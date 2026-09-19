@@ -29,11 +29,11 @@ Import the specific categorized path, for example `#lib/icons/actions/PlusIcon.s
 | ------------- | ------------------------------------------------------------ |
 | `class`       | Caller-supplied layout, color, and responsive sizing classes |
 | `size`        | Width and height attributes in pixels; defaults to 16        |
-| `strokeWidth` | Stroke width for stroked geometry; defaults to 1.75          |
+| `strokeWidth` | Stroke width, on the stroked icons; defaults to 1.75         |
 
 Color follows `currentColor`, so the owning control sets foreground color and dark-mode behavior. A Tailwind sizing class can override the SVG width/height attributes. Use a consistent method within a control family, and remember that the visual icon size is not the button's hit-target size.
 
-Source geometry retains its fill or stroke construction. Applying a stroke-oriented prop cannot turn a filled silhouette into a stroked outline. `FlagIcon` and `PinIcon` additionally accept `filled`; `LockIcon` accepts `locked`. Those state props express a real visual variant and are documented locally rather than forced into every icon's common shape.
+Source geometry retains its fill or stroke construction. Applying a stroke-oriented prop cannot turn a filled silhouette into a stroked outline, and an icon drawn entirely from filled paths declares only `class` and `size` — read the component's props type rather than assuming all three are present. `FlagIcon` and `PinIcon` additionally accept `filled`; `LockIcon` accepts `locked`. Those state props express a real visual variant and are documented locally rather than forced into every icon's common shape.
 
 ```svelte
 <script lang="ts">

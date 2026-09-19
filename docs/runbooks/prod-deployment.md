@@ -180,6 +180,8 @@ curl --connect-timeout 10 --max-time 30 -i https://fincalcs.portfolio-projects.d
 curl --connect-timeout 10 --max-time 30 -i https://fincalcs.portfolio-projects.dev/settings/
 curl --connect-timeout 10 --max-time 30 -i https://fincalcs.portfolio-projects.dev/settings/cashflow/
 curl --connect-timeout 10 --max-time 30 -I https://fincalcs.portfolio-projects.dev/amortization
+curl --connect-timeout 10 --max-time 30 -i https://fincalcs.portfolio-projects.dev/robots.txt
+curl --connect-timeout 10 --max-time 30 -i https://fincalcs.portfolio-projects.dev/sitemap.xml
 curl --connect-timeout 10 --max-time 30 -i https://fincalcs.portfolio-projects.dev/missing-page/
 ```
 
@@ -193,6 +195,8 @@ Match the responses to this table:
 | `/cashflow/` | HTTP `200`, public Cashflow HTML, `Cache-Control: no-cache` |
 | `/settings/` and `/settings/cashflow/` | HTTP `200`, the corresponding settings tab HTML, `Cache-Control: no-cache` |
 | `/amortization` without trailing slash | HTTP `301`, `Location: /amortization/`; no internal hostname, port, or HTTP origin |
+| `/robots.txt` | HTTP `200`, `Allow: /`, and a `Sitemap:` line naming this hostname's `sitemap.xml` |
+| `/sitemap.xml` | HTTP `200`, XML listing `/`, `/scratchpad/`, `/amortization/`, and `/cashflow/` at this origin; each `loc` must match a page checked above |
 | `/missing-page/` | HTTP `404`, authored “Page not found” response |
 
 Then open `https://fincalcs.portfolio-projects.dev/amortization/` in a **clean browser profile**:
@@ -201,7 +205,9 @@ Then open `https://fincalcs.portfolio-projects.dev/amortization/` in a **clean b
 2. Use the browser's developer tools **Network** tab to confirm page HTML and route data have `Cache-Control: no-cache`, and a requested `/_app/immutable/` asset has `Cache-Control: public, max-age=31536000, immutable`.
 3. Disable JavaScript and reload: the static shell and loading indicator render, while the calculator stays hidden until JavaScript initializes its browser-local state. Re-enable JavaScript and reload; the indicator must clear and the view must become interactive. Feature-specific rendering and interaction checks belong to application validation when those features change.
 
-**Expected result:** healthy Nginx, successful Verify for the deployed revision, valid public HTTPS, working direct navigation, correct caches, and a real 404. Record the commit SHA, Coolify deployment ID, and these check results together.
+**Expected result:** healthy Nginx, successful Verify for the deployed revision, valid public HTTPS, working direct navigation, correct caches, a published sitemap matching the live routes, and a real 404. Record the commit SHA, Coolify deployment ID, and these check results together.
+
+`robots.txt` and `sitemap.xml` are authored files under `static/`, not build output derived from the route table. A release that adds, renames, or removes a public route must update `static/sitemap.xml` in the same change, or this step will show a sitemap advertising a URL that now 404s, or omitting one that exists. The settings tabs are intentionally excluded from it.
 
 ## 7. GitHub website and Coolify dashboard: verify selective deployment
 

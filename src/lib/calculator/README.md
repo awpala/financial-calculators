@@ -323,7 +323,7 @@ A reference is found by matching, not by splitting the expression into words —
 - **The longest declared name that fits is taken.** With `a` and `a b` both declared, `a b + a` is 11 when `a b` is 10 and `a` is 1.
 - **A space in a name matches any run of whitespace**, line breaks included, so `gross pay` may be referred to as `gross` at the end of one line and `pay` at the start of the next.
 - **A name ending in a letter, digit, or underscore does not match the front of a longer word**, so `tax` is not found inside `taxes` or `tax_2`.
-- **A declared name wins over every other reading.** That is what lets a reference to `401(k) contribution` or `2k` be read as the name rather than as a figure, and it cuts both ways: once `-x` is declared, `3 -x` reads as `3` followed by the name `-x` and is missing an operator, while `3 - x` still subtracts.
+- **A declared name wins over every other reading.** That is what lets a reference to `401(k) contribution` or `2k` be read as the name rather than as a figure, and it cuts both ways: once `-x` is declared, `3 -x` reads as `3` followed by the name `-x` and is missing an operator, while the space in `3 - x` breaks that match and the `-` is read as subtraction again — of whatever `x` a statement has declared, or an undeclared name if none has.
 
 ### Expressions
 

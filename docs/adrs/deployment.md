@@ -25,6 +25,8 @@ Deploy one Dockerfile application on Coolify at `https://fincalcs.portfolio-proj
 
 Nginx requires revalidation for HTML and route data so a release does not leave cached page references indefinitely stale. Content-hashed assets are immutable. The public health marker reports liveness, while smoke checks separately verify content and navigation.
 
+The repository's `static/` directory is published verbatim alongside the prerendered pages, including the authored 404 page, web manifest, `robots.txt`, and a `sitemap.xml` enumerating the public calculator views at the production origin. Those files are authored rather than derived from the route table, so a public-route change must update the sitemap in the same commit; permitting indexing is a crawler directive and not a substitute for the absent access gate.
+
 ## Pipeline and release control
 
 Verify runs on pushes and pull requests. It checks types, lint, formatting, unit tests, shell syntax, and the ADR index. The Dockerfile performs the strict static build once, and deployment smoke checks exercise that image's entry page, assets, health, caching, and 404 behavior over HTTP. CI does not repeat the build on the host or make deployment checks depend on individual example features. CI consumes the project's concrete configuration directly.

@@ -19,7 +19,7 @@ Start here, then read only the guides whose scope matches the assignment. These 
 | Provisioning, developer helpers, CI, or operations  | [Development operations](docs/agents/operations.md)       | Combined gates, container commands, script conventions, and deployment entry points                  |
 | Agent definitions, skills, or harness configuration | [Harness routing and maintenance](docs/agents/harness.md) | Skill/agent selection, mirrored workflows, tool-specific settings, and instruction ownership         |
 
-Each specialty links its applicable skills. Load those when their stated trigger applies; the [complete skill and agent directory](docs/agents/harness.md#skills-and-agents) is available when selecting or maintaining a role. Skill references are conditional detail, not a request to preload their entire reference tree.
+Each specialty links its applicable skills. Load those when their stated trigger applies; the [complete skill and agent directory](docs/agents/harness.md#shared-skills-and-tool-adapters) is available when selecting or maintaining a role. Skill references are conditional detail, not a request to preload their entire reference tree.
 
 ## Rules that apply to every task
 
