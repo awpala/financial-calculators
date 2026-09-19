@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0f172a" />
+    <link rel="icon" href="%sveltekit.assets%/icons/app.svg" />
+    <link rel="manifest" href="%sveltekit.assets%/manifest.webmanifest" />
+    <script>
+      // Applies the remembered theme before first paint. Without this the page
+      // renders light, hydrates, and then flips to dark -- a flash that no
+      // amount of component-level care can remove, because the component tree
+      // does not exist yet when the first pixels are painted.
+      (function () {
+        try {
+          const stored = localStorage.getItem('theme');
+          let parsed = null;
+          if (stored !== null) {
+            try {
+              parsed = JSON.parse(stored);
+            } catch (e) {
+              parsed = stored;
+            }
+          }
+          const prefersDark =
+            window.matchMedia &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches;
+          const theme =
+            parsed === 'dark' || parsed === 'light'
+              ? parsed
+              : prefersDark
+                ? 'dark'
+                : 'light';
+          if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+          }
+        } catch (e) {
+          // localStorage may be blocked; fall through to light.
+        }
+      })();
+    </script>
+    %sveltekit.head%
+  </head>
+  <body data-sveltekit-preload-data="hover">
+    <div style="display: contents">%sveltekit.body%</div>
+  </body>
+</html>

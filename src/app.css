@@ -1,0 +1,204 @@
+@import 'tailwindcss';
+
+/* Dark mode is class-driven, not media-driven: the member's choice is
+   persisted and reapplied by the inline script in app.html, which sets
+   `.dark` on <html> before first paint. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+html,
+body {
+  height: 100%;
+}
+
+@layer base {
+  :where(
+    button:not(:disabled),
+    summary,
+    a[href],
+    [role='button']:not([aria-disabled='true']),
+    [role='switch']:not([aria-disabled='true']),
+    select:not(:disabled),
+    input[type='checkbox']:not(:disabled),
+    input[type='radio']:not(:disabled)
+  ) {
+    cursor: pointer;
+  }
+
+  :where(
+    button:disabled,
+    [aria-disabled='true'],
+    select:disabled,
+    input[type='checkbox']:disabled,
+    input[type='radio']:disabled
+  ) {
+    cursor: not-allowed;
+  }
+
+  :where(
+    button,
+    summary,
+    a[href],
+    [role='button'],
+    [role='switch'],
+    select,
+    input[type='checkbox'],
+    input[type='radio']
+  ):focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+  }
+
+  @media (hover: hover) {
+    :where(
+      button:not(:disabled),
+      summary,
+      a[href],
+      [role='button']:not([aria-disabled='true']),
+      [role='switch']:not([aria-disabled='true'])
+    ):hover {
+      filter: brightness(0.97);
+    }
+  }
+
+  :where(
+    button:not(:disabled),
+    summary,
+    a[href],
+    [role='button']:not([aria-disabled='true']),
+    [role='switch']:not([aria-disabled='true'])
+  ):active {
+    filter: brightness(0.92);
+  }
+}
+
+/* Main scroll surface -- a thin slate scrollbar in both themes. Keep the
+   scrollbar visible; only restyle. Colors come from the Tailwind theme so they
+   track the palette the utilities use. */
+main {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-slate-300) transparent;
+}
+main::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+main::-webkit-scrollbar-track {
+  background: transparent;
+}
+main::-webkit-scrollbar-thumb {
+  background-color: var(--color-slate-300);
+  border-radius: 5px;
+}
+main::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-slate-400);
+}
+html.dark main {
+  scrollbar-color: var(--color-slate-600) transparent;
+}
+html.dark main::-webkit-scrollbar-thumb {
+  background-color: var(--color-slate-600);
+}
+html.dark main::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-slate-500);
+}
+
+/* Inner scroll regions -- rail panels, filter facets, and any element that
+   scrolls inside the page rather than being the page's own surface. Global
+   rather than component-scoped because these regions live in different
+   components and must not drift apart visually. */
+.inner-scroll-region {
+  scrollbar-color: rgb(148 163 184 / 0.75) transparent;
+  scrollbar-width: thin;
+}
+.inner-scroll-region::-webkit-scrollbar {
+  width: 0.5rem;
+}
+.inner-scroll-region::-webkit-scrollbar-track {
+  background: transparent;
+}
+.inner-scroll-region::-webkit-scrollbar-thumb {
+  border: 0.125rem solid transparent;
+  border-radius: 9999px;
+  background: rgb(148 163 184 / 0.75);
+  background-clip: padding-box;
+}
+html.dark .inner-scroll-region {
+  scrollbar-color: rgb(71 85 105 / 0.9) transparent;
+}
+html.dark .inner-scroll-region::-webkit-scrollbar-thumb {
+  background: rgb(71 85 105 / 0.9);
+  background-clip: padding-box;
+}
+
+/* ---------------------------------------------------------------------------
+ * Markdown subsystem
+ *
+ * Shiki emits both themes into one token stream: light values as inline
+ * styles, dark values as `--shiki-dark*` custom properties. Swapping them at
+ * the CSS layer is what lets one server-highlighted payload serve both themes
+ * without re-highlighting on toggle. `!important` is load-bearing -- the light
+ * values it overrides are inline styles on the same elements.
+ * ------------------------------------------------------------------------ */
+html.dark .shiki,
+html.dark .shiki span {
+  color: var(--shiki-dark) !important;
+  background-color: var(--shiki-dark-bg) !important;
+  font-style: var(--shiki-dark-font-style) !important;
+  font-weight: var(--shiki-dark-font-weight) !important;
+  text-decoration: var(--shiki-dark-text-decoration) !important;
+}
+
+/* The clipboard control a code block reveals on hover. Global because the
+   button is attached to server-rendered markup by the Clipboard behavior
+   rather than being a component of its own. */
+figure[data-code-figure] button.code-copy {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  margin: 0;
+  display: flex;
+  width: 1.75rem;
+  height: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  border: 1px solid rgb(148 163 184 / 0.6);
+  border-radius: 0.375rem;
+  background: rgb(248 250 252 / 0.85);
+  color: rgb(71 85 105);
+  opacity: 0;
+  z-index: 10;
+  cursor: pointer;
+  backdrop-filter: blur(3px);
+  transition: opacity 150ms ease;
+}
+
+figure[data-code-figure]:hover button.code-copy,
+figure[data-code-figure] button.code-copy:focus-visible,
+figure[data-code-figure] button.code-copy.copied {
+  opacity: 1;
+}
+
+html.dark figure[data-code-figure] button.code-copy {
+  border-color: rgb(100 116 139 / 0.7);
+  background: rgb(15 23 42 / 0.85);
+  color: rgb(203 213 225);
+}
+
+figure[data-code-figure] button.code-copy svg {
+  width: 100%;
+  height: 100%;
+}
+
+figure[data-code-figure] button.code-copy .success {
+  display: none;
+  color: rgb(22 163 74);
+}
+
+figure[data-code-figure] button.code-copy.copied .ready {
+  display: none;
+}
+
+figure[data-code-figure] button.code-copy.copied .success {
+  display: block;
+}

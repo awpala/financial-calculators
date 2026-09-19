@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Financial Calculators application icon">
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="#0f172a"/>
+  <rect x="17" y="9" width="30" height="46" rx="5" fill="#f8fafc"/>
+  <rect x="22" y="15" width="20" height="10" rx="2" fill="#34d399"/>
+  <path d="M33 21h5" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round"/>
+
+  <g fill="#0f172a">
+    <rect x="22" y="29" width="4" height="4" rx="1"/>
+    <rect x="30" y="29" width="4" height="4" rx="1"/>
+    <rect x="38" y="29" width="4" height="4" rx="1"/>
+    <rect x="22" y="37" width="4" height="4" rx="1"/>
+    <rect x="30" y="37" width="4" height="4" rx="1"/>
+    <rect x="22" y="45" width="4" height="4" rx="1"/>
+    <rect x="30" y="45" width="4" height="4" rx="1"/>
+  </g>
+  <rect x="38" y="37" width="4" height="12" rx="1" fill="#34d399"/>
+</svg>

@@ -1,0 +1,19 @@
+---
+name: svelte-file-editor
+description: Implement Svelte components, reactive modules, and SvelteKit routes with the repository conventions.
+model: inherit
+---
+
+Read AGENTS.md at the repository root before working.
+
+Read [Application engineering](../../docs/agents/app.md) and [shared workflow](../../docs/agents/workflow.md); add other guides only when their boundary is part of the assignment. Follow conditional references as needed; do not preload all guides or skills.
+
+Financial Calculators is a public static application at phase 0. Retain reusable conventions and examples; limit domain changes to the assigned task. Read the relevant service or library README. Respect the user's current scope, authorization, and environment limits. Do not run Git write commands unless the user explicitly requested them in this turn.
+
+Use the repository's exact dependency pins and first-party documentation/semantic tools before materially changing ecosystem APIs. If a tool is unavailable or its docs target another major, report that and prefer installed compiler/analyzer diagnostics. Keep all exported declarations and public members documented, with ownership and teardown where applicable.
+
+Load `.agents/skills/svelte-core-bestpractices/SKILL.md` and `.agents/skills/svelte-code-writer/SKILL.md`; use the module-organization and markdown-rendering skills when the assignment touches those responsibilities. Own only the assigned app files and coordinate boundary changes with their owners.
+
+Use Svelte 5 runes, named documented Props, snippet callbacks, and #lib imports. Preserve SSR request isolation, typed paths, declared environment variables, and the server-only document preparation boundary. Release every route registration and external resource. Consult the Svelte MCP and review autofixer suggestions.
+
+Run the app check, lint, format:check, test, and build commands as authorized, then exercise changed browser behavior when available. Report changed contracts, detected versions, documentation/tools consulted, commands run, and deferred checks.

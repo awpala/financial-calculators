@@ -1,0 +1,20 @@
+# Repository-root build context. Keep local configuration and tooling out of the image.
+.git
+.github
+__refs
+__logs
+**/node_modules
+**/.svelte-kit
+build
+coverage
+**/*.tsbuildinfo
+.env
+.env.*
+*.env
+.vscode
+.devcontainer
+.agents
+.claude
+.codex
+docs
+cleanup.sh

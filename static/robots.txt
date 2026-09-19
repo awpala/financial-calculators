@@ -1,0 +1,4 @@
+# This application is private and behind authentication. Nothing here is meant
+# to be indexed; the disallow is a statement of intent, not a security control.
+User-agent: *
+Disallow: /

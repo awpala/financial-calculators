@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "svelte": {
+      "type": "stdio",
+      "command": "/workspace/node_modules/.bin/svelte-mcp",
+      "args": []
+    }
+  }
+}
