@@ -12,6 +12,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  # Host checks use browser mocks; the Docker builder supplies real Chromium.
   PUPPETEER_SKIP_DOWNLOAD: 'true'
 
 jobs:
@@ -26,19 +27,12 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
-      # The hosted runner supplies Chrome and its system dependencies. Reuse it
-      # rather than asking Puppeteer to install OS packages as an unprivileged user.
-      - name: Select the browser used by document transforms
-        run: |
-          browser_path="$(command -v google-chrome)"
-          "$browser_path" --version
-          echo "PUPPETEER_EXECUTABLE_PATH=$browser_path" >> "$GITHUB_ENV"
       - run: npm run check
       - run: npm run lint
       - run: npm run format:check
       - run: npm run test
-      - run: npm run build
-      - run: npm run test:deployment
+      # The Dockerfile performs the production build. Check that image's HTTP
+      # contract without repeating the build or application tests on the host.
       - name: Build and exercise the production Nginx image
         run: npm run test:container
       - name: Shell syntax and ADR index

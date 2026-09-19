@@ -27,19 +27,19 @@ Nginx requires revalidation for HTML and route data so a release does not leave 
 
 ## Pipeline and release control
 
-Verify runs on pushes and pull requests. It checks types, lint, formatting, unit tests, complete static output, shell syntax, and the ADR index; it also builds and exercises the production Nginx image. CI consumes the project's concrete configuration directly.
+Verify runs on pushes and pull requests. It checks types, lint, formatting, unit tests, shell syntax, and the ADR index. The Dockerfile performs the strict static build once, and deployment smoke checks exercise that image's entry page, assets, health, caching, and 404 behavior over HTTP. CI does not repeat the build on the host or make deployment checks depend on individual example features. CI consumes the project's concrete configuration directly.
 
 Coolify Auto Deploy listens for pushes to `main` through the repository's dedicated GitHub App. Preview deployments are disabled. Watch Paths select application code, public assets, production infrastructure, dependency/build configuration, and relevant CI tooling. Repository documentation and library READMEs do not trigger deployment; published Markdown under `src/content/docs/` does because it changes the built site. The ordered patterns and their verification procedure live in the [runbook](../runbooks/prod-deployment.md#selective-automatic-deployment).
 
 ```mermaid
 flowchart TD
   SOURCE[Push or pull request] --> VERIFY[Types, lint, format, tests]
-  VERIFY --> STATIC[Strict static build and artifact checks]
-  STATIC --> IMAGE[Production Nginx image and HTTP checks]
+  VERIFY --> IMAGE[Production image: strict static build once]
+  IMAGE --> HTTP[HTTP smoke checks]
   SOURCE --> SELECTED{Main push with watched changes?}
   SELECTED -->|Yes| BUILD[Coolify builds main via GitHub App]
   BUILD --> SITE[Public HTTPS site]
-  IMAGE --> REVIEW[Developer checks revision, CI, health, and TLS]
+  HTTP --> REVIEW[Developer checks revision, CI, health, and TLS]
   SITE --> REVIEW
 ```
 

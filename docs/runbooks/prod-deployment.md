@@ -194,8 +194,7 @@ Then open `https://fincalcs.portfolio-projects.dev/docs/guides/deployment/` in a
 
 1. Refresh that nested URL directly, then navigate through the application.
 2. Use the browser's developer tools **Network** tab to confirm page HTML and route data have `Cache-Control: no-cache`, and a requested `/_app/immutable/` asset has `Cache-Control: public, max-age=31536000, immutable`.
-3. Disable JavaScript and reload: the page remains readable. Re-enable JavaScript and check charts, theme controls, contextual rails, dialogs, and a narrow viewport.
-4. Open the getting-started document and inspect its Mermaid diagram. A rendered diagram error can appear in a page even when the build exits successfully. Check the deployment build log if the diagram failed. MathJax also needs access to its configured external browser source.
+3. Disable JavaScript and reload: the page remains readable. Re-enable JavaScript afterward. Feature-specific rendering and interaction checks belong to application validation when those features change.
 
 **Expected result:** healthy Nginx, successful Verify for the deployed revision, valid public HTTPS, working direct navigation, correct caches, and a real 404. Record the commit SHA, Coolify deployment ID, and these check results together.
 
@@ -249,6 +248,6 @@ The [Dockerfile](../../Dockerfile) installs Node 24, Chromium, fonts, and locked
 
 All deployed pages, route data, and browser assets are public. The private GitHub repository controls source access; visitors need no account or password. The prototype has no API, database, or session store. Browser preferences stay local. Published content changes require a rebuild. Nginx serves directory indexes rather than an SPA fallback; HTML and route data require revalidation, while content-hashed assets use a year-long immutable cache policy.
 
-[Verify](../../.github/workflows/verify.yml) runs on pushes and pull requests, including documentation-only changes. It checks types, lint, formatting, unit tests, the strict static build, artifacts, production-image HTTP behavior, shell syntax, and the ADR index. Its hosted runner supplies Chrome for document transforms; the Dockerfile independently installs Chromium. The image-test script owns and removes its disposable container and image. Local checks, CI, and successful source checkout each establish different facts; none alone proves the public site's TLS, routing, health, or deployed revision.
+[Verify](../../.github/workflows/verify.yml) runs on pushes and pull requests, including documentation-only changes. It checks types, lint, formatting, unit tests, production-image HTTP behavior, shell syntax, and the ADR index. The Dockerfile installs Chromium and performs the strict static build once; CI does not repeat that build on the host. Deployment smoke checks cover packaging and serving, independently of application feature tests. The image-test script owns and removes its disposable container and image. Local checks, CI, and successful source checkout each establish different facts; none alone proves the public site's TLS, routing, health, or deployed revision.
 
 See the [deployment decision](../adrs/deployment.md) for the architectural rationale. The instructions above contain the values and actions needed to carry out the deployment without consulting another repository.
