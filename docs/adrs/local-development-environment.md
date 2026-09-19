@@ -9,7 +9,7 @@ This application needs one Node toolchain and a browser for markdown diagrams. A
 
 ## Decision
 
-Use a single base-image devcontainer with Node 24 and relevant editor/CLI features. Bind the checkout at `/workspace` and the full scripts directory at `/scripts`. Run `setup-env.sh` after creation. Do not install an unrelated language toolchain or start a background app listener during provisioning.
+Use a single base-image devcontainer with Node 24 and relevant editor/CLI features. Bind the checkout at `/workspace` and link `/scripts` to `/workspace/.devcontainer/scripts` before running `setup-env.sh` after creation. `/scripts` is a symlink rather than a second bind mount because Docker pins a bind mount to the directory present at container start: a branch switch or pull that deletes and recreates `.devcontainer/scripts` would leave the mount attached to the deleted, empty directory until the container is recreated. The symlink resolves through the stable checkout mount on every access. Do not install an unrelated language toolchain or start a background app listener during provisioning.
 
 ```mermaid
 flowchart LR
@@ -26,7 +26,7 @@ Ordering matters. The browser must exist before document rendering is exercised;
 
 | Storage | Lifecycle |
 | --- | --- |
-| Checkout/scripts bind mounts | Live host source; wrapper edits require no rebuild |
+| Checkout bind mount and `/scripts` symlink | Live host source; wrapper edits and recreated script directories require no rebuild |
 | npm cache and node_modules volumes | Reused downloads; dependency tree reconstructed by npm ci |
 | CLI configuration volumes | Authentication/state survives rebuilds |
 | Toolchain and `/usr/local/bin` | Image-owned; never hidden behind stale persistent volumes |

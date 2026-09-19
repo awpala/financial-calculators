@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Financial Calculators -- single-container development provisioning.
 # Invoked as root by devcontainer.json after its Node feature is installed.
-# The checkout and live scripts are bind-mounted at /workspace and /scripts.
+# The checkout is bind-mounted at /workspace; /scripts is a symlink to its
+# .devcontainer/scripts, created by postCreateCommand before this script runs.
 # Keep ordering explicit: shell profile -> OS/browser -> CLI -> npm lockfile ->
 # handoff. Failed installs stop setup; rerun bash /scripts/setup-env.sh to retry.
 # This script prepares tools inside the development container; it must never
@@ -131,11 +132,11 @@ upsert_alias mmdc "${SCRIPTS_BIN_DIR}/mmdc.sh"
 
 # Bash aliases normally exist only in interactive shells. CI-like commands and
 # agent subprocesses must also find the shared gates, so expose real commands
-# on PATH as symlinks to the live /scripts mount. Do not copy the wrappers:
+# on PATH as symlinks to the live /scripts link. Do not copy the wrappers:
 # copied versions silently drift from the repository on the next edit.
 # The run-app convenience remains an alias; a noninteractive caller invokes
 # /scripts/bin/run-local-service.sh app.
-# chmod repairs execute bits on the writable script mount where necessary.
+# chmod repairs execute bits on the writable checkout where necessary.
 echo
 echo "--- Installing command links for non-interactive shells ---"
 chmod +x "${SCRIPTS_BIN_DIR}"/*.sh

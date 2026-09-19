@@ -19,7 +19,7 @@ The local app gate runs the static build and artifact smoke checks. CI runs the 
 
 ## Container helper contracts
 
-The workspace is fixed at `/workspace`, scripts at `/scripts`. Set `WORKSPACE_DIR="/workspace"` and derive paths from it; use `SCRIPTS_DIR="/scripts"` where needed. Do not add workspace-discovery logic or arbitrary overrides to scripts intended for this fixed container layout. npm commands remain usable directly on a host.
+The workspace is fixed at `/workspace`, scripts at `/scripts`. `/scripts` is a symlink to `/workspace/.devcontainer/scripts` created by `postCreateCommand`; do not reintroduce a separate bind mount for it, because a mount stays attached to the original directory after Git deletes and recreates it. Set `WORKSPACE_DIR="/workspace"` and derive paths from it; use `SCRIPTS_DIR="/scripts"` where needed. Do not add workspace-discovery logic or arbitrary overrides to scripts intended for this fixed container layout. npm commands remain usable directly on a host.
 
 The setup script's `upsert_alias` calls are authoritative. Names use `app`: `run-app`, `check_app`, `format_app`, and the `$app` directory export. Profile entries are replaced idempotently, never appended as competing definitions. Symlinked command wrappers remain live as source changes. Runtime installation directories must not be hidden by persistent volumes.
 

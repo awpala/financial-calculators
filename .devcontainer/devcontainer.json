@@ -49,8 +49,6 @@
     },
   },
   "mounts": [
-    // container environment setup script (bind mount)
-    "source=${localWorkspaceFolder}/.devcontainer/scripts,target=/scripts,type=bind",
     // Node caches (volumes)
     // Do not persist /usr/local/bin or the Node installation: stale volumes hide updated tools.
     "source=financial-calculators_npm-cache,target=/root/.npm,type=volume",
@@ -62,8 +60,13 @@
     "source=financial-calculators_codex-config,target=/root/.codex,type=volume",
   ],
 
-  // run setup-env.sh companion script immediately upon container launch
-  "postCreateCommand": "bash /scripts/setup-env.sh",
+  // link /scripts to the live checkout, then run setup-env.sh upon container
+  // creation. A bind mount pins the directory's inode at container start; a
+  // branch switch or pull that deletes and recreates .devcontainer/scripts then
+  // leaves /scripts attached to the deleted, empty directory until the
+  // container is recreated. The symlink resolves through the stable /workspace
+  // mount on every access, so recreated directories stay visible.
+  "postCreateCommand": "ln -sfn /workspace/.devcontainer/scripts /scripts && bash /scripts/setup-env.sh",
 
   "customizations": {
     "vscode": {
