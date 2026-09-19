@@ -1,26 +1,34 @@
 <!--
 @component
-Displays the calculated monthly payment and loan totals, using placeholders when the route has no valid calculation.
+Displays the calculated payment for the selected payment period and loan totals, using placeholders when the route has no valid calculation.
 -->
 <script lang="ts">
   import Card from '#lib/components/elements/Card.svelte';
   import { formatCurrencyUSD as money } from '#lib/text/format.js';
-  import type { Amortization } from '#lib/amortization/schedule.js';
+  import {
+    getResolutionPayment,
+    getResolutionPaymentLabel,
+    type Amortization,
+    type Resolution,
+  } from '#lib/amortization/schedule.js';
   /** Calculated loan data owned by the route. */
   type Props = {
     /** Valid loan calculation, or undefined while inputs are incomplete/invalid. */
     loan?: Amortization;
+    /** Payment period grouping, shared with the chart and table via the options rail. */
+    resolution: Resolution;
   };
-  let { loan }: Props = $props();
+  let { loan, resolution }: Props = $props();
 </script>
 
 <Card as="section" class="p-5 sm:p-6" aria-label="Loan summary">
   <h2 class="text-sm font-medium text-slate-600 dark:text-slate-400">
-    Monthly payment
+    {getResolutionPaymentLabel(resolution)}
   </h2>
   <output
     class="mt-2 block text-4xl font-semibold tracking-tight break-all tabular-nums sm:text-5xl"
-    aria-live="polite">{loan ? money(loan.monthlyPayment) : '—'}</output
+    aria-live="polite"
+    >{loan ? money(getResolutionPayment(loan, resolution)) : '—'}</output
   >
   <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
     Principal & interest

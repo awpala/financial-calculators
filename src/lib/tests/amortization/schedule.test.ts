@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   calculateAmortization,
   DEFAULT_LOAN_INPUTS,
+  getResolutionPayment,
+  getResolutionPaymentLabel,
   groupPayments,
   normalizeLoanInputs,
   parseLoanNumber,
@@ -124,6 +126,30 @@ describe('fixed-rate amortization', () => {
         5,
       );
     }
+  });
+});
+
+describe('resolution payment summary', () => {
+  it('scales the monthly payment to the selected resolution', () => {
+    const loan = calculate();
+    expect(getResolutionPayment(loan, 'month')).toBeCloseTo(
+      loan.monthlyPayment,
+      8,
+    );
+    expect(getResolutionPayment(loan, 'quarter')).toBeCloseTo(
+      loan.monthlyPayment * 3,
+      8,
+    );
+    expect(getResolutionPayment(loan, 'year')).toBeCloseTo(
+      loan.monthlyPayment * 12,
+      8,
+    );
+  });
+
+  it('labels the summary figure to match the selected resolution', () => {
+    expect(getResolutionPaymentLabel('month')).toBe('Monthly payment');
+    expect(getResolutionPaymentLabel('quarter')).toBe('Quarterly payment');
+    expect(getResolutionPaymentLabel('year')).toBe('Annual payment');
   });
 });
 

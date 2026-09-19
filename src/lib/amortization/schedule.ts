@@ -211,6 +211,33 @@ export function calculateAmortization(input: LoanInputs): LoanResult {
   };
 }
 
+/** Months contained in one period of each resolution. */
+const RESOLUTION_MONTHS: Record<Resolution, number> = {
+  year: 12,
+  quarter: 3,
+  month: 1,
+};
+
+/** Recurring payment scaled from the monthly installment to the selected resolution. */
+export function getResolutionPayment(
+  loan: Amortization,
+  resolution: Resolution,
+): number {
+  return loan.monthlyPayment * RESOLUTION_MONTHS[resolution];
+}
+
+/** Headline label for the summary card's payment figure at the selected resolution. */
+export function getResolutionPaymentLabel(resolution: Resolution): string {
+  switch (resolution) {
+    case 'year':
+      return 'Annual payment';
+    case 'quarter':
+      return 'Quarterly payment';
+    case 'month':
+      return 'Monthly payment';
+  }
+}
+
 /** Aggregate one schedule for chart and table without changing its monthly values. */
 export function groupPayments(
   payments: readonly Payment[],

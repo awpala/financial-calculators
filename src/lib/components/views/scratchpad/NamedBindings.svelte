@@ -54,7 +54,7 @@ Lists evaluated named bindings with their declaration lines and full numeric val
             <tr>
               <th
                 scope="row"
-                class="max-w-48 px-5 py-3 text-left font-normal break-words text-sky-700 dark:text-sky-300"
+                class="max-w-48 px-5 py-3 text-left font-normal wrap-break-word text-sky-700 dark:text-sky-300"
                 >{binding.name}</th
               >
               <td

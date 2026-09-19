@@ -103,7 +103,7 @@ Owns editable loan assumptions and the options rail, syncing its working copy th
     >
       <LoanFields bind:value={inputs} {purchasePriceId} />
     </InputCard>
-    <LoanSummary {loan} />
+    <LoanSummary {loan} resolution={inputs.resolution} />
   </div>
 
   <PaymentChart
