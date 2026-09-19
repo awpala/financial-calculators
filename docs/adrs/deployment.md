@@ -17,11 +17,11 @@ Deploy one Dockerfile application on Coolify at `https://fincalcs.portfolio-proj
 
 | Boundary | Owner | Contract |
 | --- | --- | --- |
-| Private source access | Coolify Git integration | Scoped GitHub App or deploy key |
+| Private source access | Coolify Git integration | Dedicated GitHub App scoped to this repository only |
 | Document preparation | Build process | Fresh AST per load, bounded rendering, owned browser teardown |
 | Public content | Nginx | Directory indexes, true 404s, relative redirects behind TLS termination |
 | Browser interaction | Svelte component tree | Route-owned state and explicit cleanup |
-| Deployment request | GitHub Actions | Pipeline credentials separate from application configuration |
+| Deployment request | Coolify Auto Deploy | GitHub App events for `main`, filtered by Watch Paths |
 
 Nginx requires revalidation for HTML and route data so a release does not leave cached page references indefinitely stale. Content-hashed assets are immutable. The public health marker reports liveness, while smoke checks separately verify content and navigation.
 
@@ -29,27 +29,30 @@ Nginx requires revalidation for HTML and route data so a release does not leave 
 
 Verify runs on pushes and pull requests. It checks types, lint, formatting, unit tests, complete static output, shell syntax, and the ADR index; it also builds and exercises the production Nginx image. CI consumes the project's concrete configuration directly.
 
-The Coolify workflow follows successful Verify runs for pushes to `main` from this repository. `COOLIFY_DEPLOY_ENABLED=true` enables its authenticated webhook request once the production resource is configured. Leave it unset during phase 0. Coolify Auto Deploy is disabled so its push handler cannot bypass verification.
+Coolify Auto Deploy listens for pushes to `main` through the repository's dedicated GitHub App. Preview deployments are disabled. Watch Paths select application code, public assets, production infrastructure, dependency/build configuration, and relevant CI tooling. Repository documentation and library READMEs do not trigger deployment; published Markdown under `src/content/docs/` does because it changes the built site. The ordered patterns and their verification procedure live in the [runbook](../runbooks/prod-deployment.md#selective-automatic-deployment).
 
 ```mermaid
 flowchart TD
-  SOURCE[Source and local documents] --> VERIFY[Types, lint, format, tests]
+  SOURCE[Push or pull request] --> VERIFY[Types, lint, format, tests]
   VERIFY --> STATIC[Strict static build and artifact checks]
   STATIC --> IMAGE[Production Nginx image and HTTP checks]
-  IMAGE --> ENABLED{Deployment enabled?}
-  ENABLED -->|Yes, current main push| WEBHOOK[Coolify deployment request]
-  WEBHOOK --> BUILD[Coolify builds configured branch]
+  SOURCE --> SELECTED{Main push with watched changes?}
+  SELECTED -->|Yes| BUILD[Coolify builds main via GitHub App]
   BUILD --> SITE[Public HTTPS site]
+  IMAGE --> REVIEW[Developer checks revision, CI, health, and TLS]
+  SITE --> REVIEW
 ```
 
-The workflow skips superseded revisions but cannot atomically pin the webhook's branch checkout. Operators serialize releases and verify the actual deployed revision, health, and TLS. A successful webhook response only confirms a request, not a successful rollout. Pipeline secrets never enter the application image.
+Auto Deploy and Verify run independently. Coolify can start deployment before CI finishes, and a failed check does not automatically prevent or roll back a release. This single-developer application accepts that tradeoff and uses manual checks after merges to `main`: inspect the actual deployed SHA, its Verify result, health, and TLS, keeping release activity sequential. GitHub Actions performs no deployment request and requires no deployment secrets. Private source credentials remain in Coolify's Git integration and never enter the application image.
 
 ## Alternatives and tradeoffs
 
 GitHub Pages would fit static output technically but does not fit this private repository's available hosting. A request-time Node application adds a running process and document-rendering dependencies without a requirement for dynamic server behavior. An account system or password gate adds session and operational complexity without an access restriction to enforce. A client-side password prompt cannot protect public static files.
 
+An authenticated deployment webhook after successful CI could gate release requests, but adds pipeline credentials and a separate release workflow. Direct GitHub App Auto Deploy fits the chosen manual review process. Watch Paths reduce unnecessary builds, but must be configured and checked in Coolify; manual deployments bypass the filter.
+
 An SPA fallback would conceal missing prerender entries and weaken readable initial content, so a dynamic route must supply complete entries instead. Server endpoints and form actions that need request-time execution would require a new architecture decision. Static hosting still supports calculations and visualizations implemented in the browser.
 
 ## Operations and verification
 
-Use the [Coolify runbook](../runbooks/prod-deployment.md). Validate root and nested URLs, public route data, hashed assets, readable HTML without JavaScript, relative directory redirects, and true 404s. Content changes require a rebuild. Local gates and image tests do not establish DNS, TLS, private Git-source access, remote secrets, or the deployed revision. Roll back through Coolify's retained deployment history and repeat those checks.
+Use the [Coolify runbook](../runbooks/prod-deployment.md). Validate root and nested URLs, public route data, hashed assets, readable HTML without JavaScript, relative directory redirects, and true 404s. Published content changes require a rebuild. Local gates and image tests do not establish DNS, TLS, private Git-source access, remote Auto Deploy settings, or the deployed revision. Pause Auto Deploy during recovery, roll back through Coolify's retained deployment history, and repeat those checks.

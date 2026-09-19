@@ -1,84 +1,254 @@
 # Coolify deployment runbook
 
-This procedure deploys the public Financial Calculators site from the private `awpala/financial-calculators` GitHub repository to `https://fincalcs.portfolio-projects.dev`. It describes future operator work; the repository's phase 0 setup does not establish that a resource, DNS record, certificate, or deployment already exists.
+Deploy the private `awpala/financial-calculators` repository as a public site at `https://fincalcs.portfolio-projects.dev`. Follow the steps in order. Each step names the system being used: **Coolify dashboard**, **GitHub website**, **Porkbun website**, or **devcontainer terminal**. Complete steps 1–4 for preparation; step 5 starts deployment.
 
-## Deployment contract
+This recipe starts with the existing Coolify project `financial-calculators`, its dedicated GitHub App, and the DNS A record pointing to `62.238.31.118`. Keep that GitHub App restricted to this repository. No GitHub Actions deployment secrets or application passwords are required.
 
-| Setting | Value |
+The UI directions below come from Coolify's official documentation and upstream application views, not an inspection of this server's installed UI. Known layout differences are stated beside the affected instruction. All application configuration paths below belong to **Coolify**, not GitHub.
+
+## 1. Coolify dashboard: open the application
+
+1. Open the Coolify dashboard where you created the project.
+2. In Coolify's sidebar, select **Projects**, then **financial-calculators**.
+3. Open the environment containing this application's resource, then open the application connected to `awpala/financial-calculators`. The environment and application display names are installation-specific; the repository is the identifier to check.
+4. Open the application's **Configuration** page. Keep this application open for steps 2 and 3.
+
+**If the project has no Application resource yet:** inside its environment, select **+ New → Private Repository (with GitHub App)**. Select the deployment server whose public address is `62.238.31.118`, select the existing dedicated GitHub App, choose `awpala/financial-calculators`, and select **Load Repository**. Set Branch to `main`, Build Pack to **Dockerfile**, Base Directory to `/`, and internal port to `8080`, then select **Continue**. Configure the resulting application below before selecting Deploy. The [official GitHub App procedure](https://coolify.io/docs/applications/sources/github/app#5-create-an-application) documents this resource-creation flow.
+
+**Expected result:** you are viewing one Git-backed Coolify Application for this repository. A project or GitHub App source by itself is not the application resource.
+
+## 2. Coolify dashboard: save the source, build, and runtime settings
+
+Work through these pages in the same Coolify application's **Configuration** menu. Save each page's changes before moving to the next page. For controls that save immediately, wait for the save to finish; reload the page to confirm the value persisted.
+
+### Git Source
+
+Open **Coolify application → Configuration → Git Source** and set:
+
+| Field | Value |
 | --- | --- |
-| Build pack | Dockerfile |
+| Repository | `awpala/financial-calculators` |
 | Branch | `main` |
-| Base Directory / build context | `/` (repository root) |
+| Commit SHA | `HEAD` |
+| Connected source | The existing GitHub App dedicated to this repository |
+
+Select **Save** if you changed any field. `HEAD` follows the selected branch; an old pinned SHA would prevent later merges from reaching the site. The [upstream Git Source form](https://github.com/coollabsio/coolify/blob/main/resources/views/livewire/project/application/source.blade.php) defines these fields.
+
+### General: build and network
+
+Open **Coolify application → Configuration → General**. Set the following fields in the build and network sections. Depending on the layout, those sections are named **Build / Network** or **Build pipeline / Networking**.
+
+| Field | Value |
+| --- | --- |
+| Build Pack | `Dockerfile` |
+| Base Directory | `/` |
 | Dockerfile Location | `/Dockerfile` |
+| Docker build stage / target, if shown | Leave empty, so Docker uses the final `runtime` stage |
+| Custom install, build, and start commands, if shown | Leave empty; the Dockerfile owns these operations |
 | Ports Exposes | `8080` |
-| Public origin | `https://fincalcs.portfolio-projects.dev` |
-| Runtime | Unprivileged Nginx |
-| Artifact | `build/` with directory indexes, route data, and browser assets |
-| Health check | `GET /healthz` on internal port `8080`, response `200 ok` |
-| Application runtime variables / persistent storage | None |
+| Port Mappings | Leave empty |
+| HTTP Basic Authentication / Authentication | Disabled / `None` |
 
-The [Dockerfile](../../Dockerfile) installs Node 24, Chromium, fonts, and locked npm dependencies in its builder stage. It prerenders the application, including document transforms, then copies only public output into the Nginx serving image. Node and Chromium are build tools and are absent from the serving stage. The Docker context excludes local environment files, references, logs, generated output, editor state, and agent configuration.
+Select **Save**. This application uses the Dockerfile from Git; do not paste a separate Dockerfile into Coolify. Port `8080` is the container's internal port. Coolify's proxy supplies public HTTP/HTTPS; port `2252` belongs only to local development. See [Coolify's Dockerfile settings](https://coolify.io/docs/applications/builds/dockerfile#configure-the-build-context).
 
-All deployed pages, route data, and browser assets are public. Private GitHub access controls source checkout; visitors require no account or password. The current prototype has no API, database, or application session store. Client preferences remain in the browser. Code and document changes require a rebuild.
+### Domain
 
-## Prepare and verify
+In the same **Coolify application**, use the domain control available in your layout:
 
-1. Run `npm run verify` and `bash .devcontainer/scripts/bin/check-adr-index.sh` in the configured development environment. On a Docker-capable host, run `npm run test:container` to build the production image and exercise its anonymous pages, route data, redirects, caching, health, and 404 behavior. The script owns and removes its disposable container and image. A host without Docker can run artifact checks but cannot claim the image passed.
-2. Exercise the dev server and production preview, including nested documents, hard refresh, navigation, both themes, and a narrow viewport. Keep the intended source revision and check results with the release record.
-3. Identify the intended Coolify server and its proxy address. The reference projects in `__refs/repos/` use a Hetzner VPS and Porkbun DNS for the `portfolio-projects.dev` family; that is context, not proof that this hostname is provisioned. Confirm the actual destination before configuration.
-4. Verify that `fincalcs.portfolio-projects.dev` resolves to that server. Check A and any AAAA records, inbound HTTP/HTTPS reachability, and any CAA policy affecting certificate issuance. Have the DNS owner provision or correct records if necessary; do not copy an IP or resource identity from another application's runbook.
-5. Connect the private repository using a Coolify GitHub App scoped to this repository, or a read-only deploy key. Source credentials belong to Coolify's Git integration, never the application image or browser bundle.
+| Visible Coolify control | Action |
+| --- | --- |
+| **Configuration → General → Domains** text field | Set it to `https://fincalcs.portfolio-projects.dev`, then select **Save**. |
+| Separate **Configuration → Domains** page | If the domain is absent, select **Add domain**, enter `https://fincalcs.portfolio-projects.dev`, and save. If already present, retain that entry. If the form asks for the internal target port, use `8080`. |
 
-The `.dev` origin requires working HTTPS in browsers. A successful local image check does not establish DNS, certificates, Git-source access, or remote capacity.
+These are the [documented General-page domain field](https://coolify.io/docs/applications/configuration/general#domains) and the [separate Domains page in the upstream UI](https://github.com/coollabsio/coolify/blob/main/resources/views/livewire/project/application/domains.blade.php). Keep Coolify's generated proxy routing. This application needs no additional service, custom network, or host port mapping.
 
-## Configure the Coolify application
+### Advanced, environment, storage, and health
 
-1. Create one Application from the private repository using the **Dockerfile** build pack. Apply the source and build settings in the table above. Leave custom install/build/start commands empty so the Dockerfile owns them.
-2. Set Domains to `https://fincalcs.portfolio-projects.dev` and Ports Exposes to `8080`. Coolify's proxy owns public TLS and routes to Nginx over the container network. Leave host port mappings empty; `2252` is only the local dev/preview port.
-3. Leave application environment variables and persistent volumes empty. Disable automatic build-argument injection; this Dockerfile needs no application build arguments. The browser executable is selected in the builder itself.
-4. Keep the image's `HEALTHCHECK` enabled. It probes `http://127.0.0.1:8080/healthz`; Coolify uses a Dockerfile-provided health check for this application type. Confirm that it reports healthy before accepting a release.
-5. Disable **Auto Deploy** and preview deployments. Leave Watch Paths empty. The GitHub workflow below owns automated releases after validation, including changes to repository-owned markdown.
-6. Confirm the proxy domain and certificate settings. Do not create a second service or network solely to route this application; Coolify supplies the application's network and proxy integration.
+Visit these pages in the same **Coolify application's Configuration menu**:
 
-## Wire automated deployment
+| Coolify page | Action |
+| --- | --- |
+| **Advanced → Build** | Disable **Inject Build Args to Dockerfile**. In the newer selection control, set **Build arguments** to **Managed manually in Dockerfile**. Save if prompted. |
+| **Environment Variables** | Add no application variables or secrets. Keep any Coolify-managed metadata; the Dockerfile supplies the builder's browser configuration. |
+| **Persistent Storage** | Add no volumes or bind mounts. |
+| **Healthcheck** | Use the image's existing Dockerfile health check. Do not replace it with a second dashboard-defined check. |
 
-1. Configure the `production` GitHub environment for `main` and confirm the intended branch policy. Where supported for this private repository, require the Verify check through branch protection or a ruleset. Repository files alone do not establish remote protection settings.
-2. Create a Coolify API token with only the deployment permission needed by the deployment webhook. Copy this application's **Deploy Webhook** URL, including its resource UUID and `force=false` query setting. This is the authenticated deployment endpoint, not a Git-provider webhook URL.
-3. Add `COOLIFY_WEBHOOK` and `COOLIFY_TOKEN` as GitHub Actions environment or repository secrets. They are pipeline credentials, not application environment variables; do not put them in `sample.env`, the Docker build, or Coolify's application variables.
-4. Once the resource is ready for automated releases, set the repository variable `COOLIFY_DEPLOY_ENABLED=true`. Leave it unset during phase 0 preparation. Setting it to any other value pauses future automated requests without removing an existing deployment.
-5. [Verify](../../.github/workflows/verify.yml) runs types, lint, formatting, unit tests, the strict static build, artifact tests, a production-image HTTP check, shell syntax, and the ADR index. [Deploy to Coolify](../../.github/workflows/deploy.yml) follows a successful push run on `main` from this repository. Pull requests and other branches cannot trigger publication through it.
-6. The deployment workflow skips a revision already superseded on `main`, serializes webhook requests, and requests a deployment with the configured bearer token. It does not wait for Coolify's build or health result. Inspect the resulting deployment, its checked-out revision, and its final health.
+The [build-argument setting](https://coolify.io/docs/applications/configuration/advanced#inject-build-args-to-dockerfile) is unnecessary for this Dockerfile. Its image health check runs `wget` against `http://127.0.0.1:8080/healthz`; the response is `200` with body `ok`. Coolify [uses a non-Compose image's Dockerfile health check in preference to the dashboard check](https://coolify.io/docs/applications/configuration/health-checks#choose-where-to-define-the-check). Confirm actual health after the first deployment in step 5.
 
-The webhook deploys the resource's configured branch; it does not pin the verified SHA. A push between the workflow's branch check and Coolify's checkout can change the revision. Serialize release activity and verify that the deployed SHA has a successful Verify run. Do not treat the superseded-revision check as an atomic release guarantee. The workflow neither provisions the resource nor changes DNS or secrets.
+**Expected result:** the saved application uses `main`, the repository's Dockerfile, port `8080`, and the exact public domain, with no application authentication, variables, or persistent storage to provision.
 
-## First deployment and verification
+## 3. Coolify dashboard: configure deployment triggers
 
-After the intended revision passes Verify, start its first deployment from Coolify or allow the enabled workflow to request it. Record the source SHA and deployment ID, inspect build logs, wait for healthy Nginx, and verify TLS at the exact public origin.
+### Selective automatic deployment
 
-```sh
-curl -i https://fincalcs.portfolio-projects.dev/healthz
-curl -i https://fincalcs.portfolio-projects.dev/
-curl -i https://fincalcs.portfolio-projects.dev/docs/guides/deployment/
-curl -i https://fincalcs.portfolio-projects.dev/docs/getting-started/__data.json
-curl -I https://fincalcs.portfolio-projects.dev/docs/guides/deployment
-curl -i https://fincalcs.portfolio-projects.dev/missing-page/
+**Watch Paths is a field in the Coolify Application. It is not a GitHub setting, a GitHub App permission, or a repository file.**
+
+1. In **Coolify**, open **Projects → financial-calculators → the application's environment → the application → Configuration → General**.
+2. In the **Build** section, find **Watch Paths**. In the newer layout, the section is **Build pipeline** and the field is **Watch paths**.
+3. Replace the field's contents with this entire block, one pattern per line, in this order:
+
+```text
+src/**
+static/**
+deploy/**
+scripts/**
+.github/workflows/**
+Dockerfile
+.dockerignore
+package.json
+package-lock.json
+.npmrc
+.nvmrc
+vite.config.ts
+tsconfig.json
+eslint.config.js
+.prettierrc
+.prettierignore
+.devcontainer/scripts/bin/checks.sh
+.devcontainer/scripts/bin/check-adr-index.sh
+cleanup.sh
+!**/*.md
+src/content/docs/**
 ```
 
-Expect `200 ok` for health, complete readable HTML for pages, and public JSON route data without cookies. The slashless directory URL redirects to a relative path, preserving the proxy's public HTTPS origin. An unknown URL returns the authored 404 page with status 404. Nginx uses directory indexes rather than an SPA fallback. HTML and route data require revalidation; hashed assets carry a year-long immutable cache policy.
+4. Select **Save** on the Coolify page.
+5. Reload the page and confirm that the full list remains in **Watch Paths**, including the final two lines.
 
-In a clean browser profile, load a nested document directly and refresh it, navigate through the app, and check asset requests. Verify readable content with JavaScript disabled, then enable it for charts, theme controls, contextual rails, and dialogs. Inspect a rendered Mermaid diagram as well as build logs: the document transform can surface a rendering error in the page rather than fail the entire build. MathJax is an external browser enhancement and needs its configured network source.
+These patterns select application code, public assets, production infrastructure, dependencies, build configuration, and relevant CI tooling. Repository documentation, library READMEs, agent instructions, and unrelated editor/devcontainer settings do not select a deployment. The final line restores published Markdown under `src/content/docs/`: those files become site pages and must rebuild when their content changes. Add a pattern here when a new build input is introduced outside the selected paths.
 
-## Diagnosis and recovery
+[Coolify's Watch Paths rules](https://coolify.io/docs/applications/deployments/automatic-deployments#limit-deployments-by-changed-paths) use ordered matching; the last matching pattern wins. Saving this Markdown file does not apply the patterns to Coolify. Manual deployments and authenticated deployment requests bypass Watch Paths.
 
-- **Private source checkout fails:** confirm the GitHub App installation or deploy key grants this repository access and `main` exists. Rotating a pipeline token does not repair Git-source credentials.
-- **No healthy server or proxy 502:** verify the Dockerfile, internal port `8080`, health check, Nginx logs, and domain-to-container route. No host port mapping is required.
-- **Certificate or name resolution failure:** compare A/AAAA records with the intended destination, then inspect proxy certificate logs, firewall rules, and CAA policy. Avoid accepting an alternate hostname as proof that this origin works.
-- **Wrong redirect origin or broken nested page:** confirm the checked-in Nginx configuration is in the image and the static build includes directory indexes. Do not add a catch-all response to hide a missing route.
-- **Stale page after a release:** inspect page/data cache headers and any intermediary cache; only content-hashed assets should be immutable. Check the deployed SHA before rebuilding.
-- **Diagram error:** inspect builder Chromium availability, fonts, and the rendered page. Mocked lifecycle tests do not demonstrate a usable browser binary.
-- **Skipped deployment:** check `COOLIFY_DEPLOY_ENABLED`, the successful push run on `main`, superseded SHA output, and environment restrictions. A missing/expired token or incorrect webhook produces a failed request step.
-- **Build drift:** preserve the original error, reproduce with `npm ci` and the gates, then use Coolify's rebuild-without-cache if needed.
+### Enable main-branch pushes and disable previews
 
-Pause automation by clearing `COOLIFY_DEPLOY_ENABLED` during recovery. Use Coolify's deployment history to roll back to a retained known-good image/revision, verify the selected SHA, and repeat the same smoke checks before re-enabling automation. There is no application database to migrate or restore. Browser preferences persist independently of a release.
+1. Still in the **Coolify application**, open **Configuration → Advanced**.
+2. Under **Deployment & Git → Auto Deploy**, enable automatic deployment. In the newer **Deployment** section, set **Auto deploy** to **Deploy on push (webhooks)**. Save if prompted.
+3. Disable **Preview Deployments** in that same Advanced page if the switch is present. In the newer layout, open **Configuration → Preview Deployments** and select **Disable preview deployments**. If the button already says **Enable preview deployments**, they are already disabled; leave it that way.
+4. Reload the relevant page and confirm Auto Deploy is enabled and preview deployments are disabled. The production branch remains `main`, as saved under **Git Source** in step 2.
 
-See the [deployment decision](../adrs/deployment.md) for the hosting and rendering boundaries behind this procedure.
+The [GitHub App integration](https://coolify.io/docs/applications/deployments/automatic-deployments#enable-automatic-deployments) delivers push events to Coolify. GitHub Actions performs verification separately; do not add an Actions deployment workflow, deployment secrets, or a manually copied deployment webhook for this setup.
+
+**Expected result:** matching pushes to `main` can deploy. Other branches and documentation-only changes do not deploy. Step 7 checks this behavior against real events after the initial release.
+
+## 4. Devcontainer terminal: finish pre-flight checks
+
+In the terminal **inside the running devcontainer**, run:
+
+```sh
+cd /workspace
+bash .devcontainer/scripts/bin/checks.sh
+```
+
+Expect **All gates passed**. This runs types, lint, formatting, unit tests, the static build, artifact checks, and the ADR index. Docker is intentionally absent in this container. The GitHub-hosted Verify job runs the production-image test; a skipped local HTTP suite is expected when no container URL is supplied.
+
+In that same **devcontainer terminal**, check public DNS:
+
+```sh
+dig +short A fincalcs.portfolio-projects.dev
+dig +short AAAA fincalcs.portfolio-projects.dev
+dig +short CAA fincalcs.portfolio-projects.dev
+dig +short CAA portfolio-projects.dev
+```
+
+Expect the A answer to be `62.238.31.118`. No AAAA answer is expected for this IPv4-only configuration. Empty CAA answers at these names mean no restriction is set at those names; if a CAA answer exists, check it against the certificate issuer configured on the server. If the A record is wrong, correct the `fincalcs` A record in **Porkbun's DNS records for `portfolio-projects.dev`**, then repeat the lookup. Use this application's address, not a copied reference-project resource identity.
+
+Before the first deployment, an HTTP proxy 404 or Traefik default certificate can mean the application route and certificate do not exist yet. Those responses are not a passing site check. Step 6 must succeed after deployment, because `.dev` requires working HTTPS in browsers.
+
+For an application change, also exercise the dev server and production preview: direct nested URLs, refresh, navigation, both themes, a narrow viewport, and dialogs. Keep the intended source revision and check results with the release record.
+
+**Preparation is complete here. Continue to step 5 when ready to publish.**
+
+## 5. GitHub website and Coolify dashboard: perform the first deployment
+
+1. **GitHub website:** open `awpala/financial-calculators` and merge the prepared application branch into `main`. The resulting `main` revision must contain `Dockerfile`, `package.json`, `src/`, `static/`, and `deploy/nginx.conf`; a README-only branch cannot build this application. This merge is the automatic deployment trigger.
+2. **Coolify dashboard:** return to this Application and open **Deployments** (named **Deployment Logs** in the newer configuration sidebar). Open the deployment triggered by that push. If no deployment was queued because `main` was populated before the application was configured, select the application's **Deploy** action once. Do not start a second manual deployment while the automatic one is running.
+3. **Coolify deployment log:** record the checked-out commit SHA and deployment ID. Follow the log through dependency installation, `npm run build`, copying `build/` into Nginx, and starting the container. Expect a successful deployment and healthy application.
+4. **GitHub website:** open the repository's **Actions → Verify** run for that same commit. Expect success, including **Build and exercise the production Nginx image**. A failed browser-install or test step is a CI failure to fix; it does not require a deployed site to run.
+5. **Devcontainer terminal and browser:** perform all checks in step 6 against the public site.
+
+Auto Deploy starts independently of Verify and may publish before CI finishes. A failed Verify run does not automatically stop or roll back the site. For this single-developer application, check the actual deployed SHA, CI result, health, and HTTPS manually after each release, and keep release activity sequential. Source credentials remain in Coolify's Git integration and never belong in application variables or the browser bundle.
+
+## 6. Devcontainer terminal and browser: verify the deployed site
+
+In the **devcontainer terminal**, run each command below. Keep certificate validation enabled; do not add `-k`.
+
+```sh
+curl --connect-timeout 10 --max-time 30 -i https://fincalcs.portfolio-projects.dev/healthz
+curl --connect-timeout 10 --max-time 30 -i https://fincalcs.portfolio-projects.dev/
+curl --connect-timeout 10 --max-time 30 -i https://fincalcs.portfolio-projects.dev/docs/guides/deployment/
+curl --connect-timeout 10 --max-time 30 -i https://fincalcs.portfolio-projects.dev/docs/getting-started/__data.json
+curl --connect-timeout 10 --max-time 30 -I https://fincalcs.portfolio-projects.dev/docs/guides/deployment
+curl --connect-timeout 10 --max-time 30 -i https://fincalcs.portfolio-projects.dev/missing-page/
+```
+
+Match the responses to this table:
+
+| Request | Required result |
+| --- | --- |
+| `/healthz` | HTTP `200`, body `ok`, valid certificate for this hostname |
+| `/` and `/docs/guides/deployment/` | HTTP `200`, readable HTML with page content, no login redirect or authentication cookie |
+| `/docs/getting-started/__data.json` | HTTP `200`, public JSON route data, `Cache-Control: no-cache` |
+| `/docs/guides/deployment` without trailing slash | HTTP `301`, `Location: /docs/guides/deployment/`; no internal hostname, port, or HTTP origin |
+| `/missing-page/` | HTTP `404`, authored “Page not found” response |
+
+Then open `https://fincalcs.portfolio-projects.dev/docs/guides/deployment/` in a **clean browser profile**:
+
+1. Refresh that nested URL directly, then navigate through the application.
+2. Use the browser's developer tools **Network** tab to confirm page HTML and route data have `Cache-Control: no-cache`, and a requested `/_app/immutable/` asset has `Cache-Control: public, max-age=31536000, immutable`.
+3. Disable JavaScript and reload: the page remains readable. Re-enable JavaScript and check charts, theme controls, contextual rails, dialogs, and a narrow viewport.
+4. Open the getting-started document and inspect its Mermaid diagram. A rendered diagram error can appear in a page even when the build exits successfully. Check the deployment build log if the diagram failed. MathJax also needs access to its configured external browser source.
+
+**Expected result:** healthy Nginx, successful Verify for the deployed revision, valid public HTTPS, working direct navigation, correct caches, and a real 404. Record the commit SHA, Coolify deployment ID, and these check results together.
+
+## 7. GitHub website and Coolify dashboard: verify selective deployment
+
+Use the next ordinary intended changes; do not create throwaway commits just to exercise the filter.
+
+1. **Before a documentation-only merge:** in the **Coolify Application → Deployments / Deployment Logs**, note the latest deployment ID and SHA.
+2. **GitHub website:** merge a change containing only repository documentation, such as `README.md` or `docs/`. Its Verify run may execute. In **Coolify**, confirm there is no deployment for that commit and that the latest deployment remains the one recorded in step 1.
+3. **GitHub website:** merge an intended application or selected infrastructure/CI change. In **Coolify**, confirm a new deployment for that commit appears, then repeat steps 5–6's release checks.
+4. Keep those event results with the release record. A main-branch SHA ahead of the deployed SHA is normal when the intervening commits only changed excluded documentation.
+
+| Changed files | Automatic deployment expected? |
+| --- | --- |
+| Only `README.md`, `docs/**`, library READMEs, or agent instructions on `main` | No |
+| Only unrelated editor/devcontainer settings on `main` | No |
+| Application code under `src/`, public assets, or published `src/content/docs/**/*.md` on `main` | Yes |
+| Dockerfile, Nginx configuration, dependencies, build settings, or the selected CI tooling on `main` | Yes |
+| Documentation plus any selected implementation file on `main` | Yes |
+| Any change on another branch, with preview deployments disabled | No |
+
+Do not use the Coolify **Deploy** button to test this filter: manual deployments bypass it.
+
+## Diagnose a failed step
+
+| Symptom | Where to act and what to check |
+| --- | --- |
+| Private source checkout fails | **Coolify application → Configuration → Git Source:** confirm repository, `main`, and the dedicated App. **Coolify sidebar → Sources → that GitHub App → Update Repositories:** confirm on the resulting GitHub page that this repository remains selected. Application variables or Actions secrets cannot repair source access. |
+| Source checkout succeeds but no automatic deployment appears | **Coolify application → Configuration → Advanced:** check Auto Deploy. **Git Source:** check `main`. **General:** check saved Watch Paths. **Coolify sidebar → Sources → the dedicated GitHub App:** inspect its webhook connection; repository access alone does not prove GitHub can reach Coolify's event endpoint. |
+| Documentation-only or another-branch change deploys | **Coolify application → deployment log:** identify whether the trigger was manual, a matching push, or a preview. Recheck the saved ordered Watch Paths and disabled preview setting. Check whether a second Application uses this repository. |
+| Build fails | **Coolify application → Deployments / Deployment Logs:** preserve the first error and failing SHA. In the **devcontainer terminal**, reproduce with `npm ci` and the local checks. Use Coolify's **Force deploy (without cache)** only if investigating stale build layers. |
+| Proxy 404, 502, or no healthy server | **Coolify application → Configuration → General:** confirm port `8080`. **Logs / Runtime Logs:** inspect Nginx. **Terminal:** run `wget -q -O - http://127.0.0.1:8080/healthz` and expect `ok`. Then recheck the domain entry from step 2. |
+| DNS or certificate failure | **Devcontainer terminal:** repeat step 4's DNS lookups. **Porkbun:** correct this hostname's records if necessary. **Coolify sidebar → Servers → the deployment server → Proxy:** inspect certificate logs. Check inbound ports 80/443 and any CAA restriction against the configured certificate issuer. |
+| Nested page or redirect is wrong | **Coolify deployment log:** confirm the intended SHA was built. Check that its `deploy/nginx.conf` supplies directory indexes and relative redirects and that the build contains the route. A catch-all SPA response would hide the defect. |
+| Page appears stale | **Browser developer tools → Network:** inspect HTML/data cache headers and intermediary caches. **Coolify deployment log:** compare the deployed SHA. Only hashed assets should be immutable. |
+| Mermaid diagram shows an error | **Coolify deployment log:** inspect Chromium and font installation. Inspect the rendered page as well; mocked lifecycle tests do not establish a usable browser binary. |
+
+## Coolify dashboard: roll back a failed release
+
+1. Open this **Coolify application → Configuration → Advanced** and disable **Auto Deploy**. In the newer control, select **Manual deployments only**. Save if prompted, then reload to confirm automation is paused.
+2. Open **Configuration → Rollback** in the same application. Select the retained image corresponding to the last working revision, then invoke its rollback action. The current runtime settings apply to the older image. If no working image is retained, this rollback path is unavailable; correct the failed revision and deploy the fix instead.
+3. Open **Deployments / Deployment Logs**, follow the rollback, record its SHA, and wait for healthy Nginx.
+4. Repeat all of step 6's HTTPS, page, data, redirect, cache, and browser checks.
+5. Correct the failing branch revision before enabling automatic deployment again. Restore **Auto Deploy** only when ready for the next selected push to `main`.
+
+Coolify's [rollback procedure](https://coolify.io/docs/applications/deployments/rollbacks) depends on retained images. This application has no database to migrate or restore. Browser preferences persist independently of the deployed image.
+
+## Deployment behavior behind this recipe
+
+The [Dockerfile](../../Dockerfile) installs Node 24, Chromium, fonts, and locked npm dependencies in its builder stage. It prerenders the application, including document transforms, and copies only `build/` into an unprivileged Nginx image. Node and Chromium are absent from the serving stage. The Docker context excludes local environment files, references, logs, generated output, editor state, and agent configuration.
+
+All deployed pages, route data, and browser assets are public. The private GitHub repository controls source access; visitors need no account or password. The prototype has no API, database, or session store. Browser preferences stay local. Published content changes require a rebuild. Nginx serves directory indexes rather than an SPA fallback; HTML and route data require revalidation, while content-hashed assets use a year-long immutable cache policy.
+
+[Verify](../../.github/workflows/verify.yml) runs on pushes and pull requests, including documentation-only changes. It checks types, lint, formatting, unit tests, the strict static build, artifacts, production-image HTTP behavior, shell syntax, and the ADR index. Its hosted runner supplies Chrome for document transforms; the Dockerfile independently installs Chromium. The image-test script owns and removes its disposable container and image. Local checks, CI, and successful source checkout each establish different facts; none alone proves the public site's TLS, routing, health, or deployed revision.
+
+See the [deployment decision](../adrs/deployment.md) for the architectural rationale. The instructions above contain the values and actions needed to carry out the deployment without consulting another repository.

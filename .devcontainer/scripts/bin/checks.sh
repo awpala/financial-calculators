@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Run every repository verification gate, in dependency order, and report a
-# single pass/fail summary. This is the same set of commands the repository's
-# agent instructions require before any non-trivial change is reported as done,
-# and it is deliberately the same set .github/workflows/verify.yml runs -- a
-# local gate that differs from CI is a gate that teaches people to ignore CI.
+# Run the local application and ADR-index gates, in dependency order, and report
+# a single pass/fail summary. These commands are shared with verify.yml so local
+# checks exercise the same application contract. CI additionally checks shell
+# syntax and the production Nginx image; Docker is intentionally unavailable in
+# this development container.
 #
 # Usage: checks.sh [app|docs]   (no argument runs everything)
 #

@@ -2,7 +2,7 @@
 
 Financial Calculators is a public application for ad hoc financial calculations and visualizations. The project is at phase 0: the application foundation, reusable libraries, development environment, and deployment pipeline are in place; calculator implementation follows separately.
 
-The application builds complete static pages and runs browser interactions after hydration. Its private GitHub repository deploys through Coolify to `https://fincalcs.portfolio-projects.dev`, using Nginx with no application login or password gate. Production provisioning and deployment are future operator work described in the [runbook](docs/runbooks/prod-deployment.md).
+The application builds complete static pages and runs browser interactions after hydration. Its private GitHub repository deploys through Coolify to `https://fincalcs.portfolio-projects.dev`, using Nginx with no application login or password gate. Production configuration and deployment checks are described in the [runbook](docs/runbooks/prod-deployment.md).
 
 ## Architecture
 
@@ -85,7 +85,7 @@ The output is `build/`. `npm run preview` previews it through Vite on port `2252
 
 The [Coolify runbook](docs/runbooks/prod-deployment.md) configures one Dockerfile resource for `https://fincalcs.portfolio-projects.dev`, with repository-root build context, private Git-source access, and internal port `8080`. Node and Chromium stay in the build stage; the serving image has Nginx and public output only.
 
-[Verify](.github/workflows/verify.yml) checks pushes and pull requests. [Deploy to Coolify](.github/workflows/deploy.yml) follows a successful push run on `main`, skips superseded commits, and requests a deployment only when `COOLIFY_DEPLOY_ENABLED=true`. Leave that repository variable unset until production is configured. The future setup supplies GitHub Actions secrets `COOLIFY_WEBHOOK` and `COOLIFY_TOKEN` and disables Coolify Auto Deploy. These credentials never belong to the deployed app. Operators must confirm the actual deployed revision and health because the webhook checks out the configured branch and only acknowledges a deployment request.
+[Verify](.github/workflows/verify.yml) checks pushes and pull requests. Coolify Auto Deploy uses a GitHub App dedicated to this repository and watches `main`; GitHub Actions needs no deployment secrets. Apply the [Watch Paths](docs/runbooks/prod-deployment.md#selective-automatic-deployment) to deploy application and relevant infrastructure/CI changes while skipping repository documentation. Published Markdown under `src/content/docs/` remains a build input. Auto Deploy runs independently of Verify, so the developer checks the deployed revision, CI result, health, and HTTPS after each release. Preview deployments stay disabled.
 
 ## Agent harness
 

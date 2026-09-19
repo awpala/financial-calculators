@@ -1,7 +1,7 @@
 {
   "name": "Financial Calculators",
   "short_name": "Financial Calculators",
-  "description": "Replace with this project's description.",
+  "description": "Ad hoc financial calculations and visualizations.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

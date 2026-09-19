@@ -17,7 +17,7 @@ env:
 jobs:
   application:
     name: SvelteKit and infrastructure gate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
@@ -26,8 +26,13 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
-      - name: Install the browser used by document transforms
-        run: npx puppeteer browsers install chrome --install-deps
+      # The hosted runner supplies Chrome and its system dependencies. Reuse it
+      # rather than asking Puppeteer to install OS packages as an unprivileged user.
+      - name: Select the browser used by document transforms
+        run: |
+          browser_path="$(command -v google-chrome)"
+          "$browser_path" --version
+          echo "PUPPETEER_EXECUTABLE_PATH=$browser_path" >> "$GITHUB_ENV"
       - run: npm run check
       - run: npm run lint
       - run: npm run format:check
