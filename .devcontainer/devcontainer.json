@@ -1,0 +1,101 @@
+{
+  "name": "Financial Calculators - Development Environment",
+
+  "image": "mcr.microsoft.com/devcontainers/base:trixie",
+
+  // container configs
+  "workspaceFolder": "/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+  "containerUser": "root",
+  "remoteUser": "root",
+  "shutdownAction": "stopContainer",
+  "runArgs": [
+    // create named container
+    "--name", "financial-calculators-dev-env",
+    // define container restart policy
+    "--restart", "unless-stopped",
+    // publish app port on the host
+    "--publish", "2252:2252",  // phoneword "CALC"
+    // load top-level .env into the container environment (must exist before launch)
+    "--env-file", "${localWorkspaceFolder}/.env",
+  ],
+
+  "containerEnv": {
+    // render Mermaid against the Chromium apt-installed by setup-env.sh instead
+    // of probing for a browser (src/lib/server/mermaid-cli.ts reads this)
+    "PUPPETEER_EXECUTABLE_PATH": "/usr/bin/chromium",
+    "PUPPETEER_SKIP_DOWNLOAD": "true",
+    // prevent launching a session bus; each plain `dbus-launch` call from the
+    // VS Code extension host (VSCODE_ESM_ENTRYPOINT=vs/workbench/api/node/
+    // extensionHostProcess) forks a bus that orphans to PID 1 and never exits,
+    // and each one holds an inotify instance until the per-user cap (128) is
+    // exhausted — which breaks `vite dev`/`svelte-kit sync` with EMFILE on .env
+    "DBUS_SESSION_BUS_ADDRESS": "disabled",
+  },
+
+  "features": {
+    "ghcr.io/devcontainers/features/node:2.1.0": {
+      "version": "24",
+    },
+    "ghcr.io/devcontainers-extra/features/typescript:2": {
+      "version": "latest",
+    },
+    "ghcr.io/devcontainers/features/github-cli:1.1.2": {},
+    "ghcr.io/devcontainers-extra/features/claude-code:2.0.3": {},
+    "ghcr.io/jsburckhardt/devcontainer-features/codex:1": {},
+    "ghcr.io/devcontainers/features/common-utils:2.6.0": {
+      "installZsh": true,
+      "installOhMyZsh": true,
+    },
+  },
+  "mounts": [
+    // container environment setup script (bind mount)
+    "source=${localWorkspaceFolder}/.devcontainer/scripts,target=/scripts,type=bind",
+    // Node caches (volumes)
+    // Do not persist /usr/local/bin or the Node installation: stale volumes hide updated tools.
+    "source=financial-calculators_npm-cache,target=/root/.npm,type=volume",
+    // app dependencies (volume)
+    "source=financial-calculators_node-modules,target=/workspace/node_modules,type=volume",
+    // CLI auth/state persistence (volumes)
+    "source=financial-calculators_gh-config,target=/root/.config/gh,type=volume",
+    "source=financial-calculators_claude-config,target=/root/.claude,type=volume",
+    "source=financial-calculators_codex-config,target=/root/.codex,type=volume",
+  ],
+
+  // run setup-env.sh companion script immediately upon container launch
+  "postCreateCommand": "bash /scripts/setup-env.sh",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "svelte.svelte-vscode",
+        "bradlc.vscode-tailwindcss",
+        "dbaeumer.vscode-eslint",
+        "redhat.vscode-yaml",
+        "mads-hartmann.bash-ide-vscode",
+        "rogalmic.bash-debug",
+        "oderwat.indent-rainbow",
+        "mechatroner.rainbow-csv",
+        "gxl.git-graph-3",
+        "anthropic.claude-code",
+        "openai.chatgpt",
+        "docker.docker",
+        "tamasfe.even-better-toml",
+        "mermaidchart.vscode-mermaid-chart",
+        "vstirbu.vscode-mermaid-preview",
+        "streetsidesoftware.code-spell-checker",
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true,
+        "editor.detectIndentation": false,
+      },
+    },
+  },
+
+  "forwardPorts": [2252], // phoneword "CALC"
+  "portsAttributes": {
+    "2252": { "label": "SvelteKit Dev Server", "onAutoForward": "notify" },
+  },
+}

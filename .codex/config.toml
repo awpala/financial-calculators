@@ -1,0 +1,24 @@
+# Codex project configuration for Financial Calculators.
+#
+# Canonical repository instructions live in /AGENTS.md, which Codex reads
+# natively; it routes to task-specific guidance under /docs/agents/.
+# Shared skills live in /.agents/skills/ and are discovered
+# automatically. This file holds only Codex-specific configuration.
+
+# Codex may edit files in the workspace, but not outside it.
+sandbox_mode = "workspace-write"
+
+# Pause for approval before operations that may escape the sandbox.
+approval_policy = "on-request"
+
+[sandbox_workspace_write]
+# Development servers and first-party documentation use the network.
+network_access = true
+
+# --- MCP servers -----------------------------------------------------------
+#
+# Direct first-party: official Svelte/SvelteKit documentation, static analysis,
+# and the Svelte autofixer.
+[mcp_servers.svelte]
+command = "/workspace/node_modules/.bin/svelte-mcp"
+args = []

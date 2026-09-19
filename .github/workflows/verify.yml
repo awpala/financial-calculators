@@ -1,0 +1,49 @@
+name: Verify
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PUPPETEER_SKIP_DOWNLOAD: 'true'
+
+jobs:
+  application:
+    name: SvelteKit and infrastructure gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      # The hosted runner supplies Chrome and its system dependencies. Reuse it
+      # rather than asking Puppeteer to install OS packages as an unprivileged user.
+      - name: Select the browser used by document transforms
+        run: |
+          browser_path="$(command -v google-chrome)"
+          "$browser_path" --version
+          echo "PUPPETEER_EXECUTABLE_PATH=$browser_path" >> "$GITHUB_ENV"
+      - run: npm run check
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run test
+      - run: npm run build
+      - run: npm run test:deployment
+      - name: Build and exercise the production Nginx image
+        run: npm run test:container
+      - name: Shell syntax and ADR index
+        run: |
+          find .devcontainer scripts -name '*.sh' -print0 | xargs -0 -n1 bash -n
+          bash -n cleanup.sh
+          sudo ln -s "$GITHUB_WORKSPACE" /workspace
+          bash .devcontainer/scripts/bin/check-adr-index.sh

@@ -1,0 +1,7 @@
+node_modules/
+.svelte-kit/
+build/
+coverage/
+__refs/
+__logs/
+package-lock.json
