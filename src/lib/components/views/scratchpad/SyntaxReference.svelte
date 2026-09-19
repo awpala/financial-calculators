@@ -5,6 +5,8 @@ Presents highlighted Scratchpad syntax and runnable examples, including nested i
 <script lang="ts">
   import Card from '#lib/components/elements/Card.svelte';
   import HighlightedExpression from '#lib/components/views/scratchpad/HighlightedExpression.svelte';
+  import ChevronDownIcon from '#lib/icons/navigation/ChevronDownIcon.svelte';
+  import ChevronRightIcon from '#lib/icons/navigation/ChevronRightIcon.svelte';
   /** Route-owned disclosure state and example execution action. */
   type Props = {
     /** Whether syntax content is expanded, restored by the route on mount. */
@@ -29,9 +31,16 @@ Presents highlighted Scratchpad syntax and runnable examples, including nested i
 
 <Card as="section" class="p-5 sm:p-6" aria-label="Syntax reference">
   <details bind:open={() => expanded, onExpandedChange}>
-    <summary class="cursor-pointer text-sm font-semibold"
-      >Syntax & examples</summary
+    <summary
+      class="flex cursor-pointer list-none items-center gap-1.5 text-sm font-semibold [&::-webkit-details-marker]:hidden"
     >
+      {#if expanded}
+        <ChevronDownIcon class="h-4 w-4 shrink-0" />
+      {:else}
+        <ChevronRightIcon class="h-4 w-4 shrink-0" />
+      {/if}
+      Syntax & examples
+    </summary>
     <div
       class="mt-5 grid gap-6 text-sm leading-relaxed text-slate-600 md:grid-cols-3 dark:text-slate-400"
     >
