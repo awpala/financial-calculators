@@ -7,11 +7,11 @@
 
 Financial Calculators is an application for ad hoc calculations and visualizations. Its initial main-branch baseline includes the application libraries and deployment configuration on which calculator features are developed. The repository is private, but the deployed content is intended for public access and contains no material requiring a site access gate. GitHub Pages is unavailable under this repository's current hosting constraints.
 
-The application has no external data service and prepares repository-owned content ahead of time. Its interactive presentation runs in the browser. A strict static build supplies readable initial HTML while keeping the production runtime small.
+The application has no external data service and prepares repository-owned content ahead of time. Its interactive presentation runs in the browser. A strict static build supplies complete initial HTML while keeping the production runtime small. The application shows its shell and loading indicator until browser-local calculator state is ready.
 
 ## Decision
 
-Use the SvelteKit static adapter with strict validation, SSR enabled, complete prerendering, directory indexes, and no SPA fallback. The single output directory is `build/`. The root layout exports `prerender = true` and `trailingSlash = 'always'`; the document catalog supplies entries for every local document, including nested and unlinked sources.
+Use the SvelteKit static adapter with strict validation, SSR enabled, complete prerendering, directory indexes, and no SPA fallback. The single output directory is `build/`. The root layout exports `prerender = true` and `trailingSlash = 'always'`; all current calculator and settings pages have static routes. The retained document catalog can supply complete entries for a future document consumer, but is not currently published.
 
 Deploy one Dockerfile application on Coolify at `https://fincalcs.portfolio-projects.dev`. Node 24 and Chromium prepare content in the builder stage; unprivileged Nginx serves only HTML, route data, and browser assets on internal port `8080`. Coolify owns TLS and proxy routing. Application runtime environment variables, persistent volumes, accounts, and sessions are unnecessary.
 
@@ -29,7 +29,7 @@ Nginx requires revalidation for HTML and route data so a release does not leave 
 
 Verify runs on pushes and pull requests. It checks types, lint, formatting, unit tests, shell syntax, and the ADR index. The Dockerfile performs the strict static build once, and deployment smoke checks exercise that image's entry page, assets, health, caching, and 404 behavior over HTTP. CI does not repeat the build on the host or make deployment checks depend on individual example features. CI consumes the project's concrete configuration directly.
 
-Coolify Auto Deploy listens for pushes to `main` through the repository's dedicated GitHub App. Preview deployments are disabled. Watch Paths select application code, public assets, production infrastructure, dependency/build configuration, and relevant CI tooling. Repository documentation and library READMEs do not trigger deployment; published Markdown under `src/content/docs/` does because it changes the built site. The ordered patterns and their verification procedure live in the [runbook](../runbooks/prod-deployment.md#selective-automatic-deployment).
+Coolify Auto Deploy listens for pushes to `main` through the repository's dedicated GitHub App. Preview deployments are disabled. Watch Paths select application code, public assets, production infrastructure, dependency/build configuration, and relevant CI tooling. Repository documentation and library READMEs do not trigger deployment; the retained Markdown catalog under `src/content/docs/` remains included in the source watch paths, even though current routes do not publish it. The ordered patterns and their verification procedure live in the [runbook](../runbooks/prod-deployment.md#selective-automatic-deployment).
 
 ```mermaid
 flowchart TD
@@ -55,4 +55,4 @@ An SPA fallback would conceal missing prerender entries and weaken readable init
 
 ## Operations and verification
 
-Use the [Coolify runbook](../runbooks/prod-deployment.md). Validate root and nested URLs, public route data, hashed assets, readable HTML without JavaScript, relative directory redirects, and true 404s. Published content changes require a rebuild. Local gates and image tests do not establish DNS, TLS, private Git-source access, remote Auto Deploy settings, or the deployed revision. Pause Auto Deploy during recovery, roll back through Coolify's retained deployment history, and repeat those checks.
+Use the [Coolify runbook](../runbooks/prod-deployment.md). Validate root and nested URLs, public route data, hashed assets, the static shell/loading indicator without JavaScript and initialized views after hydration, relative directory redirects, and true 404s. Published content changes require a rebuild. Local gates and image tests do not establish DNS, TLS, private Git-source access, remote Auto Deploy settings, or the deployed revision. Pause Auto Deploy during recovery, roll back through Coolify's retained deployment history, and repeat those checks.

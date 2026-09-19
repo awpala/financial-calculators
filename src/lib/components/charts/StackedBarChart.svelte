@@ -43,13 +43,15 @@ Renders caller-owned signed stacks as grouped SVG bars, with optional annotation
     margin?: Partial<ChartMargin>;
     /** Whether to display the series legend; defaults to true. */
     showLegend?: boolean;
+    /** Horizontal alignment of legend items below the chart; defaults to start. */
+    legendAlign?: 'start' | 'center';
     /** Inner spacing fraction between groups; defaults to 0.15. */
     groupPadding?: number;
     /** Spacing fraction between series bars in a group; defaults to 0.1. */
     barPadding?: number;
     /** Empty-state text; defaults to No data to display. */
     emptyMessage?: string;
-    /** Optional owner callback for a hovered segment; receives null on pointer leave. */
+    /** Optional owner callback on segment entry and pointer movement; receives null on pointer leave. */
     onSegmentHover?: (info: BarSegmentHoverInfo | null) => void;
     /** Optional zero-based group indices after which to draw separators; none by default. */
     separatorAfterGroupIndexes?: readonly number[];
@@ -132,6 +134,7 @@ Renders caller-owned signed stacks as grouped SVG bars, with optional annotation
     slantedXLabels = false,
     margin: marginOverride,
     showLegend = true,
+    legendAlign = 'start',
     groupPadding = 0.15,
     barPadding = 0.1,
     emptyMessage = 'No data to display.',
@@ -286,6 +289,18 @@ Renders caller-owned signed stacks as grouped SVG bars, with optional annotation
     return out;
   });
 
+  function reportHover(segment: ResolvedSegment, event: PointerEvent): void {
+    onSegmentHover?.({
+      seriesId: segment.seriesId,
+      seriesLabel: segment.seriesLabel,
+      groupLabel: segment.groupLabel,
+      segment: segment.segment,
+      color: segment.color,
+      clientX: event.clientX,
+      clientY: event.clientY,
+    });
+  }
+
   const zeroY = $derived(yScale(0));
   const zeroLineVisible = $derived(zeroY >= 0 && zeroY <= innerHeight);
 
@@ -389,7 +404,7 @@ Renders caller-owned signed stacks as grouped SVG bars, with optional annotation
 </script>
 
 <div
-  class="w-full text-slate-600 dark:text-slate-400"
+  class="w-full min-w-0 text-slate-600 dark:text-slate-400"
   bind:clientWidth={containerWidth}
 >
   {#if !hasData}
@@ -406,9 +421,10 @@ Renders caller-owned signed stacks as grouped SVG bars, with optional annotation
         ? `Stacked bar chart of ${yLabel}`
         : 'Stacked bar chart'}
       viewBox="0 0 {containerWidth} {height}"
-      width={containerWidth}
+      width="100%"
       {height}
-      class="block overflow-visible"
+      preserveAspectRatio="none"
+      class="block w-full overflow-visible"
     >
       <g transform="translate({margin.left},{margin.top})">
         {#each yTicks as t (t)}
@@ -547,16 +563,10 @@ Renders caller-owned signed stacks as grouped SVG bars, with optional annotation
               ? `${r.seriesLabel}, ${r.groupLabel}, ${r.segment.label}, ${formatY(r.segment.value)}`
               : undefined}
             onpointerenter={onSegmentHover
-              ? (e: PointerEvent) =>
-                  onSegmentHover({
-                    seriesId: r.seriesId,
-                    seriesLabel: r.seriesLabel,
-                    groupLabel: r.groupLabel,
-                    segment: r.segment,
-                    color: r.color,
-                    clientX: e.clientX,
-                    clientY: e.clientY,
-                  })
+              ? (event: PointerEvent) => reportHover(r, event)
+              : undefined}
+            onpointermove={onSegmentHover
+              ? (event: PointerEvent) => reportHover(r, event)
               : undefined}
             onpointerleave={onSegmentHover
               ? () => onSegmentHover(null)
@@ -626,7 +636,12 @@ Renders caller-owned signed stacks as grouped SVG bars, with optional annotation
     </svg>
 
     {#if showLegend}
-      <ul class="mt-0 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+      <ul
+        class={[
+          'mt-0 flex flex-wrap gap-x-4 gap-y-1 text-xs',
+          legendAlign === 'center' && 'justify-center',
+        ]}
+      >
         {#if legendItems && legendItems.length > 0}
           {#each legendItems as item (item.id)}
             <li class="flex items-center gap-1.5">

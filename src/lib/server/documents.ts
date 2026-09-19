@@ -1,8 +1,9 @@
 import { parse } from '#lib/markdown/parser.js';
 import { extractHeadings } from '#lib/markdown/headings.js';
 
-// Authored source stays in the server graph. One catalog drives both navigation
-// and prerendering, so adding an unlinked document cannot omit its static page.
+// Authored fixtures stay in the server graph. A document consumer can use this
+// same catalog for navigation and complete prerender entries; current calculator
+// routes do not publish it.
 const sources = import.meta.glob<string>('../../content/docs/**/*.md', {
   query: '?raw',
   import: 'default',
@@ -13,7 +14,7 @@ const sources = import.meta.glob<string>('../../content/docs/**/*.md', {
 export type DocumentSummary = {
   /** Relative document path without the markdown extension. */
   slug: string;
-  /** First heading, or the filename when a heading is absent. */
+  /** First heading, or the extensionless relative slug when a heading is absent. */
   title: string;
 };
 

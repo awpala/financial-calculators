@@ -3,12 +3,14 @@
 Displays an accessible on/off control. The owner supplies checked and handles requests to change it.
 -->
 <script lang="ts">
-  import type { Snippet } from 'svelte';
+  import { onMount, type Snippet } from 'svelte';
 
   /** Public inputs and callbacks for this component. */
   type Props = {
     /** Current on/off state supplied by the owner. */
     checked: boolean;
+    /** Visual treatment: default changes fill with checked; neutral keeps the fill steady; theme follows the document's dark class before hydration and requires its owner to align checked with that class. */
+    variant?: 'default' | 'neutral' | 'theme';
     /** Accessible name for the switch. */
     label: string;
     /** Whether interaction is disabled; defaults to false. */
@@ -25,6 +27,7 @@ Displays an accessible on/off control. The owner supplies checked and handles re
 
   let {
     checked,
+    variant = 'default',
     label,
     disabled = false,
     ariaKeyShortcuts,
@@ -32,6 +35,18 @@ Displays an accessible on/off control. The owner supplies checked and handles re
     content,
     children,
   }: Props = $props();
+
+  let animate = $state(false);
+  onMount(() => {
+    // Let mount-time preference restoration reach a rendered frame before
+    // enabling motion. Hidden route content still participates in CSS transitions.
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        animate = true;
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  });
 </script>
 
 <button
@@ -52,14 +67,24 @@ Displays an accessible on/off control. The owner supplies checked and handles re
   {#if content}{@render content()}{/if}
   <span
     class={[
-      'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200',
-      checked ? 'bg-slate-700' : 'bg-slate-300',
+      'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full',
+      animate && 'transition-colors duration-200',
+      variant === 'theme' || variant === 'neutral'
+        ? 'bg-slate-300 dark:bg-slate-700'
+        : checked
+          ? 'bg-slate-700'
+          : 'bg-slate-300',
     ]}
   >
     <span
       class={[
-        'pointer-events-none absolute top-0.5 inline-flex size-5 transform items-center justify-center rounded-full bg-white shadow transition-transform duration-200 ease-out',
-        checked ? 'translate-x-5.5' : 'translate-x-0.5',
+        'pointer-events-none absolute top-0.5 inline-flex size-5 transform items-center justify-center rounded-full bg-white shadow',
+        animate && 'transition-transform duration-200 ease-out',
+        variant === 'theme'
+          ? 'translate-x-0.5 dark:translate-x-5.5'
+          : checked
+            ? 'translate-x-5.5'
+            : 'translate-x-0.5',
       ]}
     >
       {#if children}{@render children()}{/if}

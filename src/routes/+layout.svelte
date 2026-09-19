@@ -1,11 +1,19 @@
 <!--
 @component
-Owns the responsive application shell, contextual rail, and theme state for one mounted layout.
+Owns the responsive application shell, view initialization, contextual rail, Settings return navigation, and theme state for one mounted layout.
 -->
 <script lang="ts">
   import { APP_NAME } from '#lib';
+  import {
+    CalculatorSettings,
+    setCalculatorSettings,
+  } from '#lib/settings/calculator-settings.svelte.js';
   import '../app.css';
-  import { onMount, type Snippet } from 'svelte';
+  import { onMount, tick, type Snippet } from 'svelte';
+  import { afterNavigate, goto, onNavigate } from '$app/navigation';
+  import { resolve } from '$app/paths';
+  import { navigating, page } from '$app/state';
+  import { isMainView, settingsDestination } from '#lib/navigation/settings.js';
   import { MediaQuery } from 'svelte/reactivity';
   import { online } from 'svelte/reactivity/window';
   import { slide } from 'svelte/transition';
@@ -19,6 +27,7 @@ Owns the responsive application shell, contextual rail, and theme state for one 
     RAIL_VISIBILITY_STORAGE_KEY,
   } from '#lib/state/rail-visibility.js';
   import { persisted } from '#lib/state/storage.svelte.js';
+  import { useKeyboard } from '#lib/hooks/useKeyboard.js';
   import {
     ThemeStore,
     detectInitialTheme,
@@ -37,14 +46,15 @@ Owns the responsive application shell, contextual rail, and theme state for one 
   // cell in a `.svelte.ts` file is one object shared by every request this Node
   // process serves, so one visitor's theme would become the next visitor's.
   const theme = setThemeContext(new ThemeStore(detectInitialTheme()));
+  setCalculatorSettings(new CalculatorSettings());
 
   // Keep the persistent contextual rail in tablet-sized editor and browser
   // panes; only phone widths move it into the on-demand drawer.
   const smallViewport = new MediaQuery('max-width: 767px', false);
   // Labeled primary navigation needs the width the title and the controls
-  // beside it leave only from the large breakpoint up; between that and phone
+  // beside it leave only from the extra-large breakpoint up; between that and phone
   // widths the entries show their icons, with their names as hover text.
-  const compactNavigation = new MediaQuery('max-width: 1023px', false);
+  const compactNavigation = new MediaQuery('max-width: 1279px', false);
 
   // Collapsing belongs to the sidebar itself, not to the route showing it: one
   // remembered state carries across every view that lends the shell a rail, so
@@ -53,14 +63,57 @@ Owns the responsive application shell, contextual rail, and theme state for one 
     RAIL_VISIBILITY_STORAGE_KEY,
     RAIL_OPEN_BY_DEFAULT,
   );
+  const settingsReturnView = persisted<unknown>('settings_return_view_v1', '/');
 
   let contextualRail = $state.raw<ContextualRail>();
   let desktopRailOpen = $state(normalizeRailOpen(railOpenStore.value));
   let contextDrawerOpen = $state(false);
   let hydrated = $state(false);
+  let viewReady = $state(false);
+  let revealFrame: number | undefined;
+  let revealGeneration = 0;
+  const viewLoading = $derived(
+    !viewReady ||
+      (navigating.to !== null &&
+        navigating.to.url.pathname !== navigating.from?.url.pathname),
+  );
+
+  function cancelViewReveal(): void {
+    revealGeneration += 1;
+    if (revealFrame !== undefined) cancelAnimationFrame(revealFrame);
+    revealFrame = undefined;
+  }
+
+  function revealView(): void {
+    cancelViewReveal();
+    const generation = revealGeneration;
+    // Mount-time storage restoration needs a DOM flush. Keep the content
+    // measurable for a full rendering cycle so ResizeObserver-backed chart
+    // dimensions have also settled before exposing the view.
+    void tick().then(() => {
+      if (generation !== revealGeneration) return;
+      revealFrame = requestAnimationFrame(() => {
+        revealFrame = requestAnimationFrame(() => {
+          revealFrame = undefined;
+          viewReady = true;
+        });
+      });
+    });
+  }
+
+  onNavigate(({ from, to }) => {
+    if (from?.url.pathname === to?.url.pathname) return;
+    cancelViewReveal();
+    viewReady = false;
+  });
+  afterNavigate(({ to }) => {
+    if (isMainView(to?.route.id)) settingsReturnView.value = to.route.id;
+    revealView();
+  });
 
   onMount(() => {
     hydrated = true;
+    return cancelViewReveal;
   });
 
   const contextMenuLabel = $derived(
@@ -95,6 +148,33 @@ Owns the responsive application shell, contextual rail, and theme state for one 
     railOpenStore.value = desktopRailOpen;
   }
 
+  useKeyboard((event) => {
+    if (
+      event.shiftKey &&
+      !event.ctrlKey &&
+      !event.altKey &&
+      !event.metaKey &&
+      (event.code === 'KeyS' || event.key.toLowerCase() === 's')
+    ) {
+      event.preventDefault();
+      void goto(
+        resolve(settingsDestination(page.route.id, settingsReturnView.value)),
+      );
+      return;
+    }
+    if (
+      contextualRail &&
+      event.shiftKey &&
+      !event.ctrlKey &&
+      !event.altKey &&
+      !event.metaKey &&
+      (event.code === 'KeyR' || event.key.toLowerCase() === 'r')
+    ) {
+      event.preventDefault();
+      toggleContextMenu();
+    }
+  });
+
   setShellContext({
     registerContextualRail(rail) {
       contextualRail = rail;
@@ -124,7 +204,10 @@ Owns the responsive application shell, contextual rail, and theme state for one 
 
 <svelte:head>
   <title>{APP_NAME}</title>
-  <meta name="description" content={`Application shell for ${APP_NAME}.`} />
+  <meta
+    name="description"
+    content="Work through everyday calculations, explore loan payments, and estimate take-home income."
+  />
 </svelte:head>
 
 {#snippet railBody()}
@@ -161,26 +244,38 @@ Owns the responsive application shell, contextual rail, and theme state for one 
     compactNavigation={compactNavigation.current}
   />
 
-  <div class="flex flex-1 overflow-hidden">
-    {#if contextualRail && !smallViewport.current && desktopRailOpen}
-      <div
-        class="h-full shrink-0"
-        transition:slide={{ axis: 'x', duration: 200 }}
+  <div class="relative flex min-h-0 flex-1 overflow-hidden">
+    <div
+      class={['flex min-h-0 min-w-0 flex-1', viewLoading && 'invisible']}
+      inert={viewLoading}
+      aria-hidden={viewLoading}
+    >
+      {#if contextualRail && !smallViewport.current && desktopRailOpen}
+        <div
+          class="h-full shrink-0"
+          transition:slide={{ axis: 'x', duration: viewLoading ? 0 : 200 }}
+        >
+          <Sidebar>{@render railBody()}</Sidebar>
+        </div>
+      {/if}
+
+      <main
+        id="main-content"
+        tabindex="-1"
+        aria-busy={viewLoading}
+        class="min-w-0 flex-1 overflow-auto p-6"
       >
-        <Sidebar>{@render railBody()}</Sidebar>
+        {@render children()}
+      </main>
+    </div>
+    {#if viewLoading}
+      <div class="absolute inset-0 grid place-items-center p-6">
+        <Spinner label="Loading view" />
       </div>
     {/if}
-
-    <main
-      id="main-content"
-      tabindex="-1"
-      class="min-w-0 flex-1 overflow-auto p-6"
-    >
-      {@render children()}
-    </main>
   </div>
 
-  {#if contextualRail && smallViewport.current && contextDrawerOpen}
+  {#if contextualRail && smallViewport.current && contextDrawerOpen && !viewLoading}
     <div class="fixed inset-x-0 top-14 bottom-0 z-40 md:hidden">
       <button
         type="button"

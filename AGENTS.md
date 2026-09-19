@@ -2,7 +2,7 @@
 
 Guidance for AI coding agents working in this repository. Compatible with the [agents.md](https://agents.md/) convention. `CLAUDE.md` is a relative symlink to this canonical entry point; edit `AGENTS.md`, never replace the link with a second instruction document.
 
-**Financial Calculators** is a public static application for ad hoc financial calculations and visualizations. Its reusable UI, document libraries, and example routes form the development baseline for calculator features. Preserve library contracts and limit domain changes to the assigned task. Current scope and service boundaries live in [project scope](docs/agents/project.md).
+**Financial Calculators** is a public static application for ad hoc financial calculations and visualizations. Its reusable UI, document libraries, calculator routes, and settings establish the current application baseline. Preserve library contracts and limit domain changes to the assigned task. Current scope and service boundaries live in [project scope](docs/agents/project.md).
 
 ## Load guidance for the current task
 

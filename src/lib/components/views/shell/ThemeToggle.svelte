@@ -1,6 +1,6 @@
 <!--
 @component
-Toggles the ThemeStore installed by the nearest ancestor from its switch or Shift+T outside editable fields. Takes no props and keeps theme state in that context.
+Toggles the ThemeStore installed by the nearest ancestor from its switch or Shift+T outside editable fields. Its appearance follows the pre-paint document theme, while interactive state stays in context. Takes no props.
 -->
 <script lang="ts">
   import HoverText from '#lib/components/behaviors/HoverText.svelte';
@@ -34,27 +34,21 @@ Toggles the ThemeStore installed by the nearest ancestor from its switch or Shif
 </script>
 
 {#snippet themeHint()}
-  <span>Change UI theme</span>
-  <span class="ml-1 inline-flex items-center gap-1">
-    <span aria-hidden="true">(toggle via</span>
-    <span class="sr-only"> (toggle via </span>
+  <span class="inline-flex items-center gap-2">
+    <span>Change UI theme</span>
     <KeypressPrompt key={THEME_TOGGLE_SHORTCUT_LABEL} showOnSmall />
-    <span aria-hidden="true">)</span>
-    <span class="sr-only">)</span>
   </span>
 {/snippet}
 
-<HoverText text="Change UI theme (toggle via Shift T)" content={themeHint}>
+<HoverText text="Change UI theme · Shift T" content={themeHint}>
   <Switch
+    variant="theme"
     checked={isDark}
     label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
     ariaKeyShortcuts={THEME_TOGGLE_KEYSHORTCUTS}
     onChange={() => theme.toggle()}
   >
-    {#if isDark}
-      <MoonIcon class="size-3 text-slate-700" />
-    {:else}
-      <SunIcon class="size-3 text-amber-500" />
-    {/if}
+    <MoonIcon class="hidden size-3 text-slate-700 dark:block" />
+    <SunIcon class="size-3 text-amber-500 dark:hidden" />
   </Switch>
 </HoverText>

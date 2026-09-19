@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { formatFixed, formatInteger } from '#lib/text/format.js';
+import {
+  formatCurrencyUSD,
+  formatFixed,
+  formatInteger,
+} from '#lib/text/format.js';
 
 describe('number formatting', () => {
+  it('shares explicit USD cents and grouping across financial summaries', () => {
+    expect(formatCurrencyUSD(125000)).toBe('$125,000.00');
+    expect(formatCurrencyUSD(4659.375)).toBe('$4,659.38');
+    expect(formatCurrencyUSD(-12.5)).toBe('-$12.50');
+  });
   it('formats fixed-point decimals', () => {
     expect(formatFixed(12.345, 1)).toBe('12.3');
     expect(formatFixed(12.3, 2)).toBe('12.30');

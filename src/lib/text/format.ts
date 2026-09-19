@@ -1,3 +1,13 @@
+const usd = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+});
+
+/** Format caller-validated finite USD amounts with en-US grouping and two decimal places. */
+export function formatCurrencyUSD(value: number): string {
+  return usd.format(value);
+}
+
 /**
  * Format a finite number with fixed decimals, or '0' for non-finite values.
  * Precision is floored and clamped to zero; native toFixed still rejects values

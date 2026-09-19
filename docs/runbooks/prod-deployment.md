@@ -114,7 +114,7 @@ src/content/docs/**
 4. Select **Save** on the Coolify page.
 5. Reload the page and confirm that the full list remains in **Watch Paths**, including the final two lines.
 
-These patterns select application code, public assets, production infrastructure, dependencies, build configuration, and relevant CI tooling. Repository documentation, library READMEs, agent instructions, and unrelated editor/devcontainer settings do not select a deployment. The final line restores published Markdown under `src/content/docs/`: those files become site pages and must rebuild when their content changes. Add a pattern here when a new build input is introduced outside the selected paths.
+These patterns select application code, public assets, production infrastructure, dependencies, build configuration, and relevant CI tooling. Repository documentation, library READMEs, agent instructions, and unrelated editor/devcontainer settings do not select a deployment. The final line includes the retained local markdown catalog under `src/content/docs/` if a document consumer is added; the current calculator routes do not publish that catalog. Add a pattern here when a new build input is introduced outside the selected paths.
 
 [Coolify's Watch Paths rules](https://coolify.io/docs/applications/deployments/automatic-deployments#limit-deployments-by-changed-paths) use ordered matching; the last matching pattern wins. Saving this Markdown file does not apply the patterns to Coolify. Manual deployments and authenticated deployment requests bypass Watch Paths.
 
@@ -174,9 +174,12 @@ In the **devcontainer terminal**, run each command below. Keep certificate valid
 ```sh
 curl --connect-timeout 10 --max-time 30 -i https://fincalcs.portfolio-projects.dev/healthz
 curl --connect-timeout 10 --max-time 30 -i https://fincalcs.portfolio-projects.dev/
-curl --connect-timeout 10 --max-time 30 -i https://fincalcs.portfolio-projects.dev/docs/guides/deployment/
-curl --connect-timeout 10 --max-time 30 -i https://fincalcs.portfolio-projects.dev/docs/getting-started/__data.json
-curl --connect-timeout 10 --max-time 30 -I https://fincalcs.portfolio-projects.dev/docs/guides/deployment
+curl --connect-timeout 10 --max-time 30 -i https://fincalcs.portfolio-projects.dev/amortization/
+curl --connect-timeout 10 --max-time 30 -i https://fincalcs.portfolio-projects.dev/scratchpad/
+curl --connect-timeout 10 --max-time 30 -i https://fincalcs.portfolio-projects.dev/cashflow/
+curl --connect-timeout 10 --max-time 30 -i https://fincalcs.portfolio-projects.dev/settings/
+curl --connect-timeout 10 --max-time 30 -i https://fincalcs.portfolio-projects.dev/settings/cashflow/
+curl --connect-timeout 10 --max-time 30 -I https://fincalcs.portfolio-projects.dev/amortization
 curl --connect-timeout 10 --max-time 30 -i https://fincalcs.portfolio-projects.dev/missing-page/
 ```
 
@@ -185,16 +188,18 @@ Match the responses to this table:
 | Request | Required result |
 | --- | --- |
 | `/healthz` | HTTP `200`, body `ok`, valid certificate for this hostname |
-| `/` and `/docs/guides/deployment/` | HTTP `200`, readable HTML with page content, no login redirect or authentication cookie |
-| `/docs/getting-started/__data.json` | HTTP `200`, public JSON route data, `Cache-Control: no-cache` |
-| `/docs/guides/deployment` without trailing slash | HTTP `301`, `Location: /docs/guides/deployment/`; no internal hostname, port, or HTTP origin |
+| `/` and `/amortization/` | HTTP `200`, readable HTML with page content, no login redirect or authentication cookie |
+| `/scratchpad/` | HTTP `200`, public Scratchpad HTML, `Cache-Control: no-cache` |
+| `/cashflow/` | HTTP `200`, public Cashflow HTML, `Cache-Control: no-cache` |
+| `/settings/` and `/settings/cashflow/` | HTTP `200`, the corresponding settings tab HTML, `Cache-Control: no-cache` |
+| `/amortization` without trailing slash | HTTP `301`, `Location: /amortization/`; no internal hostname, port, or HTTP origin |
 | `/missing-page/` | HTTP `404`, authored “Page not found” response |
 
-Then open `https://fincalcs.portfolio-projects.dev/docs/guides/deployment/` in a **clean browser profile**:
+Then open `https://fincalcs.portfolio-projects.dev/amortization/` in a **clean browser profile**:
 
 1. Refresh that nested URL directly, then navigate through the application.
 2. Use the browser's developer tools **Network** tab to confirm page HTML and route data have `Cache-Control: no-cache`, and a requested `/_app/immutable/` asset has `Cache-Control: public, max-age=31536000, immutable`.
-3. Disable JavaScript and reload: the page remains readable. Re-enable JavaScript afterward. Feature-specific rendering and interaction checks belong to application validation when those features change.
+3. Disable JavaScript and reload: the static shell and loading indicator render, while the calculator stays hidden until JavaScript initializes its browser-local state. Re-enable JavaScript and reload; the indicator must clear and the view must become interactive. Feature-specific rendering and interaction checks belong to application validation when those features change.
 
 **Expected result:** healthy Nginx, successful Verify for the deployed revision, valid public HTTPS, working direct navigation, correct caches, and a real 404. Record the commit SHA, Coolify deployment ID, and these check results together.
 
@@ -211,7 +216,7 @@ Use the next ordinary intended changes; do not create throwaway commits just to 
 | --- | --- |
 | Only `README.md`, `docs/**`, library READMEs, or agent instructions on `main` | No |
 | Only unrelated editor/devcontainer settings on `main` | No |
-| Application code under `src/`, public assets, or published `src/content/docs/**/*.md` on `main` | Yes |
+| Application code under `src/`, public assets, or the retained `src/content/docs/**/*.md` catalog on `main` | Yes |
 | Dockerfile, Nginx configuration, dependencies, build settings, or the selected CI tooling on `main` | Yes |
 | Documentation plus any selected implementation file on `main` | Yes |
 | Any change on another branch, with preview deployments disabled | No |
@@ -244,9 +249,9 @@ Coolify's [rollback procedure](https://coolify.io/docs/applications/deployments/
 
 ## Deployment behavior behind this recipe
 
-The [Dockerfile](../../Dockerfile) installs Node 24, Chromium, fonts, and locked npm dependencies in its builder stage. It prerenders the application, including document transforms, and copies only `build/` into an unprivileged Nginx image. Node and Chromium are absent from the serving stage. The Docker context excludes local environment files, references, logs, generated output, editor state, and agent configuration.
+The [Dockerfile](../../Dockerfile) installs Node 24, Chromium, fonts, and locked npm dependencies in its builder stage. It prerenders the application, running document transforms only if a route consumes them, and copies only `build/` into an unprivileged Nginx image. Node and Chromium are absent from the serving stage. The Docker context excludes local environment files, references, logs, generated output, editor state, and agent configuration.
 
-All deployed pages, route data, and browser assets are public. The private GitHub repository controls source access; visitors need no account or password. The prototype has no API, database, or session store. Browser preferences stay local. Published content changes require a rebuild. Nginx serves directory indexes rather than an SPA fallback; HTML and route data require revalidation, while content-hashed assets use a year-long immutable cache policy.
+All deployed pages, route data, and browser assets are public. The private GitHub repository controls source access; visitors need no account or password. The application has no runtime data API, database, or session store. Browser preferences stay local. Published content changes require a rebuild. Nginx serves directory indexes rather than an SPA fallback; HTML and route data require revalidation, while content-hashed assets use a year-long immutable cache policy.
 
 [Verify](../../.github/workflows/verify.yml) runs on pushes and pull requests, including documentation-only changes. It checks types, lint, formatting, unit tests, production-image HTTP behavior, shell syntax, and the ADR index. The Dockerfile installs Chromium and performs the strict static build once; CI does not repeat that build on the host. Deployment smoke checks cover packaging and serving, independently of application feature tests. The image-test script owns and removes its disposable container and image. Local checks, CI, and successful source checkout each establish different facts; none alone proves the public site's TLS, routing, health, or deployed revision.
 

@@ -1,17 +1,17 @@
 # Getting started
 
-Financial Calculators combines a responsive application shell with reusable controls, charts, and a rich markdown renderer. Calculator features will build on this foundation.
+Financial Calculators combines a responsive application shell with reusable controls, charts, and a rich markdown renderer. Home links to Scratchpad, Amortization, and Cashflow, which build on this foundation; Settings manages the financial calculators’ Reset presets. This retained document is a library fixture, not a published application route.
 
 ## Application foundation
 
-The examples demonstrate the existing library for future calculator work. Components own presentation, routes own their data, and context scopes interactive state to its component tree.
+The calculators compose the existing libraries. Components own presentation, routes own their data, and context scopes interactive state to its component tree.
 
 > [!TIP]
-> The theme toggle remembers your choice across visits. Each document also lends its table of contents to the shell's contextual rail.
+> The theme toggle remembers your choice across visits. A document consumer can also lend its table of contents to the shell's contextual rail.
 
 ## Local documents
 
-Markdown files under `src/content/docs/` become pages. A nested file such as `guides/deployment.md` becomes `/docs/guides/deployment/`.
+Markdown files under `src/content/docs/` are retained catalog fixtures. A future document route can map a nested file such as `guides/deployment.md` to a nested slug and enumerate the catalog for prerendering.
 
 ```typescript
 const doc = parse(source);
@@ -41,4 +41,4 @@ flowchart LR
 | Views | Application composition |
 | State | Preferences and owned lifetimes |
 
-See the [deployment guide](../guides/deployment/) for the public static hosting model.
+See the [deployment guide](guides/deployment.md) for the public static hosting model.

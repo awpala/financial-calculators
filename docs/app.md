@@ -12,17 +12,23 @@ On wider screens the primary navigation is positioned around the header's center
 
 A route registers a rail with its label, content snippet, and optional readiness getter. The shell can reserve its geometry immediately and show a spinner until the content is ready. Registration returns a release function, which belongs to the route's teardown. The release checks its registration identity so an old route cannot clear a newly registered rail.
 
-Desktop rail visibility persists as one browser preference across routes. The phone drawer's open state is transient, closes when the viewport widens, and is cleared when its active registration is released. A route owns its data and readiness, not the shell's DOM.
+Shift R toggles the current route’s rail outside text fields and open dialogs; without a registered rail it does nothing. The root layout owns the filtered keyboard registration and releases it on teardown. Desktop rail visibility persists as one browser preference across routes. The phone drawer's open state is transient, closes when the viewport widens, and is cleared when its active registration is released. A route owns its data and readiness, not the shell's DOM.
 
 ### What actually renders on the server
 
-SSR renders the complete shell and page content. Public builds save this HTML to directory indexes, so documents remain readable without JavaScript. There is no mount-only spinner hiding page content. Context-owned theme and route state still initialize per render; removing a mount gate never makes module-global interactive state safe.
+SSR renders the complete shell and page content into static directory indexes. A loading spinner covers the view until hydration, local-state restoration, and a rendering cycle for chart dimensions finish. The hidden view remains laid out and inert so it can initialize and measure itself without flashing default values or accepting premature input. Client navigation uses the same boundary, with pending animation frames canceled on replacement or teardown. Context-owned theme and route state initialize per render; the visibility gate does not make module-global interactive state safe.
 
 The shell uses the reactive online value to show an offline status banner after hydration. That banner does not provide an offline application: there is no service worker, document download manager, or offline mutation queue in this application.
 
-## Documents and public output
+## Calculators and public output
 
-The local catalog provides summaries and exact source lookups. The document loader parses a fresh AST, renders Mermaid, highlights code, and extracts headings. It exports entries for every slug so static builds include nested and unlinked content. A route registers the resulting headings as a contextual rail and releases it on unmount.
+Home links to three full-page routes in navigation order: Scratchpad, Amortization, and Cashflow. Amortization owns editable loan assumptions and composes monthly-payment and lifetime summaries with a stacked principal/interest chart. Its contextual-rail resolution control groups the same monthly schedule by year, quarter, or month for both the chart and table. [The model](../src/lib/amortization/README.md) owns input validation and calculation; the generic chart remains independent of loan policy.
+
+Scratchpad owns a [calculator controller](../src/lib/calculator/README.md) that parses on input, evaluates on request, clears stale results on edits, and restores browser-local source and its paired calculation. The editor sits beside result and bindings panels on desktop and above them on mobile. The route owns keyboard registration and releases it on navigation. No dropdown, pin, account context, or server state is needed.
+
+Cashflow adapts the reference annual/hourly income calculator. A [pure model](../src/lib/cashflow/README.md) annualizes hourly work, applies the supplied effective tax rate to gross income, subtracts annual contributions and deductions, and floors net income at zero. The route presents monthly take-home pay beside a signed balance sheet with its own remembered Annual/Monthly display choice, with browser-local inputs and Clear/Reset controls.
+
+`/examples/` and `/docs/` are no longer routes. The reusable document pipeline remains available: the local catalog provides summaries and exact source lookups, and consumers can prepare a fresh AST, render Mermaid, highlight code, and extract headings. A document route would enumerate every catalog slug for prerendering and register headings as a contextual rail with teardown.
 
 ```mermaid
 flowchart LR
@@ -32,9 +38,7 @@ flowchart LR
   HEADINGS --> RAIL[Contextual table of contents]
 ```
 
-Builds execute the loader while prerendering, publishing prepared HTML and route data. The deployed Nginx image serves those public files; loaders execute on the server only during builds and local development.
-
-The examples route uses only in-memory state. It demonstrates filtering, whole-array replacement, fields, a confirmation dialog, and a chart. Replacing the example domain does not require modifying generic elements, charts, or the parser.
+This is the retained library pipeline, not a current calculator route. Its transforms run only when invoked during a build or development render; the public Nginx image serves static output. Browser-local working copies and presets live in context-owned persisted cells; routes adopt working values on mount, and route-specific display preferences are restored there. These values never enter prerendered output.
 
 ## Shared modules and their contracts
 
@@ -42,6 +46,10 @@ Each module is organized around a responsibility that survives changes to its im
 
 | Module                                         | Responsibility                                                                  |
 | ---------------------------------------------- | ------------------------------------------------------------------------------- |
+| [calculator/](../src/lib/calculator/README.md) | Scratchpad language, parsing, evaluation, highlighting, and calculation persistence |
+| [amortization/](../src/lib/amortization/README.md) | Validated fixed-rate schedules and period aggregation |
+| [cashflow/](../src/lib/cashflow/README.md) | Annual/hourly income conversion and take-home-pay estimates |
+| [settings/](../src/lib/settings/README.md) | Root-owned financial working copies, independent Reset presets, and reset scope |
 | [components/](../src/lib/components/README.md)    | Shared presentation and reusable interaction composition                        |
 | [charts/](../src/lib/components/charts/README.md) | Numeric visual encodings and their drawing/interaction contracts                |
 | [markdown/](../src/lib/markdown/README.md)        | Structured document syntax, interpretation, and rendering                       |
@@ -56,7 +64,7 @@ Each module is organized around a responsibility that survives changes to its im
 | [filters/](../src/lib/filters/README.md)          | Reusable selection, membership and admission policy                             |
 | [hooks/](../src/lib/hooks/README.md)              | Component-owned integrations with external browser behavior                     |
 
-The component hierarchy follows responsibility: elements own controls and surfaces, behaviors own reusable interaction, layouts own geometry, and views compose a coherent interface. Routes and controllers own route I/O and policy. A control can own password visibility without becoming a domain view; a long cohesive component does not need a wrapper merely to reduce file length.
+The component hierarchy follows responsibility: elements own controls and surfaces, behaviors own reusable interaction, layouts own geometry, and views compose a coherent interface. Routes and controllers own route I/O and policy. Calculator routes read as compositions of named sections under `components/views/<feature>/`, while domain-independent patterns such as `RoutingCard`, `InputCard`, `InfoNote`, and `OptionSwitch` live in the reusable element layer. Cross-cutting extraction preserves this dependency direction rather than making a generic control depend on a financial model. A control can own password visibility without becoming a domain view; a long cohesive component does not need a wrapper merely to reduce file length.
 
 Shared field/surface classes remain beside the components whose native roots or geometry require them. Routes compose components instead of importing styling constants. Native dialog behavior, async confirmation failures, viewport-positioned hover text, file-picker/drop mechanics, and swim-lane ordering have detailed contracts in the component guide; they are reusable lessons rather than hidden route implementation details.
 
@@ -106,11 +114,11 @@ TypeScript remains on major 6 while the installed lint/check toolchain supports 
 
 A module-level mutable cell has one instance for every request in a Node process. The same source in the browser belongs to one loaded page. Keep that process lifetime separate from component-owned interaction and browser-local preferences. Keep getters pure, create route state inside its component tree, and guard browser-global registration outside effects. Effects themselves do not run during SSR.
 
-`LatestRequests` gives each view independent request scopes and predicates that reject superseded or destroyed results; the owner still checks those predicates before committing asynchronous state. The scroll attachment owns element/window listeners, an optional resize observer, debounced storage writes, and teardown flushing. It remembers a user/content/region-specific vertical offset without moving page ancestors or overwriting it during a temporary non-scrolling responsive layout. Neither helper is installed globally or forced into the example route merely to demonstrate a caller.
+`LatestRequests` gives each view independent request scopes and predicates that reject superseded or destroyed results; the owner still checks those predicates before committing asynchronous state. The scroll attachment owns element/window listeners, an optional resize observer, debounced storage writes, and teardown flushing. It remembers a user/content/region-specific vertical offset without moving page ancestors or overwriting it during a temporary non-scrolling responsive layout. Neither helper is installed globally or forced into a calculator route merely to demonstrate a caller.
 
 The portable leaf helpers retain their own policies: downloads own delayed Blob-URL release, strict UTC parsing validates calendar days, local timestamp display preserves invalid source text, and fuzzy search returns false for empty token arrays. Their standalone guides document edge cases rather than hiding them behind one generic utility namespace. Date/time helpers and text helpers remain separate responsibilities.
 
-Theme has three parts: the class-based dark variant in [app.css](../src/app.css), the pre-paint inline script in [app.html](../src/app.html), and a context-owned `ThemeStore` initialized from the document class. The early script prevents a flash before the component tree exists; the store and layout effect maintain later changes. It is a browser preference, not a credential or server session property.
+Theme has three parts: the class-based dark variant in [app.css](../src/app.css), the pre-paint inline script in [app.html](../src/app.html), and a context-owned `ThemeStore` initialized from the document class. The early script prevents a flash before the component tree exists; the store and layout effect maintain later changes. The theme switch’s track, thumb, and icons follow that document class before hydration so its initial position already matches the selected theme. It is a browser preference, not a credential or server session property.
 
 | Acquired resource                       | Matching release                                       |
 | --------------------------------------- | ------------------------------------------------------ |
@@ -149,3 +157,7 @@ Route data stays above presentation, server integrations stay outside the browse
 Run `npm run check`, `npm run lint`, `npm run format:check`, `npm run test`, and `npm run build` from the root. Also run `npm run test:deployment` after the static build when changing routes, adapters, environment, or deployment configuration. `npm run verify` includes the build and artifact tests. `npm run test:container` requires Docker and exercises the production Nginx image; CI runs it after the application gates. `npm run test:coverage` reports V8 coverage without claiming complete browser integration. The tests retain parser, safety, storage, request lifetime, chart hover, popup ownership, MathJax loading, and Mermaid lifecycle coverage.
 
 The [root README](../README.md#run-and-validate) owns development setup and command usage. The [Coolify runbook](runbooks/prod-deployment.md) covers production configuration, verification, and recovery. Exercise cold dev rendering, navigation, both themes, mobile rails, and any changed interaction in a browser; static analysis alone does not prove focus behavior or cleanup.
+
+## Calculator settings
+
+The gear immediately left of the theme toggle opens `/settings/` (Amortization), with a Cashflow tab at `/settings/cashflow/`. Shift S toggles Settings and the last main view, retaining that destination across settings-tab changes and reloads. [The settings controller](../src/lib/settings/README.md) keeps explicit saved presets separate from working inputs. Saving defaults affects the next Reset; a confirmed Global reset applies both saved presets while preserving Scratchpad, theme, tooltip visibility, and rail preferences. Shared bindable field components keep calculator and settings input semantics aligned. Home is the single place that explains browser-local persistence. `InfoNote` pairs reusable explanatory copy with an Info icon. In-card notes use the card width; Cashflow’s longer page-level note uses a centered width-limited container with left-aligned text.

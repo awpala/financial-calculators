@@ -10,7 +10,7 @@ The reference document renderer developed an authored-document dialect beyond ba
 
 The application preserves that library and the lessons that shaped it. Reducing the documentation to “parse markdown, render a component” would discard the syntax contracts, traversal rules, lifecycle boundaries, and performance decisions a new application would otherwise have to discover again.
 
-The central boundary is between content acquisition, parsing, enrichment, and presentation. The example loads local markdown, but the parser does not know about the catalog, routes, or hosting platform. A different source should supply text to the same pipeline without importing the example application's domain into the library.
+The central boundary is between content acquisition, parsing, enrichment, and presentation. The retained catalog supplies local markdown to a consumer, but the parser does not know about the catalog, routes, or hosting platform. A different source should supply text to the same pipeline without importing the example application's domain into the library.
 
 Earlier performance work also established a methodological lesson: measure the pipeline before adding another service. In the reference application, parsing already ran on the server, while source fetching, client highlighter downloads, and diagram rendering cost much more. Its measured timings belong to that workload and are not application benchmarks. The architectural response—keep parsing local, move heavy enrichment off the client, and bound expensive work—travels without those numbers.
 
@@ -31,9 +31,9 @@ flowchart LR
   RENDER --> INTERACT["Math, tables, popups, clipboard"]
 ```
 
-The example route's order is parse, render Mermaid, highlight remaining code blocks, then extract headings. The transforms mutate the supplied document and resolve to `void`; they do not return a replacement document. That AST belongs to the current load. Await enrichment before returning page data, and do not accidentally assign `undefined` by treating a transform as a builder.
+The supported consumer pipeline is parse, render Mermaid, highlight remaining code blocks, then extract headings. The transforms mutate the supplied document and resolve to `void`; they do not return a replacement document. That AST belongs to the current load. Await enrichment before returning page data, and do not accidentally assign `undefined` by treating a transform as a builder.
 
-The renderer participates in SSR, and the application shell renders route children during prerendering. Published HTML contains the article before JavaScript loads; hydration attaches browser enhancements afterward. Changes to shell rendering must still review viewport, persisted-state, and first-paint behavior as well as the content pipeline. Artifact tests verify readable article markup rather than inferring it from server-side parsing alone.
+The renderer supports SSR, so a consuming document route can include its article in prerendered HTML and attach enhancements during hydration. Current calculator routes do not publish documents or exercise this optional renderer. Their shell renders route children but keeps them hidden behind an initialization indicator until browser-local state settles. Changes to shell rendering must review viewport, persisted-state, and first-paint behavior as well as any future document pipeline. Current artifact tests check the entry page, assets, health marker, and error page; they do not establish rendered article behavior.
 
 The [markdown README](../../src/lib/markdown/README.md) is the standalone dialect and integration reference. This decision explains why the boundaries exist, what they preserve, and what an extension must maintain.
 
@@ -159,10 +159,10 @@ Several useful patterns remain extension options rather than existing applicatio
 
 | Pattern                         | Lesson to retain                                                                                                          | Application status                                                   |
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Whole-document render cache     | Key by stable content revision and renderer/configuration version; coalesce promises and evict failures                   | Not implemented; the example transforms a fresh AST on each load |
+| Whole-document render cache     | Key by stable content revision and renderer/configuration version; coalesce promises and evict failures                   | Not implemented; a consumer prepares a fresh AST on each load |
 | Source caching                  | Source identity and authorization must be established before serving cached content                                       | No remote document-source subsystem                              |
 | Asset streaming and coalescing  | Stream the leader where useful, share in-flight fetches, bound retained bodies, separate versioned and unversioned expiry | No content asset proxy                                           |
-| Per-stage `Server-Timing`       | Expose where time is spent before selecting an optimization                                                               | Not emitted by the example route                                 |
+| Per-stage `Server-Timing`       | Expose where time is spent before selecting an optimization                                                               | Not emitted by current routes                                 |
 | Offline document storage        | Invalidation must include application rendering changes as well as source changes                                         | No offline document manager or service worker                    |
 | SVG reuse and bounded rendering | Cache immutable content-derived results and limit expensive work across requests                                          | Implemented in the server rendering modules                      |
 
@@ -200,4 +200,4 @@ The cost is coordinated evolution: an AST change can touch several consumers, Ch
 - [Mermaid document transform](../../src/lib/server/mermaid-document.ts)
 - [Mermaid browser and cache ownership](../../src/lib/server/mermaid-cli.ts)
 - [HTML-table sanitization](../../src/lib/markdown/parsers/html-safety.ts)
-- [Example server load](../../src/routes/docs/[...slug]/+page.server.ts)
+- [Server integration and consumer pipeline](../../src/lib/server/README.md)
