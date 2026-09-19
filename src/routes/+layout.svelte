@@ -64,6 +64,9 @@ Owns the responsive application shell, view initialization, contextual rail, Set
     RAIL_OPEN_BY_DEFAULT,
   );
   const settingsReturnView = persisted<unknown>('settings_return_view_v1', '/');
+  const settingsHref = $derived(
+    resolve(settingsDestination(page.route.id, settingsReturnView.value)),
+  );
 
   let contextualRail = $state.raw<ContextualRail>();
   let desktopRailOpen = $state(normalizeRailOpen(railOpenStore.value));
@@ -242,6 +245,7 @@ Owns the responsive application shell, view initialization, contextual rail, Set
     onContextMenuToggle={toggleContextMenu}
     smallViewport={smallViewport.current}
     compactNavigation={compactNavigation.current}
+    {settingsHref}
   />
 
   <div class="relative flex min-h-0 flex-1 overflow-hidden">

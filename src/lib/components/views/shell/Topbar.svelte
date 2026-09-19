@@ -47,6 +47,12 @@ Displays primary navigation, the contextual rail toggle, the Settings entry, and
      * case on a small viewport.
      */
     compactNavigation?: boolean;
+    /**
+     * Destination for the Settings entry: `/settings` from a main view, or the
+     * saved return view when already on a Settings tab, mirroring the Shift+S
+     * shortcut's toggle behavior.
+     */
+    settingsHref: string;
   };
 
   let {
@@ -55,6 +61,7 @@ Displays primary navigation, the contextual rail toggle, the Settings entry, and
     onContextMenuToggle,
     smallViewport,
     compactNavigation = false,
+    settingsHref,
   }: Props = $props();
 
   const entries: NavEntry[] = [
@@ -129,7 +136,7 @@ Displays primary navigation, the contextual rail toggle, the Settings entry, and
         >
       {/snippet}
       <a
-        href={resolve('/settings')}
+        href={settingsHref}
         aria-label="Settings"
         aria-keyshortcuts="Shift+S"
         aria-current={page.route.id?.startsWith('/settings')
