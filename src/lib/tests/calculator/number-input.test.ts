@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   formatNumberInput,
+  numberFieldIssues,
   parseNumberInput,
+  parsePercentInput,
 } from '#lib/calculator/presentation/number-input.js';
 import { parseProgram } from '#lib/calculator/parsers/program-parser.js';
 import { evaluateProgram } from '#lib/calculator/language/evaluate.js';
@@ -36,6 +38,9 @@ describe('numeric form inputs', () => {
     '1,,000',
     '1__000',
     '1kg',
+    '1km',
+    '1MK',
+    '1.5kb',
     '1k2',
     '12x',
     '1 2',
@@ -67,5 +72,45 @@ describe('numeric form inputs', () => {
       expect(text).not.toContain('e');
       expect(parseNumberInput(text)).toBe(value);
     },
+  );
+
+  it('reports present but unreadable fields in the order given, leaving blanks out', () => {
+    const inputs = {
+      a: '$10km',
+      b: '',
+      c: '  ',
+      d: '-5',
+      e: '12x',
+      f: '$1.5k',
+      g: '0.5k',
+      h: '100',
+    };
+    expect(
+      numberFieldIssues(
+        inputs,
+        ['e', 'a', 'b', 'c', 'd', 'f', 'g', 'h'],
+        ['b', 'd', 'g', 'h'],
+      ),
+    ).toEqual([
+      { field: 'e', problem: 'malformed' },
+      { field: 'a', problem: 'malformed' },
+      { field: 'd', problem: 'percent' },
+      { field: 'g', problem: 'percent' },
+    ]);
+  });
+
+  it.each([
+    ['0', 0],
+    ['6.5', 6.5],
+    ['$24', 24],
+    ['100', 100],
+    ['1_0', 10],
+  ])('reads the percentage %j', (source, expected) => {
+    expect(parsePercentInput(source)).toBe(expected);
+  });
+
+  it.each(['', '-1', '100.01', '0.24k', '1m', '5e1', 'ten', '24%'])(
+    'refuses the percentage %j',
+    (source) => expect(parsePercentInput(source)).toBeNaN(),
   );
 });

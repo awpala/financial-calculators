@@ -4,11 +4,16 @@ Edits caller-owned take-home assumptions for the calculator or its Reset preset.
 -->
 <script lang="ts">
   import InfoNote from '#lib/components/elements/InfoNote.svelte';
+  import InvalidFieldsNote, {
+    invalidFieldAttributes,
+  } from '#lib/components/elements/InvalidFieldsNote.svelte';
   import TextField from '#lib/components/elements/TextField.svelte';
   import OptionSwitch from '#lib/components/elements/OptionSwitch.svelte';
   import HoverText from '#lib/components/behaviors/HoverText.svelte';
   import {
     changeCashflowIncomeMode,
+    invalidCashflowFields,
+    type CashflowAmountField,
     type CashflowInputs,
   } from '#lib/cashflow/income.js';
   /** Editable assumptions and optional focus identity owned by the parent. */
@@ -22,6 +27,24 @@ Edits caller-owned take-home assumptions for the calculator or its Reset preset.
   const converted = $derived(
     changeCashflowIncomeMode(value, !value.useHourlyIncome),
   );
+  const uid = $props.id();
+  const warningId = `${uid}-invalid`;
+  const labels = $derived<Record<CashflowAmountField, string>>({
+    income: value.useHourlyIncome
+      ? 'Hourly income (USD)'
+      : 'Annual income (USD)',
+    effectiveTaxRate: 'Effective tax rate (%)',
+    retirementContribution: 'Annual retirement contributions (USD)',
+    annualDeductions: 'Other annual deductions (USD)',
+    hoursPerWeek: 'Hours per week',
+    weeksWorked: 'Weeks worked per year',
+  });
+  const invalid = $derived(invalidCashflowFields(value));
+  const validity = (field: CashflowAmountField) =>
+    invalidFieldAttributes(
+      invalid.some((issue) => issue.field === field),
+      warningId,
+    );
 </script>
 
 <div class="flex justify-end">
@@ -43,31 +66,33 @@ Edits caller-owned take-home assumptions for the calculator or its Reset preset.
 <div class="grid min-w-0 gap-5 sm:grid-cols-2">
   <TextField
     id={incomeId}
-    label={value.useHourlyIncome
-      ? 'Hourly income (USD)'
-      : 'Annual income (USD)'}
+    label={labels.income}
     bind:value={value.income}
+    {...validity('income')}
     inputmode="text"
     autocomplete="off"
     inputClass="dark:bg-slate-950"
   />
   <TextField
-    label="Effective tax rate (%)"
+    label={labels.effectiveTaxRate}
     bind:value={value.effectiveTaxRate}
+    {...validity('effectiveTaxRate')}
     inputmode="text"
     autocomplete="off"
     inputClass="dark:bg-slate-950"
   />
   <TextField
-    label="Annual retirement contributions (USD)"
+    label={labels.retirementContribution}
     bind:value={value.retirementContribution}
+    {...validity('retirementContribution')}
     inputmode="text"
     autocomplete="off"
     inputClass="dark:bg-slate-950"
   />
   <TextField
-    label="Other annual deductions (USD)"
+    label={labels.annualDeductions}
     bind:value={value.annualDeductions}
+    {...validity('annualDeductions')}
     inputmode="text"
     autocomplete="off"
     inputClass="dark:bg-slate-950"
@@ -83,15 +108,17 @@ Edits caller-owned take-home assumptions for the calculator or its Reset preset.
     >
     <div class="grid gap-5 sm:grid-cols-2">
       <TextField
-        label="Hours per week"
+        label={labels.hoursPerWeek}
         bind:value={value.hoursPerWeek}
+        {...validity('hoursPerWeek')}
         inputmode="text"
         autocomplete="off"
         inputClass="dark:bg-slate-950"
       />
       <TextField
-        label="Weeks worked per year"
+        label={labels.weeksWorked}
         bind:value={value.weeksWorked}
+        {...validity('weeksWorked')}
         inputmode="text"
         autocomplete="off"
         inputClass="dark:bg-slate-950"
@@ -105,7 +132,16 @@ Edits caller-owned take-home assumptions for the calculator or its Reset preset.
   >
     Reduce the income or work-hour assumptions before changing income mode.
   </p>{/if}
+{#if invalid.length > 0}<InvalidFieldsNote
+    id={warningId}
+    issues={invalid.map(({ field, problem }) => ({
+      label: labels[field],
+      problem,
+    }))}
+    consequence="Until corrected, invalid values count as zero in the red figures."
+  />{/if}
 <InfoNote
   >Numbers accept $ signs, digit separators, and k/m/b/t suffixes, such as $125k
-  or 1_250. Enter the tax rate as percentage points, such as 24.</InfoNote
+  or 1_250. Enter the tax rate as percentage points from 0 to 100, such as 24,
+  without a suffix.</InfoNote
 >

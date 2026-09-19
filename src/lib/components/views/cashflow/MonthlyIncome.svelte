@@ -9,8 +9,10 @@ Shows the monthly take-home estimate independently of the balance sheet’s sele
   type Props = {
     /** Monthly net income, or undefined when the calculation cannot produce a finite value. */
     value?: number;
+    /** Whether the estimate reads unparseable input as zero, shown as an error. Defaults to false. */
+    invalid?: boolean;
   };
-  let { value }: Props = $props();
+  let { value, invalid = false }: Props = $props();
 </script>
 
 <Card
@@ -23,8 +25,12 @@ Shows the monthly take-home estimate independently of the balance sheet’s sele
   </h2>
   <output
     aria-live="polite"
-    class="block text-4xl font-semibold tracking-tight break-all text-emerald-700 tabular-nums sm:text-5xl dark:text-emerald-400"
-    >{value !== undefined ? money(value) : '—'}</output
+    class={[
+      'block text-4xl font-semibold tracking-tight break-all tabular-nums sm:text-5xl',
+      invalid
+        ? 'text-red-700 dark:text-red-400'
+        : 'text-emerald-700 dark:text-emerald-400',
+    ]}>{value !== undefined ? money(value) : '—'}</output
   >
   <p class="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
     After estimated taxes, retirement contributions, and other deductions,

@@ -1,4 +1,9 @@
-import { parseNumberInput } from '#lib/calculator/presentation/number-input.js';
+import {
+  numberFieldIssues,
+  parseNumberInput,
+  parsePercentInput,
+  type NumberFieldIssue,
+} from '#lib/calculator/presentation/number-input.js';
 
 /** Grouping used by both the payment chart and schedule table. */
 export type Resolution = 'year' | 'quarter' | 'month';
@@ -129,6 +134,27 @@ export function normalizeLoanInputs(raw: unknown): LoanInputs {
   };
 }
 
+/** A numeric text field of the loan assumptions. */
+export type LoanNumberField =
+  'purchasePrice' | 'downPayment' | 'years' | 'annualRate';
+
+/**
+ * Report loan fields whose text cannot be read, in form order, so the owner
+ * can name them beside the fields: amounts that are not one number, such as
+ * `450km`, and percentages (the rate, and the down payment in percentage mode)
+ * that are not from 0 through 100 or contain letters. The calculation already
+ * refuses them; blank fields and other range rules are left to its messages.
+ */
+export function invalidLoanFields(
+  inputs: LoanInputs,
+): NumberFieldIssue<LoanNumberField>[] {
+  return numberFieldIssues(
+    inputs,
+    ['purchasePrice', 'downPayment', 'years', 'annualRate'],
+    inputs.downPaymentPercent ? ['downPayment', 'annualRate'] : ['annualRate'],
+  );
+}
+
 /** Parse a nonnegative Scratchpad-style number; malformed or empty text returns NaN. */
 export function parseLoanNumber(source: string): number {
   const value = parseNumberInput(source);
@@ -136,16 +162,31 @@ export function parseLoanNumber(source: string): number {
 }
 
 /**
+ * Read the down payment in its current mode: percentage points under
+ * `parsePercentInput` in percentage mode, otherwise a nonnegative USD amount.
+ * Malformed or empty text returns NaN; the purchase-price bound stays with the
+ * calculation.
+ */
+export function parseDownPayment(
+  input: Pick<LoanInputs, 'downPayment' | 'downPaymentPercent'>,
+): number {
+  return input.downPaymentPercent
+    ? parsePercentInput(input.downPayment)
+    : parseLoanNumber(input.downPayment);
+}
+
+/**
  * Compute monthly compounding and end-of-month payments for a fixed-rate loan.
  * Validate before allocating the schedule. Terms are bounded to 1,200 months,
- * money to one trillion USD, and rates to 100% annually. Taxes, insurance,
+ * money to one trillion USD, and rates to 100% annually. Percentages, the rate
+ * and a percentage down payment, refuse letters, so `0.05k` is not 50%. Taxes, insurance,
  * fees, extra payments, and lender-specific rounding are outside this model.
  */
 export function calculateAmortization(input: LoanInputs): LoanResult {
   const price = parseLoanNumber(input.purchasePrice);
-  const down = parseLoanNumber(input.downPayment);
+  const down = parseDownPayment(input);
   const years = parseLoanNumber(input.years);
-  const rate = parseLoanNumber(input.annualRate);
+  const rate = parsePercentInput(input.annualRate);
   if (!Number.isFinite(price) || price <= 0 || price > 1e12)
     return {
       ok: false,

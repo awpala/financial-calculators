@@ -5,6 +5,7 @@ import {
   getResolutionPayment,
   getResolutionPaymentLabel,
   groupPayments,
+  invalidLoanFields,
   normalizeLoanInputs,
   parseLoanNumber,
   type LoanInputs,
@@ -174,5 +175,46 @@ describe('loan input persistence', () => {
     expect(parseLoanNumber('.5')).toBe(0.5);
     expect(parseLoanNumber('12x')).toBeNaN();
     expect(parseLoanNumber('')).toBeNaN();
+  });
+
+  it('names unreadable loan fields while leaving blank and other out-of-range ones to the range messages', () => {
+    expect(invalidLoanFields(DEFAULT_LOAN_INPUTS)).toEqual([]);
+    expect(
+      invalidLoanFields({
+        ...DEFAULT_LOAN_INPUTS,
+        purchasePrice: '450km',
+        downPayment: '',
+        years: '200',
+        annualRate: '6.5%',
+      }),
+    ).toEqual([
+      { field: 'purchasePrice', problem: 'malformed' },
+      { field: 'annualRate', problem: 'percent' },
+    ]);
+  });
+
+  it('holds percentages to 0–100 without letters, including a percentage down payment', () => {
+    const percent = { ...DEFAULT_LOAN_INPUTS, downPayment: '0.05k' };
+    expect(invalidLoanFields(percent)).toEqual([
+      { field: 'downPayment', problem: 'percent' },
+    ]);
+    expect(calculateAmortization(percent)).toEqual({
+      ok: false,
+      message: 'Enter a down payment from 0% to 100%.',
+    });
+    const amount = {
+      ...DEFAULT_LOAN_INPUTS,
+      downPaymentPercent: false,
+      downPayment: '$90k',
+    };
+    expect(invalidLoanFields(amount)).toEqual([]);
+    expect(calculateAmortization(amount).ok).toBe(true);
+    for (const annualRate of ['0.065k', '101', '-1']) {
+      const inputs = { ...DEFAULT_LOAN_INPUTS, annualRate };
+      expect(invalidLoanFields(inputs)).toEqual([
+        { field: 'annualRate', problem: 'percent' },
+      ]);
+      expect(calculateAmortization(inputs).ok).toBe(false);
+    }
   });
 });

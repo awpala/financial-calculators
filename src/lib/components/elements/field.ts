@@ -34,12 +34,15 @@ export type FieldDensity = 'form' | 'rail';
  * box compose `FIELD_CONTROL_PADDING`; controls with inset buttons spell theirs
  * out.
  *
+ * A control marked `aria-invalid` draws a red border and focus ring, so every
+ * field flags input its owner cannot read the same way.
+ *
  * The surface-dependent dark ground is absent for the same reason it is absent
  * from every card class here: it depends on the surface behind the field, so
  * the call site supplies it.
  */
 export const FIELD_CONTROL_CLASS =
-  'block rounded-md border border-slate-300 bg-white text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:border-slate-700 dark:focus:border-slate-500 dark:focus:ring-slate-800';
+  'block rounded-md border border-slate-300 bg-white text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:border-slate-700 dark:focus:border-slate-500 dark:focus:ring-slate-800 aria-invalid:border-red-500 aria-invalid:focus:ring-red-200 dark:aria-invalid:border-red-500 dark:aria-invalid:focus:ring-red-900';
 
 /** Padding of a field control whose box is symmetric. */
 export const FIELD_CONTROL_PADDING = 'px-3 py-2';

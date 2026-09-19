@@ -3,6 +3,7 @@ import {
   calculateCashflow,
   changeCashflowIncomeMode,
   DEFAULT_CASHFLOW_INPUTS,
+  invalidCashflowFields,
   normalizeCashflowInputs,
   type CashflowInputs,
 } from '#lib/cashflow/income.js';
@@ -102,12 +103,69 @@ describe('cashflow income', () => {
     (income) => expect(calculate({ income }).annualGrossIncome).toBe(0),
   );
 
-  it('clamps the tax rate and floors net income at zero', () => {
-    expect(calculate({ effectiveTaxRate: '-10' }).annualTaxes).toBe(0);
-    expect(calculate({ effectiveTaxRate: '150' })).toMatchObject({
-      annualTaxes: 120000,
-      annualNetIncome: 0,
-    });
+  it('reports unreadable fields, such as stacked suffixes, while still reading them as zero', () => {
+    const inputs = { ...DEFAULT_CASHFLOW_INPUTS, annualDeductions: '$10km' };
+    expect(invalidCashflowFields(inputs)).toEqual([
+      { field: 'annualDeductions', problem: 'malformed' },
+    ]);
+    expect(calculate(inputs).annualDeductions).toBe(0);
+    expect(
+      invalidCashflowFields({
+        ...DEFAULT_CASHFLOW_INPUTS,
+        income: '12x',
+        effectiveTaxRate: '24%',
+        retirementContribution: '1kk',
+      }),
+    ).toEqual([
+      { field: 'income', problem: 'malformed' },
+      { field: 'effectiveTaxRate', problem: 'percent' },
+      { field: 'retirementContribution', problem: 'malformed' },
+    ]);
+  });
+
+  it('leaves blank, negative, valid, and unused hourly fields unreported', () => {
+    expect(invalidCashflowFields(DEFAULT_CASHFLOW_INPUTS)).toEqual([]);
+    const inputs = {
+      ...DEFAULT_CASHFLOW_INPUTS,
+      income: '  ',
+      annualDeductions: '-500',
+      retirementContribution: '$10k',
+      effectiveTaxRate: '',
+      hoursPerWeek: 'n/a',
+    };
+    expect(invalidCashflowFields(inputs)).toEqual([]);
+    expect(invalidCashflowFields({ ...inputs, useHourlyIncome: true })).toEqual(
+      [{ field: 'hoursPerWeek', problem: 'malformed' }],
+    );
+  });
+
+  it.each(['-10', '150', '100.5', '0.24k', '24k', '1m', 'twenty', '24%'])(
+    'flags the tax rate %j and reads it as zero rather than clamping it',
+    (effectiveTaxRate) => {
+      const inputs = { ...DEFAULT_CASHFLOW_INPUTS, effectiveTaxRate };
+      expect(invalidCashflowFields(inputs)).toEqual([
+        { field: 'effectiveTaxRate', problem: 'percent' },
+      ]);
+      expect(calculate(inputs).annualTaxes).toBe(0);
+    },
+  );
+
+  it.each([
+    ['0', 0],
+    ['24', 28_800],
+    ['$24', 28_800],
+    ['100', 120_000],
+  ])(
+    'accepts the tax rate %j from 0 through 100',
+    (effectiveTaxRate, taxes) => {
+      const inputs = { ...DEFAULT_CASHFLOW_INPUTS, effectiveTaxRate };
+      expect(invalidCashflowFields(inputs)).toEqual([]);
+      expect(calculate(inputs).annualTaxes).toBe(taxes);
+    },
+  );
+
+  it('floors net income at zero', () => {
+    expect(calculate({ effectiveTaxRate: '100' }).annualNetIncome).toBe(0);
     expect(
       calculate({ retirementContribution: '200,000' }).monthlyNetIncome,
     ).toBe(0);

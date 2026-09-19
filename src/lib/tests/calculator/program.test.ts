@@ -131,6 +131,24 @@ describe('calculator program parsing', () => {
     expect(invalid(source)).toBe(message);
   });
 
+  it.each([
+    ['1km', "Missing operator before 'km' on line 1"],
+    ['1MK', "Missing operator before 'MK' on line 1"],
+    ['2.5bt', "Missing operator before 'bt' on line 1"],
+    ['(1k)m', "Missing operator before 'm' on line 1"],
+    ['m = 2;\n1km', "Missing operator before 'km' on line 2"],
+  ])(
+    'refuses the stacked suffixes in %j rather than compounding them',
+    (source, message) => {
+      // A figure takes at most one magnitude, so `km` is never 10^3 * 10^6.
+      expect(invalid(source)).toBe(message);
+    },
+  );
+
+  it('applies one suffix to each figure of an expression', () => {
+    expect(calculate('2k * 3m')).toBe(6e9);
+  });
+
   it('leaves declared names alone, whatever a figure would make of them', () => {
     // The suffix is an expression rule. A name is matched before a number is,
     // so a member who declares `2k` gets their own value back, not 2,000.

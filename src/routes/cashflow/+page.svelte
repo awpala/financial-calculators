@@ -16,6 +16,7 @@ Owns Cashflow editing and its persisted balance-sheet period, syncing working in
   import {
     calculateCashflow,
     DEFAULT_CASHFLOW_INPUTS,
+    invalidCashflowFields,
     type CashflowInputs,
   } from '#lib/cashflow/income.js';
 
@@ -39,6 +40,9 @@ Owns Cashflow editing and its persisted balance-sheet period, syncing working in
 
   const calculated = $derived(calculateCashflow(inputs));
   const cashflow = $derived(calculated.ok ? calculated.cashflow : undefined);
+  const invalid = $derived(
+    invalidCashflowFields(inputs).map((issue) => issue.field),
+  );
   function clearInputs(): void {
     inputs = {
       useHourlyIncome: inputs.useHourlyIncome,
@@ -83,10 +87,14 @@ Owns Cashflow editing and its persisted balance-sheet period, syncing working in
       <IncomeFields bind:value={inputs} {incomeId} />
     </InputCard>
     <div class="min-w-0 space-y-6">
-      <MonthlyIncome value={cashflow?.monthlyNetIncome} />
+      <MonthlyIncome
+        value={cashflow?.monthlyNetIncome}
+        invalid={invalid.length > 0}
+      />
       <BalanceSheet
         {cashflow}
         {monthlyBalance}
+        {invalid}
         onPeriodChange={(monthly) => {
           monthlyBalance = monthly;
           if (balanceStorage) balanceStorage.value = monthly;
@@ -96,10 +104,10 @@ Owns Cashflow editing and its persisted balance-sheet period, syncing working in
   </div>
 
   <InfoNote class="mx-auto max-w-4xl">
-    Empty, invalid, or negative values count as zero. The tax rate is limited to
-    0–100%, and net income has a floor of zero. This estimate uses your
-    effective rate; it does not calculate tax brackets or payroll rules. Taxes
-    apply to gross income; retirement contributions and other deductions are
-    subtracted afterward.
+    Empty, invalid, or negative values count as zero; invalid values are
+    flagged. The tax rate must be from 0 to 100%, and net income has a floor of
+    zero. This estimate uses your effective rate; it does not calculate tax
+    brackets or payroll rules. Taxes apply to gross income; retirement
+    contributions and other deductions are subtracted afterward.
   </InfoNote>
 </PageContainer>

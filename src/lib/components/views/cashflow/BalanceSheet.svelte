@@ -5,8 +5,9 @@ Presents income and deductions annually or as monthly averages. It divides the s
 <script lang="ts">
   import Card from '#lib/components/elements/Card.svelte';
   import OptionSwitch from '#lib/components/elements/OptionSwitch.svelte';
+  import WarnIcon from '#lib/icons/status/WarnIcon.svelte';
   import { formatCurrencyUSD as money } from '#lib/text/format.js';
-  import type { Cashflow } from '#lib/cashflow/income.js';
+  import type { Cashflow, CashflowAmountField } from '#lib/cashflow/income.js';
   /** Calculated annual values and the route-owned display period. */
   type Props = {
     /** Valid cashflow calculation, or undefined when values overflow. */
@@ -15,8 +16,23 @@ Presents income and deductions annually or as monthly averages. It divides the s
     monthlyBalance: boolean;
     /** Reports the selected period so the route can persist it. */
     onPeriodChange: (monthly: boolean) => void;
+    /** Fields whose text is not a number; figures they feed are shown as errors. Defaults to none. */
+    invalid?: readonly CashflowAmountField[];
   };
-  let { cashflow, monthlyBalance, onPeriodChange }: Props = $props();
+  let {
+    cashflow,
+    monthlyBalance,
+    onPeriodChange,
+    invalid = [],
+  }: Props = $props();
+  const invalidGross = $derived(
+    invalid.some(
+      (field) =>
+        field === 'income' ||
+        field === 'hoursPerWeek' ||
+        field === 'weeksWorked',
+    ),
+  );
   const balancePeriod = $derived(monthlyBalance ? 'Monthly' : 'Annual');
   const balanceDivisor = $derived(monthlyBalance ? 12 : 1);
   const rows = $derived([
@@ -24,21 +40,25 @@ Presents income and deductions annually or as monthly averages. It divides the s
       label: `${balancePeriod} gross income`,
       value: cashflow?.annualGrossIncome,
       sign: '+',
+      invalid: invalidGross,
     },
     {
       label: `${balancePeriod} taxes`,
       value: cashflow?.annualTaxes,
       sign: '−',
+      invalid: invalidGross || invalid.includes('effectiveTaxRate'),
     },
     {
       label: `${balancePeriod} retirement contributions`,
       value: cashflow?.annualRetirementContribution,
       sign: '−',
+      invalid: invalid.includes('retirementContribution'),
     },
     {
       label: `Other ${balancePeriod.toLowerCase()} deductions`,
       value: cashflow?.annualDeductions,
       sign: '−',
+      invalid: invalid.includes('annualDeductions'),
     },
   ]);
 </script>
@@ -64,8 +84,16 @@ Presents income and deductions annually or as monthly averages. It divides the s
         class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-4"
       >
         <dt class="text-slate-600 dark:text-slate-400">{row.label}</dt>
-        <dd class="text-right font-medium break-all tabular-nums">
-          {row.value === undefined
+        <dd
+          class={[
+            'text-right font-medium break-all tabular-nums',
+            row.invalid && 'text-red-700 dark:text-red-400',
+          ]}
+        >
+          {#if row.invalid}<WarnIcon
+              class="mr-1 inline size-4 align-[-0.2em]"
+            /><span class="sr-only">Uses invalid input:&nbsp;</span
+            >{/if}{row.value === undefined
             ? '—'
             : `${row.sign}${money(row.value / balanceDivisor)}`}
         </dd>
@@ -76,7 +104,12 @@ Presents income and deductions annually or as monthly averages. It divides the s
     >
       <dt class="font-semibold">{balancePeriod} net income</dt>
       <dd
-        class="text-right text-lg font-semibold break-all text-emerald-700 tabular-nums dark:text-emerald-400"
+        class={[
+          'text-right text-lg font-semibold break-all tabular-nums',
+          invalid.length > 0
+            ? 'text-red-700 dark:text-red-400'
+            : 'text-emerald-700 dark:text-emerald-400',
+        ]}
       >
         {cashflow ? money(cashflow.annualNetIncome / balanceDivisor) : '—'}
       </dd>

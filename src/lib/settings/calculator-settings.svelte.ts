@@ -12,7 +12,10 @@ import {
   normalizeCashflowInputs,
   type CashflowInputs,
 } from '#lib/cashflow/income.js';
-import { parseNumberInput } from '#lib/calculator/presentation/number-input.js';
+import {
+  parseNumberInput,
+  parsePercentInput,
+} from '#lib/calculator/presentation/number-input.js';
 
 /** Validate a Cashflow preset before saving; working inputs retain their tolerant zero policy. */
 export function cashflowDefaultsError(
@@ -31,8 +34,8 @@ export function cashflowDefaultsError(
     if (!Number.isFinite(value) || value < 0)
       return `${label} must be a nonnegative number.`;
   }
-  if (parseNumberInput(inputs.effectiveTaxRate) > 100)
-    return 'The effective tax rate must be from 0% to 100%.';
+  if (Number.isNaN(parsePercentInput(inputs.effectiveTaxRate)))
+    return 'The effective tax rate must be from 0% to 100%, written without letters.';
   const result = calculateCashflow(inputs);
   return result.ok ? undefined : result.message;
 }

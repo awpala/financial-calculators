@@ -1,6 +1,9 @@
 import {
   formatNumberInput,
+  numberFieldIssues,
   parseNumberInput,
+  parsePercentInput,
+  type NumberFieldIssue,
 } from '#lib/calculator/presentation/number-input.js';
 
 /** Editable take-home-pay assumptions, kept as text while the user works. */
@@ -96,6 +99,38 @@ export function normalizeCashflowInputs(raw: unknown): CashflowInputs {
   };
 }
 
+/** A numeric text field of the take-home assumptions. */
+export type CashflowAmountField = Exclude<
+  keyof CashflowInputs,
+  'useHourlyIncome'
+>;
+
+/**
+ * Report fields the calculation uses whose text cannot be read, in form order:
+ * amounts that are not one number, such as `$10km`, and an effective tax rate
+ * that is not a percentage from 0 through 100 written without letters. Such
+ * text reads as zero, so the owner can warn about it and mark the figures it
+ * feeds. Blank amounts, negative amounts, and unused hourly fields are not
+ * reported; they follow the documented zero policy.
+ */
+export function invalidCashflowFields(
+  inputs: CashflowInputs,
+): NumberFieldIssue<CashflowAmountField>[] {
+  return numberFieldIssues(
+    inputs,
+    [
+      'income',
+      ...(inputs.useHourlyIncome
+        ? (['hoursPerWeek', 'weeksWorked'] as const)
+        : []),
+      'effectiveTaxRate',
+      'retirementContribution',
+      'annualDeductions',
+    ],
+    ['effectiveTaxRate'],
+  );
+}
+
 /** Read Scratchpad-style numbers with the reference's nonnegative/invalid-to-zero policy. */
 function parseAmount(raw: string): number {
   const value = parseNumberInput(raw);
@@ -104,9 +139,10 @@ function parseAmount(raw: string): number {
 
 /**
  * Estimate take-home pay using the reference's gross-income tax basis and
- * zero floor. Empty, invalid, and negative amounts read as zero; the tax rate
- * is clamped to 0–100%. Contributions and deductions do not reduce that tax
- * basis. No resources, browser state, or teardown are involved.
+ * zero floor. Empty, invalid, and negative amounts read as zero, as does a tax
+ * rate outside 0–100% or written with letters, such as a k/m/b/t suffix.
+ * Contributions and deductions do not reduce that tax basis. No resources,
+ * browser state, or teardown are involved.
  */
 export function calculateCashflow(inputs: CashflowInputs): CashflowResult {
   const income = parseAmount(inputs.income);
@@ -122,7 +158,7 @@ export function calculateCashflow(inputs: CashflowInputs): CashflowResult {
         'Reduce the income or work-hour assumptions to calculate a finite annual income.',
     };
   }
-  const rate = Math.min(100, parseAmount(inputs.effectiveTaxRate));
+  const rate = parsePercentInput(inputs.effectiveTaxRate) || 0;
   const annualTaxes = annualGrossIncome * (rate / 100);
   const annualRetirementContribution = parseAmount(
     inputs.retirementContribution,
