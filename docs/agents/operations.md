@@ -15,7 +15,7 @@ npm run build
 npm run test:deployment
 ```
 
-The app gate and CI run the static build and artifact checks. CI also runs `npm run test:container` to build and exercise the actual Nginx image. Docker is intentionally unavailable in the development container; leave the image check to CI, or use a separate Docker-capable host. Without `DEPLOYMENT_BASE_URL`, artifact tests explicitly skip the container HTTP suite. `tests` runs Vitest; `format` runs ESLint fixes before Prettier; `build-app` cleans generated output, installs the lockfile, and builds. Diagram verification is separate from the fast ADR-index check because it launches Chromium.
+The local app gate runs the static build and artifact smoke checks. CI runs the app gates followed by `npm run test:container`, which builds the production application once inside Docker and checks Nginx over HTTP without a preceding host build. Deployment checks cover packaging and serving; do not duplicate feature tests or enumerate example content. Docker is intentionally unavailable in the development container; leave the image check to CI, or use a separate Docker-capable host. Without `DEPLOYMENT_BASE_URL`, artifact tests explicitly skip the HTTP suite; with a URL, local artifact checks are skipped. `tests` runs Vitest; `format` runs ESLint fixes before Prettier; `build-app` cleans generated output, installs the lockfile, and builds. Diagram verification is separate from the fast ADR-index check because it launches Chromium.
 
 ## Container helper contracts
 

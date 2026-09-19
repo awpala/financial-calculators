@@ -1,0 +1,23 @@
+# Calculator settings
+
+Settings provides route-based Amortization and Cashflow tabs, adapted from personal-finance-dashboard’s underlined settings navigation. The gear beside the theme switch opens `/settings/`; `/settings/cashflow/` selects Cashflow. There is no Scratchpad settings tab. Each route composes the shared [preset editor](../components/views/settings/PresetEditor.svelte), which owns its draft, restoration, validation feedback, change detection, and explicit Save defaults/Discard changes actions. Saving a preset does not replace the calculator’s current working inputs; its Reset button or the confirmed Global reset applies that preset.
+
+## State and ownership
+
+Shift S opens Settings from any main view and returns from either settings tab to the most recently visited main view. The root layout remembers that destination across reloads through the [navigation policy](../navigation/README.md); direct entry without a remembered view returns to Home. Typing in fields or interacting with a modal suppresses the shortcut. The gear's hover text displays its keycap.
+
+The root layout creates one [CalculatorSettings](calculator-settings.svelte.ts) and installs it through typed Svelte context. It owns four whole-value [persisted cells](../state/README.md): `amortization_defaults_v1`, `cashflow_defaults_v1`, and the existing `amortization_inputs_v1`/`cashflow_inputs_v1` working copies. Defaults and working copies remain separate. Getters return normalized copies without writing; invalid saved presets fall back to the reference illustrations. Loan presets follow the loan model’s validation. Cashflow presets require all six numbers to be finite and nonnegative, with a tax rate of 0–100%; the working Cashflow view retains its tolerant invalid-to-zero policy.
+
+Calculator routes and preset editors render deterministic initial values during SSR, adopt their working copy or preset draft on mount, and persist working edits through the controller. The shell’s initialization spinner covers restoration. Shared [loan fields](../components/views/amortization/LoanFields.svelte) and [income fields](../components/views/cashflow/IncomeFields.svelte) keep units, mode conversion, numeric syntax, and styling aligned between Settings and calculators. The owner supplies the bindable draft; these controls own no persistence. Drafts are committed only by Save defaults and are discarded when leaving the settings tab. Existing working-input keys remain valid. If there is no saved working copy, a calculator starts from its saved preset.
+
+The controller is scoped to one application tree, never a module singleton. It acquires no listeners or timers and needs no teardown. Browser storage failure leaves the mounted app’s cells usable across navigation; a later browser reload cannot recover values the browser refused to store. Separate tabs do not synchronize live. SSR can read initial values but cannot write cells, following the persistence primitive’s tripwire.
+
+## Reset scope
+
+An individual Reset replaces all inputs for its calculator, including Amount/Percentage or Annual/Hourly mode and the saved work assumptions. Amortization’s preset includes the Year/Quarter/Month grouping used by its chart and schedule; the working grouping selector lives in its contextual rail. Clear continues to empty numeric fields without changing the selected mode or grouping.
+
+The settings layout composes route-tab navigation and a dedicated reset interaction. The latter owns its open state and completion feedback, while the layout supplies the controller’s reset action. Global reset opens the shared native confirmation dialog, initially focusing Cancel. Confirm replaces both working copies with the currently saved presets, then closes the dialog and reports success. Cancel, Escape, and backdrop dismissal make no changes. The warning explicitly states that current working inputs will be lost and unsaved preset edits are not applied. Scratchpad input/result and presentation preferences, Cashflow’s balance-sheet period, theme, tooltip visibility, rail visibility, and saved presets are preserved. No global storage clearing is used.
+
+## Validation
+
+The [settings tests](../tests/settings/calculator-settings.test.ts) cover save/reset separation, persistence, preservation of unrelated storage, invalid presets, malformed storage, denied storage, and copy isolation. Browser checks cover tab routes, field parity, save/discard, route-specific Reset, modal cancellation/confirmation/focus, reload, and mobile layout. Run the [application gates](../../../README.md#run-and-validate) after changes.

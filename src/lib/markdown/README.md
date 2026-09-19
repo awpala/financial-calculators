@@ -43,7 +43,7 @@ Each stage owns a narrow concern:
 | Heading extraction     | server       | Flat `Heading[]` available to a navigation owner           |
 | Rendering              | SSR + client | DOM, then client-only enhancements                         |
 
-The document loader performs parsing and transforms during the static build or a development server request, so the browser receives structured data, heading navigation needs no second parse, and heavy work such as Puppeteer and Shiki grammars stays out of the client bundle. The parser and heading extractor are pure functions and do not intrinsically require a server. Relative image URLs are left as authored; an application that stores assets elsewhere must supply its own resolution policy.
+A consuming document loader performs parsing and transforms during the static build or a development server request, so the browser receives structured data, heading navigation needs no second parse, and heavy work such as Puppeteer and Shiki grammars stays out of the client bundle. The parser and heading extractor are pure functions and do not intrinsically require a server. Relative image URLs are left as authored; an application that stores assets elsewhere must supply its own resolution policy.
 
 Each call to `parse(source)` produces a fresh document. Both `renderMermaidDiagrams(doc)` and `highlightCodeBlocks(doc)` mutate that tree in place and return `Promise<void>`. Await them and return the same `doc`; assigning their return value would discard the document. Do not share a mutable document between requests.
 
@@ -351,7 +351,7 @@ Every rendered node receives a `scope` string built from its path through the tr
 
 ### Client-side enhancements
 
-The renderer can produce document markup during SSR; its progressive enhancements require the browser. The application renders the component during prerendering so the published HTML contains readable document content before hydration.
+The renderer can produce document markup during SSR; its progressive enhancements require the browser. A consuming application can render the component during prerendering so published HTML contains document content before hydration. Financial Calculators currently retains this library without a published document route; its calculator shell hides route content until initialization completes.
 
 | Enhancement         | Behavior                                                                                                                                      |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -424,7 +424,7 @@ sequenceDiagram
   R->>R: MathJax, clipboard, table dividers, popups
 ```
 
-The caller owns source retrieval and content policy. The library renders article markup during SSR, and this application prerenders it after the server loader prepares the AST. Browser enhancements attach to that initial markup after hydration.
+The caller owns source retrieval and content policy. The library can render article markup during SSR after a consuming server loader prepares the AST. The current calculator routes do not instantiate this renderer. Browser enhancements attach to that initial markup after hydration.
 
 The baseline does not cache whole rendered documents or add a source-version cache key, asset proxy, service worker, or stage-timing response headers. If an application adds a document cache, its key and ownership must account for the source and access model without allowing a mutable AST from one request to become another request's workspace.
 

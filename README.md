@@ -1,6 +1,6 @@
 # Financial Calculators
 
-Financial Calculators is a public application for ad hoc financial calculations and visualizations. The initial merge to `main` establishes its development baseline: reusable libraries, example routes, a development environment, and a deployment pipeline. Calculator features are developed from this baseline.
+Financial Calculators is a public application for ad hoc financial calculations and visualizations. A minimal Home links to Scratchpad for named expressions and freeform working, Amortization for fixed-rate loan schedules, and Cashflow for take-home income estimates. The calculators use the reusable UI and chart libraries established by the development baseline.
 
 The application builds complete static pages and runs browser interactions after hydration. Its private GitHub repository deploys through Coolify to `https://fincalcs.portfolio-projects.dev`, using Nginx with no application login or password gate. Production configuration and deployment checks are described in the [runbook](docs/runbooks/prod-deployment.md).
 
@@ -8,16 +8,17 @@ The application builds complete static pages and runs browser interactions after
 
 ```mermaid
 flowchart LR
-  SOURCE[Local markdown] --> SERVER[Parse and transform AST]
-  SERVER --> STATIC[Prerendered HTML and page data]
+  ROUTES[Home · Scratchpad · Amortization · Cashflow] --> STATIC[Prerendered HTML and client assets]
   STATIC --> HOST[Nginx behind Coolify HTTPS]
-  HOST --> BROWSER[Svelte components and browser state]
+  HOST --> BROWSER[Route-owned calculations and charts]
+  BROWSER <--> STORAGE[Browser-local working and preferences]
 ```
 
 The app lives at the repository root. Composition lives in routes; reusable libraries have explicit responsibility boundaries. A route lends the shell a rail and releases it on teardown. Browser preferences outlive components, but interactive controllers and pending work remain instance-owned. Server modules never become client runtime imports.
 
 | Reusable mechanism | Contract and explanation |
 | --- | --- |
+| Calculations | [Scratchpad language and state](src/lib/calculator/README.md), [amortization model](src/lib/amortization/README.md), [cashflow model](src/lib/cashflow/README.md) |
 | Presentation | [Elements, behaviors, layouts, views](src/lib/components/README.md), [design decision](docs/adrs/style-design-system.md) |
 | Markdown | [Typed parser, transforms, renderers](src/lib/markdown/README.md), [architecture](docs/adrs/markdown-subsystem.md) |
 | Visualization | [Charts](src/lib/components/charts/README.md) and [leaf icons](src/lib/icons/README.md) |
@@ -57,13 +58,19 @@ The dependency and npm-cache volumes persist between rebuilds, as do the CLI sta
 
 The launcher owns a process group so stopping npm also stops Vite. These aliases are conveniences; the npm scripts remain authoritative and work outside the container. `cleanup.sh` runs on the host to remove this development container. `cleanup.sh --volumes` additionally deletes this project's dependency caches and CLI credentials/state; it never removes the bind-mounted checkout.
 
-## Example routes and local content
+## Calculator views and retained libraries
 
-The landing page introduces the application foundation. `/examples/` composes existing fields, cards, filtering, confirmation, and a bar chart with route-owned in-memory data. `/docs/` lists markdown under [src/content/docs/](src/content/docs/), with nested filenames mapping to nested slugs. Keep these examples as development references while adding calculator routes; preserve their reusable library contracts.
+Home remains a small entry point. `/amortization/` estimates fixed-rate monthly payments from purchase price, down payment in dollars or percent, term, and annual rate. It retains the reference principal/interest stacked chart and year, quarter, or month grouping, with a matching payment table and remaining balances. Assumptions persist in this browser. The [model contract](src/lib/amortization/README.md) documents limits, zero-interest behavior, and rounding.
 
-The document loader creates a fresh AST, renders Mermaid, highlights code, and extracts headings. The browser receives prepared data and lends heading navigation to the shell. Document transforms run during prerendering and development. Adding a document needs no hand-maintained route list: the catalog supplies `entries()` for prerendering, including unlinked nested documents. Content changes require a rebuild.
+`/scratchpad/` lifts the calculator subsystem from quiz-bank-app into a full-page editor, with result and named-binding summaries alongside it. It retains comments, freeform binding names, currency notation, magnitude suffixes, arithmetic, constants/functions, sums/products, diagnostics, syntax highlighting, line numbers, shortcuts, and saved calculations. The [calculator guide](src/lib/calculator/README.md) preserves the complete language reference and ownership contracts. Work is stored locally in the browser without an account or runtime API.
 
-Static HTML contains the actual route content before JavaScript loads. Theme, rail, popup, and chart lifetimes remain scoped to their owners. MathJax is a lazy external browser enhancement, so a fully disconnected site must supply its own math runtime if required. No offline corpus cache or service worker is included.
+`/cashflow/` adapts the personal-finance-dashboard take-home-pay calculator, with annual/hourly income conversion, work-hour assumptions, an effective tax rate, retirement contributions, other deductions, monthly net income, and an Annual/Monthly balance sheet. Its [model contract](src/lib/cashflow/README.md) documents the reference calculation policies and local persistence.
+
+The gear beside the theme switch opens [Settings](src/lib/settings/README.md), with Amortization and Cashflow tabs for saved Reset presets. Shift S opens Settings or returns to the most recent main view; the return destination survives a reload. Global reset asks for confirmation before restoring both working calculators to those presets; Scratchpad is preserved. Home carries the shared browser-persistence note, and `InfoNote` keeps supplemental guidance visually consistent; Cashflow’s long page-level note has its own centered width limit.
+
+The starter Examples and Docs routes are removed. Their reusable UI, chart, markdown, and server libraries remain available. The retained local markdown catalog under [src/content/docs/](src/content/docs/) is a library fixture; it is not a published route. A future document consumer can prepare a fresh AST, render Mermaid, highlight code, extract headings, and supply prerender entries for its catalog. The standalone library guides preserve that pipeline's usage and lifecycle details.
+
+Static HTML contains the shell and default route content. An accessible spinner hides the view until browser-local inputs are restored and chart dimensions settle; the hidden view stays mounted and measurable. Saved calculations are restored only after mounting; none enter prerendered output. Theme, rail, popup, and chart lifetimes remain scoped to their owners. MathJax remains a lazy external browser enhancement for markdown consumers. No offline corpus cache or service worker is included.
 
 ## Run and validate
 
@@ -77,7 +84,7 @@ npm run build
 npm run test:deployment
 ```
 
-`npm run verify` runs the app gates, static build, and artifact tests. `npm run test:container` additionally builds the production Docker image and exercises its HTTP behavior on a disposable loopback listener; it requires Docker and a preceding local build. CI runs both sets of checks. The artifact command reports the HTTP suite as skipped when no container URL is supplied. `npm run test:coverage` adds the V8 report. Browser-dependent markdown rendering needs system Chromium or Puppeteer's managed browser (`npx puppeteer browsers install chrome`); the development container and Docker builder install it. A syntax/type check does not establish browser behavior: exercise navigation, narrow layouts, both themes, dialogs, and teardown after a route change.
+`npm run verify` runs the app gates, static build, and artifact smoke checks. `npm run test:container` builds the production Docker image and checks its HTTP behavior on a disposable loopback listener; it requires Docker but no preceding local build. CI runs the app gates followed by this image check, so the Dockerfile performs the production build once. Deployment checks cover the entry page, a generated asset, health, caching, and 404 behavior; feature coverage stays in application tests. Without a container URL, the deployment command checks local artifacts and skips HTTP; with a URL, it checks HTTP and skips local artifacts. `npm run test:coverage` adds the V8 report. Browser-dependent markdown rendering needs system Chromium or Puppeteer's managed browser (`npx puppeteer browsers install chrome`); the development container and Docker builder install it. A syntax/type check does not establish browser behavior: exercise navigation, narrow layouts, both themes, dialogs, and teardown after a route change.
 
 The output is `build/`. `npm run preview` previews it through Vite on port `2252`. Production Nginx supports direct directory-index requests, relative slash redirects, a content-free `/healthz`, and a real 404 page. HTML and route data require revalidation; content-hashed assets are immutable.
 
@@ -85,7 +92,7 @@ The output is `build/`. `npm run preview` previews it through Vite on port `2252
 
 The [Coolify runbook](docs/runbooks/prod-deployment.md) configures one Dockerfile resource for `https://fincalcs.portfolio-projects.dev`, with repository-root build context, private Git-source access, and internal port `8080`. Node and Chromium stay in the build stage; the serving image has Nginx and public output only.
 
-[Verify](.github/workflows/verify.yml) checks pushes and pull requests. Coolify Auto Deploy uses a GitHub App dedicated to this repository and watches `main`; GitHub Actions needs no deployment secrets. Apply the [Watch Paths](docs/runbooks/prod-deployment.md#selective-automatic-deployment) to deploy application and relevant infrastructure/CI changes while skipping repository documentation. Published Markdown under `src/content/docs/` remains a build input. Auto Deploy runs independently of Verify, so the developer checks the deployed revision, CI result, health, and HTTPS after each release. Preview deployments stay disabled.
+[Verify](.github/workflows/verify.yml) checks pushes and pull requests. Coolify Auto Deploy uses a GitHub App dedicated to this repository and watches `main`; GitHub Actions needs no deployment secrets. Apply the [Watch Paths](docs/runbooks/prod-deployment.md#selective-automatic-deployment) to deploy application and relevant infrastructure/CI changes while skipping repository documentation. The retained markdown catalog is available to future document consumers. Auto Deploy runs independently of Verify, so the developer checks the deployed revision, CI result, health, and HTTPS after each release. Preview deployments stay disabled.
 
 ## Agent harness
 

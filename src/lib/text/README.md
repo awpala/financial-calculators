@@ -9,7 +9,7 @@ Token-based fuzzy matching and numeric/byte labels are the initial entries. Both
 | Text policy      | Responsibility                                                               |
 | ---------------- | ---------------------------------------------------------------------------- |
 | Search matching  | Normalize searchable text into tokens and require every query token to match |
-| Value formatting | Fixed-decimal, default-locale numeric, and 1024-based byte labels            |
+| Value formatting | Explicit USD currency, fixed-decimal, default-locale numeric, and 1024-based byte labels            |
 
 ## Tokenization and search ownership
 
@@ -51,6 +51,8 @@ The implementation keeps three rows of the distance matrix and rejects pairs who
 Character indexing and lengths in the distance pass follow JavaScript UTF-16 strings. Unicode-aware tokenization does not make edit distance grapheme-aware, normalize composed/decomposed accents, or supply language-specific case/search rules. Add such policy explicitly if the project's text requires it; it changes matching semantics and deserves its own cases.
 
 ## Numeric display contracts
+
+`formatCurrencyUSD(value)` formats caller-validated finite values with explicit `en-US` locale, USD currency, grouping, and two decimal places. Amortization and Cashflow share it so summaries, tables, and tooltips agree. It rounds for display only; numeric models retain unrounded values. It does not parse input or replace invalid-value validation.
 
 `formatFixed(value, fractionDigits)` returns `'0'` for a non-finite value. For finite values it floors precision and clamps it to at least zero, then delegates to native `toFixed`. Precision above 100 still throws `RangeError`; values at least `1e21` in magnitude use the native exponential representation. This is a display primitive, not decimal arithmetic or a rounding policy for money.
 

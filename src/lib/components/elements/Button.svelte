@@ -1,6 +1,6 @@
 <!--
 @component
-Renders the application's standard action control in one of three roles, as a link when given href and a button otherwise.
+Renders the application's standard action control with primary, secondary, or destructive emphasis, as a link when given href and a button otherwise.
 -->
 <script lang="ts">
   import type { HTMLAttributes } from 'svelte/elements';

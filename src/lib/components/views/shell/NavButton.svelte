@@ -52,6 +52,7 @@ Links to a static application route and highlights that route and its descendant
 {#snippet link()}
   <a
     href={target}
+    aria-label={label}
     aria-current={active ? 'page' : undefined}
     onclick={onNavigate}
     class={[

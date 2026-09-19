@@ -66,17 +66,16 @@ Displays a keyboard shortcut as a keycap, hidden below the medium breakpoint, wh
   One keycap. Every keyboard shortcut hint in the app renders through this, so
   they cannot drift into three slightly different caps again.
 
-  `hidden md:inline-flex` is load-bearing and is not a duplicate of the
-  `showShortcuts` guard at the call sites, even though the two breakpoints
-  agree. The layout's `MediaQuery('max-width: 767px', false)` reports `false`
-  during SSR and until hydration, so `showShortcuts` is true on that first
-  render regardless of the real viewport, and the server would otherwise ship a
-  visible cap to a phone. The CSS hides it for exactly that window; the guard
-  then keeps it out of the DOM entirely once the media query is live.
+  `hidden md:inline-flex` applies the compact presentation before hydration,
+  including when a caller renders this component unconditionally. A browser
+  media query with an SSR fallback cannot establish the visitor's real width
+  during prerendering. CSS handles that interval and subsequent resizing;
+  callers opt into an always-visible hint with `showOnSmall`, as the shell's
+  hover explanations do.
 
   The cap is a real `<kbd>`, and its text joins the accessible name of whatever
   encloses it. That is deliberate for a control whose label is the action --
-  "Next question, Space" reads correctly -- so keep it inside the button or
+  "Calculate, Shift Enter" reads correctly -- so keep it inside the button or
   label it annotates rather than floating it alongside.
 -->
 <kbd

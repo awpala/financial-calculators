@@ -7,6 +7,7 @@ The `navigation` module owns shared decisions about destinations and how navigat
 | Policy                | Responsibility                                                                                                            | Presentation boundary                                                     |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | Authored destinations | Accept supported destination schemes, classify outbound forms, choose target/rel attributes, and share prose-link styling | Prose-link controls apply the policy; the caller supplies accessible text |
+| Settings return | Restrict the Settings shortcut's return destination to a main application view | The root layout owns keyboard registration and the remembered destination |
 
 The authored-destination policy below is a pure value boundary with no browser state, event listeners, or network requests. Other navigation policies must state their own input, interpretation, and ownership rules.
 
@@ -36,6 +37,10 @@ linkTargetAttributes('#details'); // undefined target and rel
 `LINK_CLASS` carries the shared visible underline/color treatment. It does not supply an accessible label; the owning component provides meaningful text and any additional interaction semantics.
 
 ## Other path boundaries remain distinct
+
+The [Settings destination policy](settings.ts) opens Settings from another view and returns from either settings tab to the remembered Home, Scratchpad, Amortization, or Cashflow route. Missing, obsolete, or malformed destinations fall back to Home; arbitrary URLs never become navigation targets. The root layout records completed visits to main views in `settings_return_view_v1`, so moving between settings tabs or reloading Settings retains the prior view. Shift S uses this policy through typed `resolve()` and `goto()` calls. The shared keyboard hook suppresses shortcuts during typing, key repeat, composition, and modal interaction. The layout owns and releases that registration; this module owns no state or listeners.
+
+The [Settings navigation tests](../tests/navigation/settings.test.ts) cover both tabs, all main return destinations, and rejected saved values. Browser checks exercise keyboard toggling, gear entry, tab changes, reload, and shortcut filtering.
 
 Application route links use SvelteKit's typed `resolve()` contract. Images and embedded markup have their own allowed-source boundaries. This authored-link helper does not validate restored login destinations, authorize a route, constrain image sources, or sanitize arbitrary HTML.
 

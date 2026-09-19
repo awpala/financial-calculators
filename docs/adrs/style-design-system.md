@@ -85,7 +85,7 @@ This is not a preference. Tailwind's preflight sets `box-sizing: border-box`, so
 
 ### `class` is an escape hatch for position, not for palette
 
-Every component takes a `class` prop and merges it last through Svelte 5's array-class syntax: `class={[base, className]}`.
+Components with caller-configurable geometry expose a `class` prop and compose it through Svelte 5’s array-class syntax: `class={[base, className]}`. Specialized controls may expose only the props their contract needs. Appending classes does not override conflicting Tailwind utilities by string order; use an owned variant for alternate geometry and avoid supplying competing width or padding classes.
 
 One thing that syntax does _not_ do is decide conflicts. Two utilities targeting the same CSS property resolve by their order in the generated stylesheet, not by their order in the class attribute, so "merged last" buys ordering in the markup and nothing in the cascade. That is why the hatch is scoped to properties the base does not already set.
 

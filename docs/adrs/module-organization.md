@@ -106,7 +106,7 @@ If those answers amount only to “the file becomes shorter,” keep the cohesiv
 
 ### Build and browser boundaries deserve physical separation
 
-The source catalog and document transforms stay server-only so Chromium and highlighting grammars do not enter the browser graph. The static build publishes their prepared HTML/data. Presentation components receive serializable document data and own only browser interaction; server-only module placement does not make published content private.
+The source catalog and document transforms stay server-only so Chromium and highlighting grammars do not enter the browser graph. A consuming route can publish their prepared HTML/data through the static build; the current calculator routes do not publish the retained catalog. Presentation components receive serializable document data and own only browser interaction; server-only module placement does not make published content private.
 
 | Operation | Owner | Boundary |
 | --- | --- | --- |

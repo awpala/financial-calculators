@@ -15,9 +15,9 @@ The integrations support local document sources and build-time transforms. Their
 
 ## Document sources and deployment lifetime
 
-[`documents.ts`](documents.ts) owns a Vite glob of local markdown sources. Only summaries leave the catalog; the detail loader parses an exact selected source. The same catalog supplies dynamic-route prerender entries, so adding an unlinked or nested file cannot silently omit its page. Slugs index known bundled strings and are never passed to filesystem reads.
+[`documents.ts`](documents.ts) owns a Vite glob of local markdown sources. Consumers can request summaries or an exact selected source. A document route should use the same catalog for dynamic-route prerender entries, so an unlinked or nested file cannot silently omit its page. The current calculator routes do not consume the retained catalog. Slugs index known bundled strings and are never passed to filesystem reads.
 
-The static adapter executes loaders during the build and publishes prepared HTML/data. The same loaders execute during local development. A content update requires rebuilding the deployed artifact. Static assets, prepared document data, and client modules are public; server-only imports keep build tools out of the browser bundle.
+When a route consumes these integrations, the static adapter executes its loader during the build and publishes prepared HTML/data; the same loader executes during local development. A content update requires rebuilding the deployed artifact. Static assets, prepared document data, and client modules are public; server-only imports keep build tools out of the browser bundle.
 
 ```mermaid
 flowchart LR
@@ -54,4 +54,4 @@ This makes cleanup ownership explicit, at the cost of browser startup for uncach
 
 Add a server integration only when its responsibility cannot run safely in a browser. Keep request-owned values in parameters; keep any shared cache bounded and keyed only by everything that determines its content. If a new helper acquires a resource, define who closes it on success, failure, cancellation, and shutdown before adding a process-global singleton.
 
-Use the [app gate](../../../README.md#run-and-validate). Unit tests cover parser contracts and Mermaid lifecycle behavior with mocks; those checks do not prove a real Chromium installation. The build and artifact checks exercise document preparation with the installed browser. Report those separately from compiler/test success and from production-image HTTP checks.
+Use the [app gate](../../../README.md#run-and-validate). Unit tests cover parser contracts and Mermaid lifecycle behavior with mocks; those checks do not prove a real Chromium installation. A consumer that invokes document preparation uses the installed browser; a diagram failure becomes a visible error node rather than failing the build. Current calculator builds do not exercise this optional integration. Exercise actual rendering when changing this integration; deployment smoke checks only validate packaging and serving. Report rendering checks separately from compiler/test success and from production-image HTTP checks.

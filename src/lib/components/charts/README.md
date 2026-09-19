@@ -47,9 +47,9 @@ Charts measure their container width and take an explicit height, defaulting to 
 
 Automatic numeric y domains include zero and add padding, with a fallback extent for degenerate data. Explicit domain and, where supported, minimum/maximum overrides let the caller preserve comparable scales across charts. Axis tick formatters convert numeric coordinates into meaningful labels; the line chart's x axis is numeric, so a time series must provide numeric timestamps and a formatter.
 
-Grouped bars use a band scale for groups and another for series inside each group. Stacked bars accumulate positive and negative values separately around zero. Summing all signed segments into one height would conceal the negative portion and misrepresent the composition. Group and bar padding adjust spacing independently.
+Grouped bars use a band scale for groups and another for series inside each group. Stacked bars accumulate positive and negative values separately around zero. Summing all signed segments into one height would conceal the negative portion and misrepresent the composition. Group and bar padding adjust spacing independently. The stacked chart’s SVG fills its container even before measurement; continuous band ranges distribute every group across the full measured plotting width without a fixed pixel width or integer rounding. Resizing the container, including opening or closing a contextual rail, recomputes that distribution.
 
-The stacked chart also supports separators, secondary and tertiary labels over inclusive group spans, annotations, horizontal overlays, and custom legend entries. These remain drawing instructions. The chart does not know whether an overlay is a target, threshold, or computed statistic; the caller must calculate and label it. Keep index spans aligned when filtering or reordering groups.
+The stacked chart also supports separators, secondary and tertiary labels over inclusive group spans, annotations, horizontal overlays, and custom legend entries. `legendAlign` positions the legend at the start by default or centers the items below the chart; Amortization chooses center. These remain drawing instructions. The chart does not know whether an overlay is a target, threshold, or computed statistic; the caller must calculate and label it. Keep index spans aligned when filtering or reordering groups.
 
 D3 is used for pure calculations. Svelte owns the SVG nodes, so there is no imperative D3 selection, retained chart instance, or third-party DOM lifecycle to reconcile with component teardown. Derived scales and paths recompute from props and measured size. Scratch maps created inside a derivation are temporary aggregation values, not independently reactive application state.
 
@@ -57,7 +57,7 @@ D3 is used for pure calculations. Svelte owns the SVG nodes, so there is no impe
 
 Hover and scroll-lock ownership are part of chart-interaction lifetime; the caller determines tooltip content.
 
-The line and stacked-bar charts report hover data with viewport `clientX`/`clientY` coordinates and send `null` when the pointer leaves. They do not choose the tooltip's domain content, position policy, or interaction controls. The owner renders the tooltip and decides whether it is interactive.
+The line and stacked-bar charts report hover data with viewport `clientX`/`clientY` coordinates and send `null` when the pointer leaves. The stacked chart also updates its callback as the pointer moves within a segment, allowing a value bubble to follow the pointer. They do not choose the tooltip's domain content, position policy, or interaction controls. `ChartTooltip` supplies a noninteractive floating text bubble clamped to the viewport; its caller owns visibility and dismissal, while Svelte owns its measurement and viewport subscriptions. The owner renders the tooltip and decides whether it is interactive.
 
 ```mermaid
 sequenceDiagram

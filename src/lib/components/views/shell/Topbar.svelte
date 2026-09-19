@@ -1,18 +1,22 @@
 <!--
 @component
-Displays primary navigation, the contextual rail toggle, and the theme control.
+Displays primary navigation, the contextual rail toggle, the Settings entry, and the theme control with shortcut hints.
 -->
 <script lang="ts">
   import { resolve } from '$app/paths';
+  import { page } from '$app/state';
   import type { Component, ComponentProps } from 'svelte';
   import { APP_NAME } from '#lib';
   import NavButton from '#lib/components/views/shell/NavButton.svelte';
   import HoverText from '#lib/components/behaviors/HoverText.svelte';
   import ThemeToggle from '#lib/components/views/shell/ThemeToggle.svelte';
+  import KeypressPrompt from '#lib/components/elements/KeypressPrompt.svelte';
   import HouseIcon from '#lib/icons/navigation/HouseIcon.svelte';
+  import AmortizationIcon from '#lib/icons/content/AmortizationIcon.svelte';
+  import ScratchpadIcon from '#lib/icons/content/ScratchpadIcon.svelte';
+  import CashflowIcon from '#lib/icons/content/CashflowIcon.svelte';
   import MenuIcon from '#lib/icons/layout/MenuIcon.svelte';
-  import NotesIcon from '#lib/icons/content/NotesIcon.svelte';
-  import LayersIcon from '#lib/icons/layout/LayersIcon.svelte';
+  import GearIcon from '#lib/icons/actions/GearIcon.svelte';
 
   /** One entry in the primary navigation bar. */
   type NavEntry = {
@@ -53,11 +57,11 @@ Displays primary navigation, the contextual rail toggle, and the theme control.
     compactNavigation = false,
   }: Props = $props();
 
-  // Retain the reference pages alongside future calculator routes.
   const entries: NavEntry[] = [
     { href: '/', label: 'Home', icon: HouseIcon },
-    { href: '/examples', label: 'Examples', icon: LayersIcon },
-    { href: '/docs', label: 'Docs', icon: NotesIcon },
+    { href: '/scratchpad', label: 'Scratchpad', icon: ScratchpadIcon },
+    { href: '/amortization', label: 'Amortization', icon: AmortizationIcon },
+    { href: '/cashflow', label: 'Cashflow', icon: CashflowIcon },
   ];
   const iconOnly = $derived(smallViewport || compactNavigation);
 
@@ -73,11 +77,20 @@ Displays primary navigation, the contextual rail toggle, and the theme control.
 >
   <div class="flex shrink-0 items-center gap-1">
     {#if contextMenuLabel && onContextMenuToggle}
-      <HoverText text={contextMenuLabel}>
+      <HoverText text={`${contextMenuLabel} · Shift R`}>
+        {#snippet content()}
+          <span class="inline-flex items-center gap-2"
+            >{contextMenuLabel}<KeypressPrompt
+              key="Shift R"
+              showOnSmall
+            /></span
+          >
+        {/snippet}
         <button
           type="button"
           aria-label={contextMenuLabel}
           aria-expanded={contextMenuExpanded}
+          aria-keyshortcuts="Shift+R"
           onclick={onContextMenuToggle}
           class={controlClass}
         >
@@ -100,7 +113,7 @@ Displays primary navigation, the contextual rail toggle, and the theme control.
       smallViewport
         ? 'flex min-w-0 flex-1 items-center justify-center gap-0.5'
         : 'pointer-events-none absolute left-1/2 flex w-full max-w-xl -translate-x-1/2 items-center gap-1',
-      !smallViewport && (iconOnly ? 'justify-center' : 'justify-between'),
+      !smallViewport && 'justify-center',
     ]}
   >
     {#each entries as entry (entry.href)}
@@ -109,6 +122,26 @@ Displays primary navigation, the contextual rail toggle, and the theme control.
   </nav>
 
   <div class="ml-auto flex shrink-0 items-center gap-0.5">
+    <HoverText text="Settings · Shift S">
+      {#snippet content()}
+        <span class="inline-flex items-center gap-2"
+          >Settings<KeypressPrompt key="Shift S" showOnSmall /></span
+        >
+      {/snippet}
+      <a
+        href={resolve('/settings')}
+        aria-label="Settings"
+        aria-keyshortcuts="Shift+S"
+        aria-current={page.route.id?.startsWith('/settings')
+          ? 'page'
+          : undefined}
+        class={[
+          controlClass,
+          page.route.id?.startsWith('/settings') &&
+            'bg-slate-100 dark:bg-slate-800',
+        ]}><GearIcon class="size-5" /></a
+      >
+    </HoverText>
     <div class="flex h-11 w-11 items-center justify-center">
       <ThemeToggle />
     </div>
