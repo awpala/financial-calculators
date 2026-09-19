@@ -17,14 +17,37 @@ Edits caller-owned loan assumptions for the calculator or its saved Reset preset
     type LoanNumberField,
   } from '#lib/amortization/schedule.js';
   import { formatNumberInput } from '#lib/calculator/presentation/number-input.js';
+  import {
+    isClearInputsShortcut,
+    isResetShortcut,
+  } from '#lib/calculator/presentation/shortcuts.js';
   /** Editable assumptions and optional focus identity owned by the parent. */
   type Props = {
     /** Required mutable draft; the owner binds value and owns persistence. */
     value: LoanInputs;
     /** Optional ID used by the owner's Clear action to focus the purchase price. */
     purchasePriceId?: string;
+    /** Caller-owned action reached by Ctrl+L while a field has focus. */
+    onClear?: () => void;
+    /** Caller-owned action reached by Shift+D while a field has focus. */
+    onReset?: () => void;
   };
-  let { value = $bindable(), purchasePriceId }: Props = $props();
+  let {
+    value = $bindable(),
+    purchasePriceId,
+    onClear,
+    onReset,
+  }: Props = $props();
+
+  function handleKeyDown(event: KeyboardEvent): void {
+    if (onClear && isClearInputsShortcut(event)) {
+      event.preventDefault();
+      onClear();
+    } else if (onReset && isResetShortcut(event)) {
+      event.preventDefault();
+      onReset();
+    }
+  }
   const price = $derived(parseLoanNumber(value.purchasePrice));
   const down = $derived(parseDownPayment(value));
   const converted = $derived(
@@ -63,6 +86,7 @@ Edits caller-owned loan assumptions for the calculator or its saved Reset preset
     inputmode="text"
     autocomplete="off"
     inputClass="dark:bg-slate-950"
+    onkeydown={handleKeyDown}
   />
   <div class="min-w-0 space-y-2">
     <TextField
@@ -72,6 +96,7 @@ Edits caller-owned loan assumptions for the calculator or its saved Reset preset
       inputmode="text"
       autocomplete="off"
       inputClass="dark:bg-slate-950"
+      onkeydown={handleKeyDown}
     />
     <div class="flex justify-end">
       <OptionSwitch
@@ -98,6 +123,7 @@ Edits caller-owned loan assumptions for the calculator or its saved Reset preset
     inputmode="text"
     autocomplete="off"
     inputClass="dark:bg-slate-950"
+    onkeydown={handleKeyDown}
   />
   <TextField
     label={labels.annualRate}
@@ -106,6 +132,7 @@ Edits caller-owned loan assumptions for the calculator or its saved Reset preset
     inputmode="text"
     autocomplete="off"
     inputClass="dark:bg-slate-950"
+    onkeydown={handleKeyDown}
   />
 </div>
 {#if invalid.length > 0}<InvalidFieldsNote

@@ -21,6 +21,15 @@ Owns editable loan assumptions and the options rail, syncing its working copy th
     type LoanInputs,
   } from '#lib/amortization/schedule.js';
   import { persisted, type Persisted } from '#lib/state/storage.svelte.js';
+  import { useKeyboard } from '#lib/hooks/useKeyboard.js';
+  import {
+    CLEAR_INPUTS_KEYSHORTCUTS,
+    CLEAR_INPUTS_SHORTCUT_LABEL,
+    isClearInputsShortcut,
+    isResetShortcut,
+    RESET_KEYSHORTCUTS,
+    RESET_SHORTCUT_LABEL,
+  } from '#lib/calculator/presentation/shortcuts.js';
 
   let inputs = $state<LoanInputs>({ ...DEFAULT_LOAN_INPUTS });
   const shell = getShellContext();
@@ -61,10 +70,24 @@ Owns editable loan assumptions and the options rail, syncing its working copy th
     document.getElementById(purchasePriceId)?.focus();
   }
 
+  function resetInputs(): void {
+    inputs = settings.amortizationDefaults;
+  }
+
   function setTooltipsEnabled(enabled: boolean): void {
     tooltipsEnabled = enabled;
     if (tooltipStorage) tooltipStorage.value = enabled;
   }
+
+  useKeyboard((event) => {
+    if (isClearInputsShortcut(event)) {
+      event.preventDefault();
+      clearInputs();
+    } else if (isResetShortcut(event)) {
+      event.preventDefault();
+      resetInputs();
+    }
+  });
 </script>
 
 {#snippet optionsRail()}
@@ -98,10 +121,19 @@ Owns editable loan assumptions and the options rail, syncing its working copy th
       clearDescription="Empty all four loan values. Keep the down-payment mode and chart grouping."
       resetDescription="Restore your saved Amortization defaults, including the payment-period grouping. Edit defaults in Settings."
       onClear={clearInputs}
-      onReset={() => (inputs = settings.amortizationDefaults)}
+      onReset={resetInputs}
       error={calculated.ok ? undefined : calculated.message}
+      clearShortcutLabel={CLEAR_INPUTS_SHORTCUT_LABEL}
+      clearKeyShortcuts={CLEAR_INPUTS_KEYSHORTCUTS}
+      resetShortcutLabel={RESET_SHORTCUT_LABEL}
+      resetKeyShortcuts={RESET_KEYSHORTCUTS}
     >
-      <LoanFields bind:value={inputs} {purchasePriceId} />
+      <LoanFields
+        bind:value={inputs}
+        {purchasePriceId}
+        onClear={clearInputs}
+        onReset={resetInputs}
+      />
     </InputCard>
     <LoanSummary {loan} resolution={inputs.resolution} />
   </div>

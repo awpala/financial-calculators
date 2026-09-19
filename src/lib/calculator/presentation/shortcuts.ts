@@ -1,7 +1,10 @@
 /**
- * Scratchpad editor shortcuts: Shift+Enter calculates and Ctrl+L clears.
- * Enter and Space otherwise remain text. Browsers may reserve Ctrl+L for the
- * address bar, so the Clear Inputs button is always available as well.
+ * Calculator input shortcuts: Shift+Enter calculates (Scratchpad only),
+ * Ctrl+L clears inputs (Scratchpad, Amortization, and Cashflow), and Shift+D
+ * resets inputs to their defaults — D for Defaults (Amortization and
+ * Cashflow, which are the views with a Reset action). Enter and Space
+ * otherwise remain text. Browsers may reserve Ctrl+L for the address bar, so
+ * the Clear Inputs button is always available as well.
  */
 
 type ShortcutEvent = Pick<
@@ -17,6 +20,12 @@ export const CLEAR_INPUTS_SHORTCUT_LABEL = 'Ctrl L';
 
 /** The Clear Inputs shortcut, as `aria-keyshortcuts` spells it. */
 export const CLEAR_INPUTS_KEYSHORTCUTS = 'Control+L';
+
+/** The keycap label for the Reset shortcut. */
+export const RESET_SHORTCUT_LABEL = 'Shift D';
+
+/** The Reset shortcut, as `aria-keyshortcuts` spells it. */
+export const RESET_KEYSHORTCUTS = 'Shift+D';
 
 function isShiftOnly(event: ShortcutEvent): boolean {
   return (
@@ -47,5 +56,17 @@ export function isClearInputsShortcut(event: ShortcutEvent): boolean {
     !event.metaKey &&
     !event.isComposing &&
     (event.code === 'KeyL' || event.key.toLocaleLowerCase() === 'l')
+  );
+}
+
+/**
+ * Whether a keydown is Shift+D, which resets the input to its defaults — D
+ * for Defaults. The physical key is matched first so another keyboard layout
+ * still reaches it; the character is the fallback.
+ */
+export function isResetShortcut(event: ShortcutEvent): boolean {
+  return (
+    isShiftOnly(event) &&
+    (event.code === 'KeyD' || event.key.toLocaleLowerCase() === 'd')
   );
 }

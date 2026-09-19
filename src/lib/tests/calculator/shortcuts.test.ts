@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   isCalculateShortcut,
   isClearInputsShortcut,
+  isResetShortcut,
 } from '#lib/calculator/presentation/shortcuts.js';
 
 const plain = {
@@ -15,7 +16,9 @@ const enter = { ...plain, key: 'Enter', code: 'Enter' };
 const space = { ...plain, key: ' ', code: 'Space' };
 const letterC = { ...plain, key: 'c', code: 'KeyC' };
 const letterL = { ...plain, key: 'l', code: 'KeyL' };
+const letterD = { ...plain, key: 'd', code: 'KeyD' };
 const clearChord = { ...letterL, ctrlKey: true };
+const resetChord = { ...letterD, shiftKey: true };
 
 describe('calculator shortcuts', () => {
   it('calculates on Shift+Enter only', () => {
@@ -56,6 +59,20 @@ describe('calculator shortcuts', () => {
     expect(isClearInputsShortcut({ ...letterC, shiftKey: true })).toBe(false);
   });
 
+  it('resets on Shift+D only, by physical key or by character', () => {
+    expect(isResetShortcut(resetChord)).toBe(true);
+    expect(isResetShortcut({ ...resetChord, key: 'D' })).toBe(true);
+    expect(isResetShortcut({ ...resetChord, code: 'KeyJ', key: 'd' })).toBe(
+      true,
+    );
+    expect(isResetShortcut(letterD)).toBe(false);
+    expect(isResetShortcut({ ...letterC, shiftKey: true })).toBe(false);
+    expect(isResetShortcut({ ...resetChord, ctrlKey: true })).toBe(false);
+    expect(isResetShortcut({ ...resetChord, altKey: true })).toBe(false);
+    expect(isResetShortcut({ ...resetChord, metaKey: true })).toBe(false);
+    expect(isResetShortcut({ ...resetChord, isComposing: true })).toBe(false);
+  });
+
   it.each(['altKey', 'metaKey', 'isComposing'] as const)(
     'declines every chord while %s is also active',
     (extra) => {
@@ -65,6 +82,7 @@ describe('calculator shortcuts', () => {
       expect(isClearInputsShortcut({ ...clearChord, [extra]: true })).toBe(
         false,
       );
+      expect(isResetShortcut({ ...resetChord, [extra]: true })).toBe(false);
     },
   );
 

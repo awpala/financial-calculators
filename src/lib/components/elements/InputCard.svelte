@@ -7,6 +7,7 @@ Frames editable inputs with Clear/Reset actions, their explanatory hover text, a
   import Card from '#lib/components/elements/Card.svelte';
   import Button from '#lib/components/elements/Button.svelte';
   import HoverText from '#lib/components/behaviors/HoverText.svelte';
+  import KeypressPrompt from '#lib/components/elements/KeypressPrompt.svelte';
   /** Public content and action contracts for a group of editable inputs. */
   type Props = {
     /** Section heading and accessible name. */
@@ -25,6 +26,14 @@ Frames editable inputs with Clear/Reset actions, their explanatory hover text, a
     children: Snippet;
     /** Internal spacing and additional layout classes; defaults to space-y-5. */
     class?: string;
+    /** Keycap label shown on Clear, such as "Ctrl L"; omitted leaves Clear unannotated. */
+    clearShortcutLabel?: string;
+    /** `aria-keyshortcuts` value paired with `clearShortcutLabel`, such as "Control+L". */
+    clearKeyShortcuts?: string;
+    /** Keycap label shown on Reset, such as "Shift D"; omitted leaves Reset unannotated. */
+    resetShortcutLabel?: string;
+    /** `aria-keyshortcuts` value paired with `resetShortcutLabel`, such as "Shift+D". */
+    resetKeyShortcuts?: string;
   };
   let {
     title,
@@ -35,6 +44,10 @@ Frames editable inputs with Clear/Reset actions, their explanatory hover text, a
     error,
     children,
     class: className = 'space-y-5',
+    clearShortcutLabel,
+    clearKeyShortcuts,
+    resetShortcutLabel,
+    resetKeyShortcuts,
   }: Props = $props();
 </script>
 
@@ -43,10 +56,24 @@ Frames editable inputs with Clear/Reset actions, their explanatory hover text, a
     <h2 class="text-base font-semibold">{title}</h2>
     <div class="flex items-center gap-2">
       <HoverText text={clearDescription}
-        ><Button variant="secondary" onclick={onClear}>Clear</Button></HoverText
+        ><Button
+          variant="secondary"
+          onclick={onClear}
+          aria-keyshortcuts={clearKeyShortcuts}
+          >{#if clearShortcutLabel}<span class="flex items-center gap-3"
+              >Clear <KeypressPrompt key={clearShortcutLabel} /></span
+            >{:else}Clear{/if}</Button
+        ></HoverText
       >
       <HoverText text={resetDescription} align="end"
-        ><Button variant="secondary" onclick={onReset}>Reset</Button></HoverText
+        ><Button
+          variant="secondary"
+          onclick={onReset}
+          aria-keyshortcuts={resetKeyShortcuts}
+          >{#if resetShortcutLabel}<span class="flex items-center gap-3"
+              >Reset <KeypressPrompt key={resetShortcutLabel} /></span
+            >{:else}Reset{/if}</Button
+        ></HoverText
       >
     </div>
   </div>

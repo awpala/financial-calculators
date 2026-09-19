@@ -16,14 +16,32 @@ Edits caller-owned take-home assumptions for the calculator or its Reset preset.
     type CashflowAmountField,
     type CashflowInputs,
   } from '#lib/cashflow/income.js';
+  import {
+    isClearInputsShortcut,
+    isResetShortcut,
+  } from '#lib/calculator/presentation/shortcuts.js';
   /** Editable assumptions and optional focus identity owned by the parent. */
   type Props = {
     /** Required mutable draft; the owner binds value and owns persistence. */
     value: CashflowInputs;
     /** Optional ID used by the owner's Clear action to focus gross income. */
     incomeId?: string;
+    /** Caller-owned action reached by Ctrl+L while a field has focus. */
+    onClear?: () => void;
+    /** Caller-owned action reached by Shift+D while a field has focus. */
+    onReset?: () => void;
   };
-  let { value = $bindable(), incomeId }: Props = $props();
+  let { value = $bindable(), incomeId, onClear, onReset }: Props = $props();
+
+  function handleKeyDown(event: KeyboardEvent): void {
+    if (onClear && isClearInputsShortcut(event)) {
+      event.preventDefault();
+      onClear();
+    } else if (onReset && isResetShortcut(event)) {
+      event.preventDefault();
+      onReset();
+    }
+  }
   const converted = $derived(
     changeCashflowIncomeMode(value, !value.useHourlyIncome),
   );
@@ -72,6 +90,7 @@ Edits caller-owned take-home assumptions for the calculator or its Reset preset.
     inputmode="text"
     autocomplete="off"
     inputClass="dark:bg-slate-950"
+    onkeydown={handleKeyDown}
   />
   <TextField
     label={labels.effectiveTaxRate}
@@ -80,6 +99,7 @@ Edits caller-owned take-home assumptions for the calculator or its Reset preset.
     inputmode="text"
     autocomplete="off"
     inputClass="dark:bg-slate-950"
+    onkeydown={handleKeyDown}
   />
   <TextField
     label={labels.retirementContribution}
@@ -88,6 +108,7 @@ Edits caller-owned take-home assumptions for the calculator or its Reset preset.
     inputmode="text"
     autocomplete="off"
     inputClass="dark:bg-slate-950"
+    onkeydown={handleKeyDown}
   />
   <TextField
     label={labels.annualDeductions}
@@ -96,6 +117,7 @@ Edits caller-owned take-home assumptions for the calculator or its Reset preset.
     inputmode="text"
     autocomplete="off"
     inputClass="dark:bg-slate-950"
+    onkeydown={handleKeyDown}
   />
 </div>
 {#if value.useHourlyIncome}
@@ -114,6 +136,7 @@ Edits caller-owned take-home assumptions for the calculator or its Reset preset.
         inputmode="text"
         autocomplete="off"
         inputClass="dark:bg-slate-950"
+        onkeydown={handleKeyDown}
       />
       <TextField
         label={labels.weeksWorked}
@@ -122,6 +145,7 @@ Edits caller-owned take-home assumptions for the calculator or its Reset preset.
         inputmode="text"
         autocomplete="off"
         inputClass="dark:bg-slate-950"
+        onkeydown={handleKeyDown}
       />
     </div>
   </fieldset>

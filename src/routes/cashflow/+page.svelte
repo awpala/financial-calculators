@@ -19,6 +19,15 @@ Owns Cashflow editing and its persisted balance-sheet period, syncing working in
     invalidCashflowFields,
     type CashflowInputs,
   } from '#lib/cashflow/income.js';
+  import { useKeyboard } from '#lib/hooks/useKeyboard.js';
+  import {
+    CLEAR_INPUTS_KEYSHORTCUTS,
+    CLEAR_INPUTS_SHORTCUT_LABEL,
+    isClearInputsShortcut,
+    isResetShortcut,
+    RESET_KEYSHORTCUTS,
+    RESET_SHORTCUT_LABEL,
+  } from '#lib/calculator/presentation/shortcuts.js';
 
   const uid = $props.id();
   const incomeId = `${uid}-income`;
@@ -55,6 +64,20 @@ Owns Cashflow editing and its persisted balance-sheet period, syncing working in
     };
     document.getElementById(incomeId)?.focus();
   }
+
+  function resetInputs(): void {
+    inputs = settings.cashflowDefaults;
+  }
+
+  useKeyboard((event) => {
+    if (isClearInputsShortcut(event)) {
+      event.preventDefault();
+      clearInputs();
+    } else if (isResetShortcut(event)) {
+      event.preventDefault();
+      resetInputs();
+    }
+  });
 </script>
 
 <svelte:head>
@@ -81,10 +104,19 @@ Owns Cashflow editing and its persisted balance-sheet period, syncing working in
       clearDescription="Empty all income, deduction, and work-hour values. Keep the selected income mode."
       resetDescription="Restore your saved Cashflow defaults, including income mode and work-hour assumptions. Edit defaults in Settings."
       onClear={clearInputs}
-      onReset={() => (inputs = settings.cashflowDefaults)}
+      onReset={resetInputs}
       error={calculated.ok ? undefined : calculated.message}
+      clearShortcutLabel={CLEAR_INPUTS_SHORTCUT_LABEL}
+      clearKeyShortcuts={CLEAR_INPUTS_KEYSHORTCUTS}
+      resetShortcutLabel={RESET_SHORTCUT_LABEL}
+      resetKeyShortcuts={RESET_KEYSHORTCUTS}
     >
-      <IncomeFields bind:value={inputs} {incomeId} />
+      <IncomeFields
+        bind:value={inputs}
+        {incomeId}
+        onClear={clearInputs}
+        onReset={resetInputs}
+      />
     </InputCard>
     <div class="min-w-0 space-y-6">
       <MonthlyIncome
