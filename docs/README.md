@@ -1,6 +1,6 @@
 # Architecture and operations
 
-These decisions retain reusable mechanisms, rationale, and failure lessons from the reference projects. Financial Calculators is one public static application; library organization, presentation contracts, and ownership conventions remain deliberate.
+These decisions document Financial Calculators' architecture, rationale, and operational lessons. It is one public static application with explicit library organization, presentation contracts, and ownership conventions.
 
 | Decision | Status | Scope |
 | --- | --- | --- |

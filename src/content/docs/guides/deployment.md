@@ -10,6 +10,6 @@ Run `npm run build` to produce `build/`. Every document has a directory index, s
 
 ## Publishing changes
 
-Content is bundled from this repository. Publish a new build whenever code or documents change. The repository's production runbook covers private source access, pipeline setup, domain configuration, verification, and recovery. Deployment is separate from the current phase 0 preparation.
+Content is bundled from this repository. Coolify deploys selected changes on `main`, including application code, published documents, and relevant infrastructure/CI tooling. Repository documentation alone does not trigger deployment. The production runbook covers private source access, configuration, verification, and recovery; each release is checked against its deployed revision and CI result.
 
 Return to [getting started](../../getting-started/).

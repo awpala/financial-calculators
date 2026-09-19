@@ -1,6 +1,6 @@
 # Financial Calculators
 
-Financial Calculators is a public application for ad hoc financial calculations and visualizations. The project is at phase 0: the application foundation, reusable libraries, development environment, and deployment pipeline are in place; calculator implementation follows separately.
+Financial Calculators is a public application for ad hoc financial calculations and visualizations. The initial merge to `main` establishes its development baseline: reusable libraries, example routes, a development environment, and a deployment pipeline. Calculator features are developed from this baseline.
 
 The application builds complete static pages and runs browser interactions after hydration. Its private GitHub repository deploys through Coolify to `https://fincalcs.portfolio-projects.dev`, using Nginx with no application login or password gate. Production configuration and deployment checks are described in the [runbook](docs/runbooks/prod-deployment.md).
 
@@ -14,7 +14,7 @@ flowchart LR
   HOST --> BROWSER[Svelte components and browser state]
 ```
 
-The app lives at the repository root, following the standalone reference. Composition lives in routes; the reusable libraries retain their original responsibility boundaries. A route lends the shell a rail and releases it on teardown. Browser preferences outlive components, but interactive controllers and pending work remain instance-owned. Server modules never become client runtime imports.
+The app lives at the repository root. Composition lives in routes; reusable libraries have explicit responsibility boundaries. A route lends the shell a rail and releases it on teardown. Browser preferences outlive components, but interactive controllers and pending work remain instance-owned. Server modules never become client runtime imports.
 
 | Reusable mechanism | Contract and explanation |
 | --- | --- |
@@ -89,6 +89,6 @@ The [Coolify runbook](docs/runbooks/prod-deployment.md) configures one Dockerfil
 
 ## Agent harness
 
-[AGENTS.md](AGENTS.md) is the shared entry point; `CLAUDE.md` is a symlink. Task guides under [docs/agents/](docs/agents/) retain the source project's detailed Svelte, organization, documentation, and lifecycle conventions. Canonical skills in `.agents/skills/` are mirrored into `.claude/skills/`, with paired Svelte implementation and review roles for both harnesses. The project-local first-party Svelte MCP is configured in both adapters; host sessions may need to adjust its `/workspace` path.
+[AGENTS.md](AGENTS.md) is the shared entry point; `CLAUDE.md` is a symlink. Task guides under [docs/agents/](docs/agents/) define this application's Svelte, organization, documentation, and lifecycle conventions. Canonical skills in `.agents/skills/` are mirrored into `.claude/skills/`, with paired Svelte implementation and review roles for both harnesses. The project-local first-party Svelte MCP is configured in both adapters; host sessions may need to adjust its `/workspace` path.
 
-The [decision index](docs/README.md) links the retained and adapted ADRs. Library READMEs stand alone and explain contracts, ownership, failure modes, extension, and verification without requiring an agent guide. Preserve those explanations as the application grows.
+The [decision index](docs/README.md) links the application's ADRs. Library READMEs stand alone and explain contracts, ownership, failure modes, extension, and verification without requiring an agent guide. Preserve those explanations as the application grows.

@@ -9,7 +9,7 @@ This application needs one Node toolchain and a browser for markdown diagrams. A
 
 ## Decision
 
-Use a single base-image devcontainer with Node 24 and relevant editor/CLI features. Bind the checkout at `/workspace` and the full scripts directory at `/scripts`. Run the reduced `setup-env.sh` after creation. Do not install an unrelated language toolchain or start a background app listener during provisioning.
+Use a single base-image devcontainer with Node 24 and relevant editor/CLI features. Bind the checkout at `/workspace` and the full scripts directory at `/scripts`. Run `setup-env.sh` after creation. Do not install an unrelated language toolchain or start a background app listener during provisioning.
 
 ```mermaid
 flowchart LR

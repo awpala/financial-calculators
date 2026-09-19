@@ -3,9 +3,9 @@ import { untrack } from 'svelte';
 import type { Attachment } from 'svelte/attachments';
 import { USER_SCOPED_STORAGE, userScopedKey } from '#lib/state/storage-keys.js';
 
-/** Account and content scope that owns a persisted element-local scroll position. */
+/** Identity namespace and content scope for a persisted element-local scroll position. */
 export type LocalScrollScope = {
-  /** Account identifier that isolates browser storage; empty selects anonymous. */
+  /** Storage namespace; this public application uses an empty anonymous identity. */
   userId: string;
   /** Caller-owned content identity whose position is restored. */
   scopeId: string;
@@ -63,7 +63,7 @@ export type LocalScrollOptions = {
   onRestore?: (element: HTMLElement, saved: number | undefined) => void;
 };
 
-/** Return the browser-only key for one user's scrollable region and scope. */
+/** Return the browser-only key for one identity namespace, region, and content scope. */
 export function localScrollPositionKey({
   userId,
   scopeId,

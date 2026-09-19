@@ -1,6 +1,6 @@
 # Project scope and boundaries
 
-Financial Calculators is an independent application for ad hoc financial calculations and visualizations. Phase 0 establishes the development environment, reusable UI and document libraries, public static architecture, and Coolify deployment pipeline. Calculator behavior and the first production deployment are subsequent work.
+Financial Calculators is an independent application for ad hoc financial calculations and visualizations. Its initial `main` baseline includes the development environment, reusable UI and document libraries, public static architecture, and Coolify deployment pipeline. Ongoing application work develops calculator features within these boundaries.
 
 ## Project configuration
 
@@ -25,4 +25,4 @@ All pages are prerendered and ship public HTML, route data, and client assets. C
 
 Routes own composition and local interactions. Server-only modules prepare documents during builds and development. Reusable presentation remains independent of calculator policy. Preserve the [application](app.md), [markdown](markdown.md), [workflow](workflow.md), [documentation](documentation.md), [tooling](tooling.md), and [operations](operations.md) contracts and the standalone library READMEs.
 
-Use the [Coolify runbook](../runbooks/prod-deployment.md) for future production setup. Editing deployment files does not execute that procedure or establish remote DNS, TLS, secrets, or resource state.
+Use the [Coolify runbook](../runbooks/prod-deployment.md) for production configuration, deployment, verification, and recovery. Editing deployment files does not execute that procedure or establish the deployed revision, remote DNS, TLS, or resource state.

@@ -8,7 +8,7 @@ Read AGENTS.md at the repository root before working.
 
 Read [Application engineering](../../docs/agents/app.md) and [shared workflow](../../docs/agents/workflow.md); add other guides only when their boundary is part of the assignment. Follow conditional references as needed; do not preload all guides or skills.
 
-Financial Calculators is a public static application at phase 0. Retain reusable conventions and examples; limit domain changes to the assigned task. Read the relevant service or library README. Respect the user's current scope, authorization, and environment limits. Do not run Git write commands unless the user explicitly requested them in this turn.
+Financial Calculators is a public static application for ad hoc financial calculations and visualizations. Preserve its reusable libraries and examples; limit domain changes to the assigned task. Read the relevant service or library README. Respect the user's current scope, authorization, and environment limits. Do not run Git write commands unless the user explicitly requested them in this turn.
 
 Use the repository's exact dependency pins and first-party documentation/semantic tools before materially changing ecosystem APIs. If a tool is unavailable or its docs target another major, report that and prefer installed compiler/analyzer diagnostics. Keep all exported declarations and public members documented, with ownership and teardown where applicable.
 

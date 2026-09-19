@@ -27,7 +27,7 @@ parseDateISO('2026-02-09T10:00:00Z'); // null: timestamps are another contract
 parseDateISOMs('2026-02-09'); // UTC midnight expressed in epoch milliseconds
 ```
 
-The accepted year range is **0100 through 9999**. `Date.UTC` treats numeric years 0 through 99 as 1900 through 1999; the field-comparison guard consequently rejects input years `0000` through `0099`. The four-digit grammar rejects expanded or signed years. This is the inherited policy, not a claim to support every ISO calendar representation.
+The accepted year range is **0100 through 9999**. `Date.UTC` treats numeric years 0 through 99 as 1900 through 1999; the field-comparison guard consequently rejects input years `0000` through `0099`. The four-digit grammar rejects expanded or signed years. This parser policy does not cover every ISO calendar representation.
 
 `parseDateISOMs(raw)` delegates to the same parser and returns a number or `null`. Do not test a returned timestamp for truthiness: zero is a valid epoch timestamp, and dates before the epoch produce negative values.
 
@@ -88,7 +88,7 @@ The returned `YearSubAxisLabel` ranges are inclusive indexes into the supplied a
 | `monthLabelFromMonthKey('2025-01-extra')`                         | `'Jan 2025'`; extra segments are ignored                              |
 | Invalid/non-finite month-key fields or month outside 1 through 12 | Original key returned                                                 |
 
-Validate untrusted date text before these display/grouping operations. Do not silently broaden the strict parser to match permissive labels, and do not change inherited formatting behavior merely to hide malformed upstream data. A project can introduce a stricter key type or explicit locale/time-zone policy at its boundary.
+Validate untrusted date text before these display/grouping operations. Do not silently broaden the strict parser to match permissive labels, and do not change formatting behavior merely to hide malformed upstream data. Callers can introduce a stricter key type or explicit locale/time-zone policy at their boundary.
 
 ## Tests and extension
 

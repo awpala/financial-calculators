@@ -12,7 +12,7 @@ The reference projects reached these conventions through refactoring. One subsys
 
 The component library exposed the same distinction. Generic controls, interaction wrappers, page layout, and domain views had different dependency directions even when all were Svelte components. Moving files into folders only helped when the folder explained why a caller imported that implementation.
 
-The decision is therefore about responsibility, authorization, and ownership. File size is evidence to inspect, not the rule that decides the boundary. The application preserves the organizing principles while removing the reference domains that originally demonstrated them.
+The decision is therefore about responsibility, authorization, and ownership. File size is evidence to inspect, not the rule that decides the boundary. Apply these principles to the application's actual responsibilities as calculator features are added.
 
 ## Decision
 
@@ -134,7 +134,7 @@ Do not duplicate the source tree with exhaustive lists of files, components, or 
 
 Public declarations and component props document their actual contracts at the source. The README provides the exposition and rationale those local comments cannot. ADRs record why boundaries were chosen and what alternatives cost. Agent instructions carry the same conventions into automated work but do not replace application documentation or become a prerequisite for reading it.
 
-These forms serve different readers. A new application should rewrite its domain description while retaining the reusable contracts and lessons. A new contributor should not need the old reference repository to reconstruct why a helper is instance-owned or why two credential handlers remain separate.
+These forms serve different readers. Update domain descriptions as Financial Calculators evolves while retaining the reusable contracts and lessons. A new contributor should be able to understand from this repository why a helper is instance-owned or why build-time document preparation and browser interaction remain separate.
 
 ## Alternatives considered
 
@@ -153,7 +153,7 @@ An organizational change should be reviewable as an organizational change. Compa
 
 For component moves, an unchanged emitted CSS asset is useful evidence that the utility rule set stayed the same, but it does not establish identical markup or behavior. Compare rendered contracts and exercise affected interactions where appropriate; the [design-system ADR](style-design-system.md) explains the limitation. Avoid tests that merely assert folder names instead of a behavioral contract.
 
-The result is more meaningful imports and clearer review boundaries. The cost is that a relocation can touch many consumers and docs. That cost is paid once so subsequent projects inherit one understandable arrangement, rather than carrying compatibility layers or relearning the same structural lessons.
+The result is more meaningful imports and clearer review boundaries. The cost is that a relocation can touch many consumers and docs. That cost is paid once so subsequent application work uses one understandable arrangement without carrying obsolete import paths or obscuring ownership.
 
 ## References
 

@@ -16,10 +16,10 @@ The following are hard constraints for review and implementation across code cha
 
 - **UI agent**: register listeners/observers/timers at module scope for interactive behavior or route-local state.
   - Impact: duplicated interactions after navigation and process-wide state leakage under SSR.
-- **UI route agent**: store route-specific state (current user interaction, search context, transient auth-derived values) in global/module-level mutable objects.
+- **UI route agent**: store route-specific state (current user interaction, search context, transient page data) in global/module-level mutable objects.
   - Impact: cross-route and cross-user contamination in a long-lived node process.
-- **Server/build owner**: cache a session verdict or retain an unowned browser, timer, or pending task across unrelated renders.
-  - Impact: stale access decisions, leaked processes, or late work acting on a replacement owner.
+- **Server/build owner**: share a mutable document AST or retain an unowned browser, timer, or pending task across unrelated renders.
+  - Impact: cross-render mutations, leaked processes, or late work acting on a replacement owner.
 
 When these patterns appear in a PR, the change must be blocked until ownership boundaries and teardown paths are explicit.
 
@@ -29,7 +29,7 @@ Keep one class per file, together with the helpers and types describing that cla
 
 Subfolders name a responsibility: `persistence/`, `presentation/`, `navigation/`, `parsers/`, or `timing/`. Do not introduce `utils/`, `common/`, `shared/`, or `misc/`. A domain root keeps contracts and its composition point; distinct implementations belong under their responsibility.
 
-Extract shared logic only when callers share the same rule. State and cleanup remain with the owning instance. Prefer cohesion over line count: keep a long controller intact when it has one responsibility and lifecycle. Keep access checks at the request boundary and outside generic presentation components.
+Extract shared logic only when callers share the same rule. State and cleanup remain with the owning instance. Prefer cohesion over line count: keep a long controller intact when it has one responsibility and lifecycle. Keep document preparation behind the server-only boundary and outside generic presentation components.
 
 When moving code, update every importer and remove the old path. Do not add forwarding files or barrel exports at retired paths. These conventions apply alongside the language conventions in the specialty guides. See [the organization decision](../adrs/module-organization.md) and [the organization skill](../../.agents/skills/module-organization/SKILL.md).
 
@@ -39,7 +39,7 @@ When moving code, update every importer and remove the old path. Do not add forw
 - **Match the file's style.** Two-space indentation and single quotes in TS/JS/Svelte, enforced by [.prettierrc](../../.prettierrc). Never argue with a formatter.
 - **Comments preserve contracts and reasoning.** Prefer clear names to comments that merely repeat application statements. Public API documentation remains mandatory, and provisioning/configuration files require comprehensive inline explanations of behavior, ordering, dependencies, failure modes, and operational lessons. Concision is not a reason to delete useful exposition.
 - **Do NOT leave vestigial comments on code removal.** If a removal has been asserted, do not replace it with a lingering comment; a reduction should be net-lines-of-code reductive in the source files. Logic is trued up with updated tests and git history, not with commentary about what used to be there.
-- **Don't add backwards-compat shims** for code in this repo — a project seeded from this template is pre-1.0 and freely refactorable.
+- **Don't add backwards-compat shims** for retired internal paths. Update callers together when refactoring Financial Calculators, while preserving contracts outside the assigned change.
 - When you complete a UI change, exercise it in the dev server before reporting done.
 - **Use American English exclusively** in all code, comments, docs, and commit messages. Initialize, not initialise; color, not colour; behavior, not behaviour.
 - Markdown in this repository does **not** hard-wrap semantic paragraphs. One paragraph is one line, one bullet is one line, with a blank line between paragraphs. Fenced code blocks and Mermaid bodies are the exception, where line structure is significant.

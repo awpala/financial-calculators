@@ -94,9 +94,9 @@ upsert_alias ll 'ls -alF'
 upsert_alias la 'ls -A'
 upsert_alias l 'ls -CF'
 
-# Retain the reference repositories' initialization of any color and listing
-# aliases supplied by the base image. Explicit aliases above guarantee the
-# commands; this pass also preserves the image's related shell conveniences.
+# Enable the color and listing aliases supplied by the base image. Explicit
+# aliases above guarantee the commands; this pass also preserves the image's
+# related shell conveniences.
 echo
 echo "--- Post-processing .bashrc ---"
 if [ -f "$BASH_RC" ]; then
@@ -166,8 +166,8 @@ ln -sf "${SCRIPTS_BIN_DIR}/mmdc.sh" /usr/local/bin/mmdc
 # exercise different boundaries.
 #
 # Install Chromium itself and let apt resolve its required shared libraries.
-# The reference's hand-maintained libglib/libasound/etc. list broke as distro
-# package names and ABI transitions changed; listing those libraries separately
+# Hand-maintained libglib/libasound/etc. lists break as distro package names
+# and ABI transitions change; listing those libraries separately
 # can make setup fail even while the distro's Chromium package is installable.
 # fonts-liberation supplies predictable common fonts despite omitting optional
 # recommended packages. ca-certificates/curl/gnupg support the vendor downloads,

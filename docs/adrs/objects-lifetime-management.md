@@ -9,13 +9,13 @@ Ephemeral behavior must remain ephemeral, and long-lived resources must have exp
 
 ## Normative ownership rules
 
-- Component/request scope lasts for one mounted owner or one render. Current interaction, session verdicts, and mutable ASTs belong here.
-- Process scope contains reusable grammar/theme infrastructure and bounded content-derived caches. It never contains a current visitor or a cached authorization result.
+- Component/request scope lasts for one mounted owner or one render. Current interaction, route data, and mutable ASTs belong here.
+- Process scope contains reusable grammar/theme infrastructure and bounded content-derived caches. It never contains a current visitor or mutable route-specific state.
 - Browser persistence stores preferences with explicit keys and normalization. It does not transfer a controller's lifetime to the module that exports its class.
 - Every acquisition outside the component tree has an effect/attachment/mount cleanup or an explicit `destroy()`/close path. Teardown is safe after partial initialization and repeated calls.
 - Mark an owner invalid before canceling its resources. Cancellation and result validity are separate contracts; a continuation already queued must still check its owner.
 
-Theme and rail visibility are browser-wide preferences. Element-local scroll memory uses identity/content/region keys while its attachment owns listeners, observers, debounce timers, and the final pending write. An anonymous app supplies an empty identity. An account-based app must supply the active identity without creating a global request store.
+Theme and rail visibility are browser-wide preferences. Element-local scroll memory uses identity/content/region keys while its attachment owns listeners, observers, debounce timers, and the final pending write. Financial Calculators supplies an empty identity for anonymous storage. The helper's namespace support does not imply an account system or a global request store.
 
 MathJax is an explicit browser-page runtime exception. One browser-only loader owns the shared script attempt, listeners, and startup deadline; failed attempts clean up and can retry. Renderer-owned targets pass through a serialized queue. Each renderer invalidates outgoing work and clears tracked math on teardown. The page-global loader contains no session, document AST, or active-popup state.
 
@@ -43,7 +43,6 @@ flowchart TD
 | Mutable document | One loader call | Return serializable data; never reuse mutable ASTs |
 | Chromium | One uncached render attempt | Bounded close in `finally`, then forced termination if necessary |
 | Highlighting/cache | Server process | Bounded content keys; no request identity |
-| Session validity | Request hook | Reverify the request cookie on every request |
 
 ### Component ownership includes asynchronous results
 
@@ -51,9 +50,9 @@ The reusable UI mechanisms demonstrate the same rule at different scales. A [she
 
 Resource cleanup and result validity are separate checks. Removing a listener does not cancel an already-started request; aborting a request does not guarantee a queued continuation will not run. A route controller with asynchronous work should invalidate its owner before releasing resources, then accept a result only when both the owner is alive and that request's generation is still current.
 
-The reference implementations exposed why one generation counter per entire page can also be wrong. Independent requests need independent scopes: changing a reporting window need not invalidate a resource's metadata, while selecting another resource must immediately invalidate the old detail response before the new metadata arrives. Otherwise an old result can repopulate a cleared panel or dismiss a new request's loading indicator.
+One generation counter per entire page can also be wrong. Independent requests need independent scopes: changing a reporting window need not invalidate a resource's metadata, while selecting another resource must immediately invalidate the old detail response before the new metadata arrives. Otherwise an old result can repopulate a cleared panel or dismiss a new request's loading indicator.
 
-These are extension rules, not claims that the application includes the reference domain controllers. When adding a controller:
+Apply these ownership rules when adding a controller:
 
 1. Construct it per route or keyed component instance.
 2. Name the request scopes according to which changes invalidate them.
@@ -81,15 +80,15 @@ A `Promise.race` timeout rejects the caller's wait; it does not cancel the losin
 
 ```mermaid
 flowchart LR
-  REQUEST[Incoming cookie] --> VERIFY[Verify signature and expiry]
-  VERIFY --> LOCAL[Request-local verdict]
-  LOCAL --> LOADER[Page loader]
-  PUBLIC[Configured public key] --> VERIFY
-  LOADER --> INFRA[Shared grammar and content infrastructure]
-  LOADER -. never retain .-> IDENTITY[Process-global visitor state]
+  SOURCE[Repository document] --> LOADER[Build or development loader]
+  LOADER --> LOCAL[Fresh AST and route data]
+  LOCAL --> OUTPUT[Prerender or SSR result]
+  INFRA[Shared grammars and themes] --> LOADER
+  LOADER --> CACHE[Bounded content-derived cache]
+  LOADER -. never retain .-> STATE[Process-global route state]
 ```
 
-The verifier can be process-scoped because it is immutable configuration. Signed tokens and their verdicts remain request-local. Rate-limit windows are explicitly bounded and keyed, and enforce only an attempt budget; they never stand in for authentication. A browser's stored preference cannot grant access.
+Grammars and themes can be process-scoped because they are shared infrastructure. Each loader owns its mutable AST and returned route data, so preparing one document cannot alter another render's state. Content-cache entries require keys that cover every rendering input and explicit size limits. Browser preferences remain local presentation choices; the generated pages and route data are public.
 
 ## Shutdown and partial failure
 
@@ -106,7 +105,7 @@ A timeout that only rejects the wait leaves the underlying operation running. Th
 
 ## Verification contract
 
-For component changes, navigate away while work is pending and remount repeatedly; callback counts must not grow and late results must not alter a replacement owner. Exercise teardown after success, failure, and partial initialization. For server changes, verify that separate requests cannot share mutable ASTs or session decisions. Content caches require explicit bounds and keys covering every rendering input.
+For component changes, navigate away while work is pending and remount repeatedly; callback counts must not grow and late results must not alter a replacement owner. Exercise teardown after success, failure, and partial initialization. For server changes, verify that separate renders cannot share mutable ASTs or route-specific state. Content caches require explicit bounds and keys covering every rendering input.
 
 Parser, persistence, request-lifetime, popup, scroll, MathJax, hover, and mocked Mermaid tests preserve selected contracts. Neither mocked browser cleanup nor a successful static build proves real browser launch or container shutdown. Report actual browser and deployment checks separately.
 

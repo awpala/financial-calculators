@@ -5,7 +5,7 @@
 
 ## Context
 
-Financial Calculators will provide ad hoc calculations and visualizations. Phase 0 establishes the application foundation and deployment configuration; calculator implementation and the first deployment follow separately. The repository is private, but the deployed content is intended for public access and contains no material requiring a site access gate. GitHub Pages is unavailable under this repository's current hosting constraints.
+Financial Calculators is an application for ad hoc calculations and visualizations. Its initial main-branch baseline includes the application libraries and deployment configuration on which calculator features are developed. The repository is private, but the deployed content is intended for public access and contains no material requiring a site access gate. GitHub Pages is unavailable under this repository's current hosting constraints.
 
 The application has no external data service and prepares repository-owned content ahead of time. Its interactive presentation runs in the browser. A strict static build supplies readable initial HTML while keeping the production runtime small.
 

@@ -10,22 +10,22 @@ The current primitives cover preferences and asynchronous/scroll ownership. Add 
 | ------------------------------ | ------------------------------------------------------------------------- |
 | Whole-value persistence        | Caller chooses lifetime and key; server writes are rejected               |
 | Theme state                    | Component-tree controller with a browser-level preference                 |
-| Preference identity and policy | Explicit browser/account scopes and contract-specific normalization       |
+| Preference identity and policy | Explicit browser/storage namespaces and contract-specific normalization   |
 | Asynchronous result ownership  | Per-view scopes, invalidation, and permanent teardown                     |
-| Element-local scroll memory    | Account/content/region keys with element-owned registrations and flushing |
+| Element-local scroll memory    | Namespace/content/region keys with element-owned registrations and flushing |
 
 ## Choose the lifetime before choosing the primitive
 
-The same imported module has two very different lifetimes. In the browser it belongs to one running page; during prerendering or protected Node rendering it can serve many routes and requests for the lifetime of the Node process. A module-level `$state` cell is therefore not a convenient request store. A value written while rendering one visitor can be read by the next visitor.
+The same imported module has two very different lifetimes. In the browser it belongs to one running page; during prerendering or development SSR it can serve many routes and requests for the lifetime of the Node process. A module-level `$state` cell is therefore not a convenient request store. A value written while rendering one visitor can be read by the next visitor.
 
 | Scope                    | Appropriate values                                     | Owner                                                |
 | ------------------------ | ------------------------------------------------------ | ---------------------------------------------------- |
 | Server process           | Immutable configuration and content-derived caches     | Server composition; never current-user state         |
-| Request                  | Cookie, session verdict, loaded route data      | Request and loader arguments                         |
+| Render                   | Mutable document AST and loaded route data              | Build or development loader arguments                |
 | Component tree           | Theme controller, shell registration, route controller | An ancestor installs context; descendants consume it |
 | Component instance       | Input values, open panels, pointer state               | The component's `$state` and cleanup                 |
 | Browser profile          | Theme and shell-visibility preference                  | Explicit localStorage key                            |
-| Account within a browser | A future account-specific preference         | An identity-scoped localStorage key                  |
+| Storage namespace        | Isolated preference keys; anonymous in this application | A caller-supplied namespace encoded in the key        |
 | Active view/controller   | Which asynchronous result is still relevant            | A `LatestRequests` instance destroyed with its owner |
 | Mounted scrolling region | Scroll listeners, observer, and pending writes         | A Svelte attachment released with the element        |
 
@@ -33,12 +33,12 @@ Context is the bridge between an owner and its descendants. Create a controller 
 
 ```mermaid
 flowchart TD
-  REQUEST["Request identity and route data"] --> LAYOUT["Layout instance"]
+  DATA["Loaded route data"] --> LAYOUT["Layout instance"]
   LAYOUT --> CONTEXT["Theme and shell context"]
   CONTEXT --> CHILDREN["Descendant components"]
   BROWSER[("Browser localStorage")] <--> PERSISTED["persisted value<br/>whole-value replacement"]
   PERSISTED --> LAYOUT
-  USER["Current account ID"] --> KEY["userScopedKey"]
+  NAMESPACE["Anonymous namespace: empty identity"] --> KEY["userScopedKey"]
   KEY --> SCROLL["Scoped scroll preference"] --> BROWSER
 ```
 
@@ -72,7 +72,7 @@ The backing cell is `$state.raw`, deliberately. Preference payloads are replaced
 
 Do not mutate `preferences.value.hiddenColumns` in place. Build a new array and replace the containing object. A raw cell does not publish nested mutations; a browser-only mutation that appears visually harmless can also conceal a server ownership mistake.
 
-Storage is best-effort. Invalid JSON or denied reads fall back to the supplied initial value; quota or access failures on writes leave the in-memory change intact. Successfully parsed JSON is not shape-validated. The generic type is a TypeScript promise made by the caller, not a runtime validator. Callers own normalization, schema versions, migrations, and account scoping. There is no storage-event subscription or cross-tab synchronization.
+Storage is best-effort. Invalid JSON or denied reads fall back to the supplied initial value; quota or access failures on writes leave the in-memory change intact. Successfully parsed JSON is not shape-validated. The generic type is a TypeScript promise made by the caller, not a runtime validator. Callers own normalization, schema versions, migrations, and storage namespaces. There is no storage-event subscription or cross-tab synchronization.
 
 ### What happens during SSR
 
@@ -92,12 +92,11 @@ The theme has three cooperating parts because the component tree does not exist 
 
 The generic persistence helper does not validate loaded values. New preference formats should normalize their input explicitly; the rail preference below already demonstrates that boundary.
 
-## Shell and account preferences
+## Shell and storage namespaces
 
 Rail visibility is one preference for the contextual rail itself, not one per route. [`rail-visibility.ts`](rail-visibility.ts) exposes its key, expanded-by-default policy, and `normalizeRailOpen(unknown)`. Only a boolean is accepted; anything else returns the default. The layout owns the reactive state and writes the stored value when the user toggles the desktop rail. Opening the phone drawer is transient state and does not rewrite that preference.
 
-[`storage-keys.ts`](storage-keys.ts) centralizes account-scoped prefixes. `userScopedKey(prefix, userId)` encodes the identity segment once; an empty ID selects an anonymous slot. `isUserScopedKey` recognizes a prefix for callers that need to inspect stored entries. The retained prefix scopes element-local scroll memory; an anonymous app supplies an empty identity.
-
+[`storage-keys.ts`](storage-keys.ts) centralizes namespaced prefixes. `userScopedKey(prefix, userId)` encodes the identity segment once; an empty ID selects an anonymous slot. `isUserScopedKey` recognizes a prefix for callers that need to inspect stored entries. The scroll prefix scopes element-local scroll memory. Financial Calculators has no accounts and uses the empty identity; the reusable helper's namespace argument does not create an authentication boundary.
 
 ## Latest-result ownership across asynchronous requests
 
@@ -152,27 +151,25 @@ sequenceDiagram
 
 ## Element-local scroll memory
 
-[`scroll-position.ts`](scroll-position.ts) persists an element's own vertical `scrollTop`. It does not move the page, synchronize parent scroll containers, or infer which content is selected. `LocalScrollScope` combines account identity, a caller-owned content identity, and a region name. The key encodes all three segments under `USER_SCOPED_STORAGE.localScrollPosition`, so separate accounts, content scopes, and panels cannot accidentally share one position.
+[`scroll-position.ts`](scroll-position.ts) persists an element's own vertical `scrollTop`. It does not move the page, synchronize parent scroll containers, or infer which content is selected. `LocalScrollScope` combines a storage namespace, a caller-owned content identity, and a region name. The key encodes all three segments under `USER_SCOPED_STORAGE.localScrollPosition`, so separate namespaces, content scopes, and panels cannot accidentally share one position. Application callers use an empty `userId` for the anonymous namespace:
 
 ```svelte
 <script lang="ts">
   import { persistLocalScrollPosition } from '#lib/state/scroll-position.js';
 
-  /** Identity and content scope for the independently scrolling panel. */
+  /** Content scope for the independently scrolling panel. */
   type Props = {
-    /** Account whose browser-local position is remembered. */
-    userId: string;
     /** Content collection whose position should be restored. */
     collectionId: string;
   };
 
-  let { userId, collectionId }: Props = $props();
+  let { collectionId }: Props = $props();
 </script>
 
 <div
   class="max-h-96 overflow-y-auto"
   {@attach persistLocalScrollPosition({
-    userId,
+    userId: '',
     scopeId: collectionId,
     region: 'detail-list',
   })}
@@ -181,7 +178,7 @@ sequenceDiagram
 </div>
 ```
 
-Recreating the attachment when its identity changes flushes the old owner's pending value before restoring the new owner's value. Desktop and mobile alternatives can deliberately share a region key when they represent the same logical viewport, but two simultaneously active scrollers sharing a key will compete to write it. Empty account identity selects the anonymous slot; it is not an authorization mechanism.
+Recreating the attachment when its content scope or namespace changes flushes the old owner's pending value before restoring the new owner's value. Desktop and mobile alternatives can deliberately share a region key when they represent the same logical viewport, but two simultaneously active scrollers sharing a key will compete to write it. Empty identity selects the anonymous slot; it is not an authorization mechanism.
 
 `readLocalScrollPosition(scope)` returns a finite number between zero and `Number.MAX_SAFE_INTEGER`, or `undefined` for absent, malformed, unavailable, or server-side storage. `writeLocalScrollPosition` rejects values outside those bounds, rounds valid values to integer pixels, and writes best-effort. Reads can accept fractional values written by an earlier caller. Denied storage does not break scrolling, and this helper does not subscribe to other tabs' storage changes.
 
@@ -203,6 +200,6 @@ The attachment is a browser lifecycle operation. Importing it and computing keys
 
 `persisted()` itself installs no timers, listeners, or subscriptions outside Svelte's reactive graph. The scroll attachment explicitly owns and releases its external resources; a controller built around these primitives must expose cleanup and be owned by a component that calls it. In particular, never use a module-level singleton to make a timer or listener survive navigation; that transfers its lifetime to the browser page and, without guarding, to the server process.
 
-When adding a preference, decide whether it belongs to the browser or account, define its key in one place, normalize untrusted stored data, and replace values immutably. If the preference must survive devices or enforce policy, give it a server-owned contract instead of treating localStorage as durable application state.
+When adding a preference, decide whether it belongs to the browser as a whole or to a content/region scope, define its key in one place, normalize untrusted stored data, and replace values immutably. Cross-device persistence and server-enforced policy are outside this application's scope; localStorage cannot provide either.
 
-The [storage tests](../tests/state/storage.test.ts) cover SSR protection and browser persistence. [Request ownership tests](../tests/state/latest-requests.test.ts) cover independent scopes, supersession, invalidation, permanent destruction, and instance isolation. [Scroll tests](../tests/state/scroll-position.test.ts) cover identity isolation, invalid stored values, restoration and teardown flush, intentional zero, and responsive overflow transitions. Their synthetic dimensions make the lifecycle cases deterministic; they do not replace checking real layout in a browser. Use the [app gate](../../../README.md#run-and-validate) after changes, then exercise hydration, denied storage, account switching, and navigation in the application.
+The [storage tests](../tests/state/storage.test.ts) cover SSR protection and browser persistence. [Request ownership tests](../tests/state/latest-requests.test.ts) cover independent scopes, supersession, invalidation, permanent destruction, and instance isolation. [Scroll tests](../tests/state/scroll-position.test.ts) cover identity isolation, invalid stored values, restoration and teardown flush, intentional zero, and responsive overflow transitions. Their synthetic dimensions make the lifecycle cases deterministic; they do not replace checking real layout in a browser. Use the [app gate](../../../README.md#run-and-validate) after changes, then exercise hydration, denied storage, content-scope changes, and navigation in the application.
