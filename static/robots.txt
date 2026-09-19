@@ -1,4 +1,6 @@
-# This public prototype requests no indexing. The disallow is a crawler
+# This public prototype permits indexing. The allow is a crawler
 # directive, not an access restriction or security control.
 User-agent: *
-Disallow: /
+Allow: /
+
+Sitemap: https://fincalcs.portfolio-projects.dev/sitemap.xml
