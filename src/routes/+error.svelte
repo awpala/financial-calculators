@@ -10,12 +10,14 @@ Renders an uncaught route error with its status and message.
   import PageHeader from '#lib/components/layout/PageHeader.svelte';
 </script>
 
-<PageContainer width="narrow">
-  <PageHeader
-    title={`${page.status}`}
-    description={page.error?.message ?? 'Something went wrong.'}
-  />
-  <Button href={resolve('/')} variant="secondary" class="mt-6 self-center">
-    Back to start
-  </Button>
-</PageContainer>
+<div class="flex min-h-full items-center justify-center">
+  <PageContainer width="narrow">
+    <PageHeader
+      title={`${page.status}`}
+      description={page.error?.message ?? 'Something went wrong.'}
+    />
+    <Button href={resolve('/')} variant="secondary" class="mt-6 self-center">
+      Back to Home
+    </Button>
+  </PageContainer>
+</div>
