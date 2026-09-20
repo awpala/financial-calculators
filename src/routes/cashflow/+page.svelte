@@ -1,6 +1,6 @@
 <!--
 @component
-Owns Cashflow editing, its persisted display period, and the contextual rail that selects it, syncing working inputs through the root settings controller and composing take-home pay with annual or monthly line items and their shares of gross income.
+Owns Cashflow editing, its persisted display period and chart-hover preference, and the contextual rail that selects them, syncing working inputs through the root settings controller and composing take-home pay with annual or monthly line items and their shares of gross income.
 -->
 <script lang="ts">
   import { onMount } from 'svelte';
@@ -39,11 +39,13 @@ Owns Cashflow editing, its persisted display period, and the contextual rail tha
   let restored = $state(false);
   let monthlyBalance = $state(false);
   let balanceStorage: Persisted<unknown> | undefined;
+  let tooltipsEnabled = $state(true);
 
   onMount(() => {
     inputs = settings.cashflowInputs;
     balanceStorage = persisted<unknown>('cashflow_monthly_balance_v1', false);
     monthlyBalance = balanceStorage.value === true;
+    tooltipsEnabled = settings.chartTooltips;
     restored = true;
     return shell.registerContextualRail({
       label: 'Cashflow Options',
@@ -81,6 +83,11 @@ Owns Cashflow editing, its persisted display period, and the contextual rail tha
     if (balanceStorage) balanceStorage.value = monthly;
   }
 
+  function setTooltipsEnabled(enabled: boolean): void {
+    tooltipsEnabled = enabled;
+    settings.chartTooltips = enabled;
+  }
+
   useKeyboard((event) => {
     if (isClearInputsShortcut(event)) {
       event.preventDefault();
@@ -93,7 +100,12 @@ Owns Cashflow editing, its persisted display period, and the contextual rail tha
 </script>
 
 {#snippet optionsRail()}
-  <OptionsRail {monthlyBalance} onPeriodChange={setMonthlyBalance} />
+  <OptionsRail
+    {monthlyBalance}
+    onPeriodChange={setMonthlyBalance}
+    {tooltipsEnabled}
+    onTooltipsChange={setTooltipsEnabled}
+  />
 {/snippet}
 
 <svelte:head>
@@ -145,7 +157,12 @@ Owns Cashflow editing, its persisted display period, and the contextual rail tha
     </div>
     <div class="min-w-0 space-y-6">
       <BalanceSheet {cashflow} {monthlyBalance} {invalid} />
-      <IncomeBreakdown {cashflow} {monthlyBalance} {invalid} />
+      <IncomeBreakdown
+        {cashflow}
+        {monthlyBalance}
+        {tooltipsEnabled}
+        {invalid}
+      />
     </div>
   </div>
 </PageContainer>

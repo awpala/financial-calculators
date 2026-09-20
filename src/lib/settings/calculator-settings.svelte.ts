@@ -64,6 +64,22 @@ export class CalculatorSettings {
     'cashflow_inputs_v1',
     this.cashflowDefaults,
   );
+  #chartTooltips = persisted<unknown>('chart_tooltips_v1', true);
+
+  /**
+   * Whether charts respond to hover, accenting the mark under the pointer and
+   * offering its tooltip. One preference serves every calculator: a reader who
+   * turned hover off on one chart means it for the charts on the others too,
+   * so each rail's Show tooltips switch reads and writes this same value.
+   * Anything other than an explicit `false` reads as on.
+   */
+  get chartTooltips(): boolean {
+    return this.#chartTooltips.value !== false;
+  }
+  /** Persist the shared chart-hover preference; callers write it from an event handler. */
+  set chartTooltips(enabled: boolean) {
+    this.#chartTooltips.value = enabled;
+  }
 
   /** Valid saved loan preset, falling back to the initial illustration if corrupted. */
   get amortizationDefaults(): LoanInputs {

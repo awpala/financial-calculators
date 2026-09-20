@@ -157,6 +157,7 @@ Owns payment-chart presentation, responsive label density, and transient segment
         .map((group) => group.toIndex)}
       {legendItems}
       legendAlign="center"
+      hoverEnabled={tooltipsEnabled}
       onSegmentHover={(info) => {
         hovered = info && tooltipsEnabled ? { info, source: periods } : null;
       }}

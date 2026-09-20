@@ -45,7 +45,7 @@ describe('calculator presets and reset scope', () => {
       scratchpad_result_v1: '{"value":24}',
       scratchpad_syntax_expanded_v1: 'true',
       theme: '"dark"',
-      amortization_tooltips_v1: 'false',
+      chart_tooltips_v1: 'false',
       cashflow_monthly_balance_v1: 'true',
     };
     for (const [key, value] of Object.entries(unrelated))

@@ -33,6 +33,8 @@ Renders caller-owned magnitudes as SVG pie wedges, sized and labeled by each sli
     legendDividerAfterIndexes?: readonly number[];
     /** Empty-state text; defaults to No data to display. */
     emptyMessage?: string;
+    /** Whether pointer hover accents a wedge, reports to the owner, and offers a native bubble; defaults to true. */
+    hoverEnabled?: boolean;
     /** Optional owner callback on wedge entry and pointer movement; receives null on pointer leave. */
     onSliceHover?: (info: PieSliceHoverInfo | null) => void;
   };
@@ -53,6 +55,7 @@ Renders caller-owned magnitudes as SVG pie wedges, sized and labeled by each sli
     legendAlign = 'start',
     legendDividerAfterIndexes,
     emptyMessage = 'No data to display.',
+    hoverEnabled = true,
     onSliceHover,
   }: Props = $props();
 
@@ -138,10 +141,13 @@ Renders caller-owned magnitudes as SVG pie wedges, sized and labeled by each sli
   // when an owner also tracks the hover for a tooltip. It is presentation only:
   // a stale ID simply matches nothing once the slices are replaced.
   let hoveredId = $state.raw<string | null>(null);
+  // Reading the accent through hoverEnabled rather than clearing the cell means
+  // switching hover off mid-hover cannot strand a wedge at full strength.
+  const accentedId = $derived(hoverEnabled ? hoveredId : null);
 
   /** Opacity that recedes every wedge except the hovered one. */
   function wedgeOpacity(id: string): number {
-    return hoveredId === null || hoveredId === id ? 1 : DIMMED_MARK_OPACITY;
+    return accentedId === null || accentedId === id ? 1 : DIMMED_MARK_OPACITY;
   }
 
   function reportHover(wedge: ResolvedWedge, event: PointerEvent): void {
@@ -189,14 +195,21 @@ Renders caller-owned magnitudes as SVG pie wedges, sized and labeled by each sli
             d={wedge.path}
             fill={wedge.color}
             opacity={wedgeOpacity(wedge.id)}
-            class="stroke-2 stroke-white transition-opacity duration-150 hover:cursor-pointer dark:stroke-slate-900"
+            class={[
+              'stroke-2 stroke-white transition-opacity duration-150 dark:stroke-slate-900',
+              hoverEnabled && 'hover:cursor-pointer',
+            ]}
             role="img"
             aria-label={`${wedge.label}, ${formatValue(wedge.value)}, ${formatShare(wedge.share)}`}
-            onpointerenter={(event: PointerEvent) => reportHover(wedge, event)}
-            onpointermove={(event: PointerEvent) => reportHover(wedge, event)}
-            onpointerleave={endHover}
+            onpointerenter={hoverEnabled
+              ? (event: PointerEvent) => reportHover(wedge, event)
+              : undefined}
+            onpointermove={hoverEnabled
+              ? (event: PointerEvent) => reportHover(wedge, event)
+              : undefined}
+            onpointerleave={hoverEnabled ? endHover : undefined}
           >
-            {#if !onSliceHover}
+            {#if hoverEnabled && !onSliceHover}
               <title>
                 {wedge.label}: {formatValue(wedge.value)} ({formatShare(
                   wedge.share,
@@ -224,7 +237,7 @@ Renders caller-owned magnitudes as SVG pie wedges, sized and labeled by each sli
               )};"
             ></span>
             <span
-              class={hoveredId === entry.id
+              class={accentedId === entry.id
                 ? 'text-slate-900 dark:text-slate-100'
                 : 'text-slate-600 dark:text-slate-300'}>{entry.label}</span
             >

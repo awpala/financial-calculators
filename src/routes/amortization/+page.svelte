@@ -20,7 +20,6 @@ Owns editable loan assumptions and the options rail, syncing its working copy th
     groupPayments,
     type LoanInputs,
   } from '#lib/amortization/schedule.js';
-  import { persisted, type Persisted } from '#lib/state/storage.svelte.js';
   import { useKeyboard } from '#lib/hooks/useKeyboard.js';
   import {
     CLEAR_INPUTS_KEYSHORTCUTS,
@@ -34,12 +33,10 @@ Owns editable loan assumptions and the options rail, syncing its working copy th
   let inputs = $state<LoanInputs>({ ...DEFAULT_LOAN_INPUTS });
   const shell = getShellContext();
   const settings = getCalculatorSettings();
-  let tooltipStorage: Persisted<unknown> | undefined;
   let tooltipsEnabled = $state(true);
   let restored = $state(false);
   onMount(() => {
-    tooltipStorage = persisted<unknown>('amortization_tooltips_v1', true);
-    tooltipsEnabled = tooltipStorage.value !== false;
+    tooltipsEnabled = settings.chartTooltips;
     inputs = settings.amortizationInputs;
     restored = true;
     return shell.registerContextualRail({
@@ -76,7 +73,7 @@ Owns editable loan assumptions and the options rail, syncing its working copy th
 
   function setTooltipsEnabled(enabled: boolean): void {
     tooltipsEnabled = enabled;
-    if (tooltipStorage) tooltipStorage.value = enabled;
+    settings.chartTooltips = enabled;
   }
 
   useKeyboard((event) => {
@@ -114,7 +111,7 @@ Owns editable loan assumptions and the options rail, syncing its working copy th
   />
 
   <div
-    class="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
+    class="grid items-stretch gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
   >
     <InputCard
       title="Loan assumptions"
@@ -138,15 +135,17 @@ Owns editable loan assumptions and the options rail, syncing its working copy th
     <LoanSummary {loan} resolution={inputs.resolution} />
   </div>
 
-  <PaymentChart
-    {periods}
-    resolution={inputs.resolution}
-    paidInFull={loan?.principal === 0}
-    {tooltipsEnabled}
-  />
-  <PaymentSchedule
-    {periods}
-    resolution={inputs.resolution}
-    paidInFull={loan?.principal === 0}
-  />
+  <div class="grid items-stretch gap-6 xl:grid-cols-[minmax(0,1fr)_auto]">
+    <PaymentChart
+      {periods}
+      resolution={inputs.resolution}
+      paidInFull={loan?.principal === 0}
+      {tooltipsEnabled}
+    />
+    <PaymentSchedule
+      {periods}
+      resolution={inputs.resolution}
+      paidInFull={loan?.principal === 0}
+    />
+  </div>
 </PageContainer>

@@ -23,10 +23,12 @@ Renders grouped loan payments in a keyboard-scrollable table. The route supplies
 
 <Card
   as="section"
-  class="min-w-0 overflow-hidden"
+  class="mx-auto flex w-fit max-w-full flex-col overflow-hidden xl:h-0 xl:min-h-full"
   aria-label="Amortization schedule"
 >
-  <div class="flex flex-wrap items-center justify-between gap-2 px-5 py-4">
+  <div
+    class="flex shrink-0 flex-wrap items-center justify-between gap-2 px-5 py-4"
+  >
     <h2 class="text-base font-semibold">Payment schedule</h2>
     <p class="text-xs text-slate-500 dark:text-slate-400">
       {periods.length}
@@ -40,40 +42,40 @@ Renders grouped loan payments in a keyboard-scrollable table. The route supplies
   <!-- The schedule must support keyboard scrolling in both directions. -->
   <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
   <div
-    class="max-h-96 overflow-auto"
+    class="max-h-96 min-h-0 flex-1 overflow-auto xl:max-h-none"
     role="region"
     aria-label="Payment schedule table"
     tabindex="0"
   >
-    <table class="w-full text-right text-sm whitespace-nowrap tabular-nums">
+    <table class="w-max text-right text-sm whitespace-nowrap tabular-nums">
       <thead
         class="sticky top-0 bg-slate-100 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300"
         ><tr
-          ><th scope="col" class="px-5 py-3 text-left">Period</th><th
+          ><th scope="col" class="px-3 py-3 text-left">Period</th><th
             scope="col"
-            class="px-5 py-3">Principal</th
-          ><th scope="col" class="px-5 py-3">Interest</th><th
+            class="px-3 py-3">Principal</th
+          ><th scope="col" class="px-3 py-3">Interest</th><th
             scope="col"
-            class="px-5 py-3">Total payment</th
-          ><th scope="col" class="px-5 py-3">Balance</th></tr
+            class="px-3 py-3">Total payment</th
+          ><th scope="col" class="px-3 py-3">Balance</th></tr
         ></thead
       >
       <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
         {#each periods as period (period.key)}
           <tr
-            ><th scope="row" class="px-5 py-3 text-left font-medium"
+            ><th scope="row" class="px-3 py-3 text-left font-medium"
               >{period.key}</th
-            ><td class="px-5 py-3">{money(period.principal)}</td><td
-              class="px-5 py-3">{money(period.interest)}</td
-            ><td class="px-5 py-3"
+            ><td class="px-3 py-3">{money(period.principal)}</td><td
+              class="px-3 py-3">{money(period.interest)}</td
+            ><td class="px-3 py-3"
               >{money(period.principal + period.interest)}</td
-            ><td class="px-5 py-3">{money(period.balance)}</td></tr
+            ><td class="px-3 py-3">{money(period.balance)}</td></tr
           >
         {:else}
           <tr
             ><td
               colspan="5"
-              class="px-5 py-8 text-center text-slate-500 dark:text-slate-400"
+              class="px-3 py-8 text-center text-slate-500 dark:text-slate-400"
               >{paidInFull
                 ? 'No balance to repay.'
                 : 'Complete the loan assumptions to see the schedule.'}</td

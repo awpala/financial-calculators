@@ -52,6 +52,8 @@ Renders caller-owned signed stacks as grouped SVG bars, with optional annotation
     barPadding?: number;
     /** Empty-state text; defaults to No data to display. */
     emptyMessage?: string;
+    /** Whether pointer hover accents a segment, reports to the owner, and offers a native bubble; defaults to true. */
+    hoverEnabled?: boolean;
     /** Optional owner callback on segment entry and pointer movement; receives null on pointer leave. */
     onSegmentHover?: (info: BarSegmentHoverInfo | null) => void;
     /** Optional zero-based group indices after which to draw separators; none by default. */
@@ -139,6 +141,7 @@ Renders caller-owned signed stacks as grouped SVG bars, with optional annotation
     groupPadding = 0.15,
     barPadding = 0.1,
     emptyMessage = 'No data to display.',
+    hoverEnabled = true,
     onSegmentHover,
     separatorAfterGroupIndexes,
     subAxisLabels,
@@ -294,10 +297,15 @@ Renders caller-owned signed stacks as grouped SVG bars, with optional annotation
   // even when an owner also tracks the hover for a tooltip. It is presentation
   // only: a stale key simply matches nothing once the groups are replaced.
   let hoveredKey = $state.raw<string | null>(null);
+  // Reading the accent through hoverEnabled rather than clearing the cell means
+  // switching hover off mid-hover cannot strand a segment at full strength.
+  const accentedKey = $derived(hoverEnabled ? hoveredKey : null);
 
   /** Opacity that recedes every segment except the hovered one. */
   function segmentOpacity(key: string): number {
-    return hoveredKey === null || hoveredKey === key ? 1 : DIMMED_MARK_OPACITY;
+    return accentedKey === null || accentedKey === key
+      ? 1
+      : DIMMED_MARK_OPACITY;
   }
 
   function reportHover(segment: ResolvedSegment, event: PointerEvent): void {
@@ -568,7 +576,10 @@ Renders caller-owned signed stacks as grouped SVG bars, with optional annotation
 
         {#each rects as r (r.key)}
           <rect
-            class="transition-opacity duration-150 hover:cursor-pointer"
+            class={[
+              'transition-opacity duration-150',
+              hoverEnabled && 'hover:cursor-pointer',
+            ]}
             x={r.x}
             y={r.y}
             width={r.width}
@@ -578,11 +589,15 @@ Renders caller-owned signed stacks as grouped SVG bars, with optional annotation
             rx="1.5"
             role="img"
             aria-label={`${r.seriesLabel}, ${r.groupLabel}, ${r.segment.label}, ${formatY(r.segment.value)}`}
-            onpointerenter={(event: PointerEvent) => reportHover(r, event)}
-            onpointermove={(event: PointerEvent) => reportHover(r, event)}
-            onpointerleave={endHover}
+            onpointerenter={hoverEnabled
+              ? (event: PointerEvent) => reportHover(r, event)
+              : undefined}
+            onpointermove={hoverEnabled
+              ? (event: PointerEvent) => reportHover(r, event)
+              : undefined}
+            onpointerleave={hoverEnabled ? endHover : undefined}
           >
-            {#if !onSegmentHover}
+            {#if hoverEnabled && !onSegmentHover}
               <title>
                 {r.seriesLabel} — {r.groupLabel} — {r.segment.label}: {formatY(
                   r.segment.value,

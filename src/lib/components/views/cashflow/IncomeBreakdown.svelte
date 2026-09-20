@@ -19,10 +19,17 @@ Presents the balance-sheet line items and net income as shares of gross income. 
     cashflow?: Cashflow;
     /** True reports monthly averages in hover amounts; false reports annual totals. Shares are the same either way. */
     monthlyBalance: boolean;
+    /** Whether slice hover may accent a wedge and display a floating tooltip. */
+    tooltipsEnabled: boolean;
     /** Fields whose text is not a number; their figures read as zero here. Defaults to none. */
     invalid?: readonly CashflowAmountField[];
   };
-  let { cashflow, monthlyBalance, invalid = [] }: Props = $props();
+  let {
+    cashflow,
+    monthlyBalance,
+    tooltipsEnabled,
+    invalid = [],
+  }: Props = $props();
   // What is kept wears the emerald this page already uses for a calculated
   // figure. What is taken out wears one red ramp read by size, so the deepest
   // red always marks the largest deduction; a shade therefore follows the
@@ -121,7 +128,9 @@ Presents the balance-sheet line items and net income as shares of gross income. 
     source: readonly PieSlice[];
   };
   let hovered = $state.raw<HoverState | null>(null);
-  const hover = $derived(hovered?.source === slices ? hovered.info : null);
+  const hover = $derived(
+    tooltipsEnabled && hovered?.source === slices ? hovered.info : null,
+  );
 </script>
 
 <svelte:document
@@ -167,9 +176,10 @@ Presents the balance-sheet line items and net income as shares of gross income. 
     height={274}
     legendAlign="center"
     legendDividerAfterIndexes={[0]}
+    hoverEnabled={tooltipsEnabled}
     {emptyMessage}
     onSliceHover={(info) => {
-      hovered = info ? { info, source: slices } : null;
+      hovered = info && tooltipsEnabled ? { info, source: slices } : null;
     }}
   />
 </Card>

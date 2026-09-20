@@ -4,7 +4,7 @@ Presents Amortization tooltip and payment-period controls. The route owns their 
 -->
 <script lang="ts">
   import RailPanel from '#lib/components/layout/RailPanel.svelte';
-  import Switch from '#lib/components/elements/Switch.svelte';
+  import ChartHoverToggle from '#lib/components/charts/ChartHoverToggle.svelte';
   import {
     PAYMENT_RESOLUTIONS,
     type Resolution,
@@ -26,24 +26,11 @@ Presents Amortization tooltip and payment-period controls. The route owns their 
 </script>
 
 <RailPanel title="Amortization">
-  <section class="w-64 max-w-full space-y-3" aria-label="Chart options">
-    <h3
-      class="text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
-    >
-      Chart options
-    </h3>
-    <Switch
-      label="Show chart tooltips"
-      checked={tooltipsEnabled}
-      onChange={onTooltipsChange}
-    >
-      {#snippet content()}<span class="text-sm">Show tooltips</span>{/snippet}
-    </Switch>
-    <p class="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-      Show the period and payment amount when you hover over principal or
-      interest in the chart.
-    </p>
-  </section>
+  <ChartHoverToggle
+    enabled={tooltipsEnabled}
+    onChange={onTooltipsChange}
+    description="Hovering principal or interest shows that period and payment amount."
+  />
   <div class="mt-6 space-y-2">
     <h2 class="text-xs font-semibold text-slate-600 dark:text-slate-400">
       Payment period

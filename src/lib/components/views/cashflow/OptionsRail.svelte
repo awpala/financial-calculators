@@ -1,26 +1,39 @@
 <!--
 @component
-Presents the Cashflow display period, which every figure on the page follows, and the assumptions behind those figures. The route owns the period value, persistence, and contextual-rail registration.
+Presents the shared chart-hover preference, the Cashflow display period that every figure on the page follows, and the assumptions behind those figures, in the order Amortization's rail uses. The route owns those values, their persistence, and contextual-rail registration.
 -->
 <script lang="ts">
   import RailPanel from '#lib/components/layout/RailPanel.svelte';
+  import ChartHoverToggle from '#lib/components/charts/ChartHoverToggle.svelte';
   import InfoNote from '#lib/components/elements/InfoNote.svelte';
   import OptionSwitch from '#lib/components/elements/OptionSwitch.svelte';
-  /** Route-owned selection exposed by this rail. */
+  /** Route-owned selections exposed by this rail. */
   type Props = {
     /** Whether figures read as monthly averages rather than annual totals. */
     monthlyBalance: boolean;
     /** Persists a change to the route-owned display period. */
     onPeriodChange: (monthly: boolean) => void;
+    /** Whether the income breakdown responds to slice hover. */
+    tooltipsEnabled: boolean;
+    /** Persists a change to the route-owned chart-hover preference. */
+    onTooltipsChange: (enabled: boolean) => void;
   };
-  let { monthlyBalance, onPeriodChange }: Props = $props();
+  let {
+    monthlyBalance,
+    onPeriodChange,
+    tooltipsEnabled,
+    onTooltipsChange,
+  }: Props = $props();
 </script>
 
 <RailPanel title="Cashflow">
-  <section class="w-64 max-w-full space-y-3" aria-label="Display period">
-    <h3
-      class="text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
-    >
+  <ChartHoverToggle
+    enabled={tooltipsEnabled}
+    onChange={onTooltipsChange}
+    description="Hovering a slice shows that amount and its share of gross income."
+  />
+  <section class="mt-6 w-64 max-w-full space-y-3" aria-label="Display period">
+    <h3 class="text-xs font-semibold text-slate-600 dark:text-slate-400">
       Display period
     </h3>
     <OptionSwitch
@@ -37,9 +50,7 @@ Presents the Cashflow display period, which every figure on the page follows, an
     </p>
   </section>
   <section class="mt-6 w-64 max-w-full space-y-3" aria-label="Assumptions">
-    <h3
-      class="text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
-    >
+    <h3 class="text-xs font-semibold text-slate-600 dark:text-slate-400">
       Assumptions
     </h3>
     <InfoNote>
