@@ -35,8 +35,8 @@ Lists evaluated named bindings with their declaration lines and full numeric val
     >
   </div>
   {#if result}
-    <div class="max-h-128 overflow-auto">
-      <table aria-label="Variables" class="w-full text-sm">
+    <div class="flex max-h-128 justify-center overflow-auto">
+      <table aria-label="Variables" class="text-sm">
         <thead
           class="sticky top-0 bg-slate-50 text-xs text-slate-500 dark:bg-slate-900 dark:text-slate-400"
         >
