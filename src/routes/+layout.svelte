@@ -259,7 +259,7 @@ Owns the responsive application shell, view initialization, contextual rail, Set
           class="h-full shrink-0"
           transition:slide={{ axis: 'x', duration: viewLoading ? 0 : 200 }}
         >
-          <Sidebar>{@render railBody()}</Sidebar>
+          <Sidebar label={contextualRail.label}>{@render railBody()}</Sidebar>
         </div>
       {/if}
 
@@ -291,7 +291,7 @@ Owns the responsive application shell, view initialization, contextual rail, Set
         class="relative h-full w-[min(20rem,90vw)] shadow-xl"
         transition:slide={{ axis: 'x', duration: 200 }}
       >
-        <Sidebar>{@render railBody()}</Sidebar>
+        <Sidebar label={contextualRail.label}>{@render railBody()}</Sidebar>
       </div>
     </div>
   {/if}

@@ -8,13 +8,13 @@ Its identity is the shared presentation layer. New components join the responsib
 
 Import the responsible component directly through `#lib/components/...svelte`; there is no root barrel to turn unrelated concerns into one dependency. The directory boundaries describe ownership rather than component size. The following groups define the stable presentation boundaries.
 
-| Boundary                    | Responsibility                                                                                                                                           |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [elements/](elements/)      | Controls, fields, feedback, surfaces, tables, and constrained text rendering; shared field and surface styling lives beside these consumers              |
-| [behaviors/](behaviors/)    | Reusable interaction wrappers such as native modal synchronization, asynchronous confirmation, hover explanations, clipboard actions, and file selection |
-| [layout/](layout/)          | Page and contextual-rail structure, headings, and caller-supplied content slots                                                                          |
-| [views/](views/)            | Cohesive interfaces grouped by feature or interaction, including the shell, calculators, settings, and swim lanes                                        |
-| [charts/](charts/README.md) | Domain-neutral SVG plotting, chart headings, and tooltip ownership helpers                                                                               |
+| Boundary                          | Responsibility                                                                                                                                           |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [elements/](elements/)            | Controls, fields, feedback, surfaces, tables, and constrained text rendering; shared field and surface styling lives beside these consumers              |
+| [behaviors/](behaviors/README.md) | Reusable interaction wrappers such as native modal synchronization, asynchronous confirmation, hover explanations, clipboard actions, and file selection |
+| [layout/](layout/README.md)       | Page and contextual-rail structure, headings, and caller-supplied content slots                                                                          |
+| [views/](views/)                  | Cohesive interfaces grouped by feature or interaction, including the shell, calculators, settings, and swim lanes                                        |
+| [charts/](charts/README.md)       | Domain-neutral SVG plotting, chart headings, and tooltip ownership helpers                                                                               |
 
 An element may own local state, such as an expanded option list, without becoming a feature view. A behavior wraps caller content or reports an interaction; business policy remains with its caller. Layout, elements, and behaviors must not import application feature views. A cohesive component can remain intact even when its implementation is long; a file split is useful when it establishes a distinct responsibility or lifetime.
 

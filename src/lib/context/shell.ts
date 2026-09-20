@@ -1,8 +1,13 @@
 import { createContext, type Snippet } from 'svelte';
 
-/** One route's contextual sidebar: the toggle's wording and the content. */
+/** One route's contextual sidebar: its region name and the content. */
 export type ContextualRail = {
-  /** Noun phrase the shell builds the toggle's label from. */
+  /**
+   * Title-case name of the rail region. The shell uses it verbatim as the
+   * accessible name of the sidebar landmark, and reads it back inside the
+   * toggle's label and the loading message, so word it as the region's name
+   * rather than as a description of it.
+   */
   label: string;
   /** The rail's body, rendered inside the shell's sized container. */
   content: Snippet;

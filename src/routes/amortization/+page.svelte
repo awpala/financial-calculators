@@ -43,7 +43,7 @@ Owns editable loan assumptions and the options rail, syncing its working copy th
     inputs = settings.amortizationInputs;
     restored = true;
     return shell.registerContextualRail({
-      label: 'amortization options',
+      label: 'Amortization Options',
       content: optionsRail,
     });
   });

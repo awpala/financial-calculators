@@ -8,8 +8,6 @@ Frames a contextual rail: a full-height column with a fixed heading band above i
 
   /** Public inputs and content for this component. */
   type Props = {
-    /** Accessible name for the rail region. */
-    label: string;
     /** Heading displayed in the band above the scrolling body. */
     title: string;
     /** Optional summary of what the body currently shows, such as a result count. */
@@ -20,10 +18,10 @@ Frames a contextual rail: a full-height column with a fixed heading band above i
     children: Snippet;
   };
 
-  let { label, title, count, header, children }: Props = $props();
+  let { title, count, header, children }: Props = $props();
 </script>
 
-<div aria-label={label} class="flex h-full flex-col">
+<div class="flex h-full flex-col">
   <div
     class="border-b border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900"
   >

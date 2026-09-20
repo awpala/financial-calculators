@@ -25,7 +25,7 @@ Presents Amortization tooltip and payment-period controls. The route owns their 
   }: Props = $props();
 </script>
 
-<RailPanel label="Amortization options" title="Amortization">
+<RailPanel title="Amortization">
   <section class="w-64 max-w-full space-y-3" aria-label="Chart options">
     <h3
       class="text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
