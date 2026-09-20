@@ -15,7 +15,7 @@
 import { splitComments } from '#lib/calculator/language/comments.js';
 
 const WORD_CHARACTER = /[\p{L}\p{N}_]/u;
-const NUMERIC_TEXT = /^[\d\s,_.$]+$/u;
+const NUMERIC_TEXT = /^[\d\s,_.$%]+$/u;
 
 /** Reduce the text before a declaration's `=` to the name it declares. */
 export function normalizeName(raw: string): string {
@@ -28,9 +28,10 @@ export function normalizeName(raw: string): string {
 }
 
 /**
- * Whether a name reads as a figure, such as `100` or `$1,000`. Such a name is
- * refused, since a declared name is matched before a number is and would
- * otherwise silently stand in for that number everywhere it appears.
+ * Whether a name reads as a figure, such as `100`, `$1,000`, or `5%`. Such a
+ * name is refused, since a declared name is matched before a number is and
+ * would otherwise silently stand in for that number everywhere it appears. A
+ * name holding a letter — `2k`, `rate %` — reads as no figure and stands.
  */
 export function isNumericName(name: string): boolean {
   return NUMERIC_TEXT.test(name);

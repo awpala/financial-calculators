@@ -58,6 +58,9 @@ export const INDEX_JOINER = '_';
 /** The character separating an iteration's arguments. */
 export const ARGUMENT_SEPARATOR = ',';
 
+/** The three arguments a head such as `sum_i` takes, as its messages name them. */
+export const ITERATION_PARAMETERS = ['expression', 'start', 'end'] as const;
+
 /**
  * The most terms one calculation evaluates across all its sums and products,
  * nested terms included, so that a mistyped bound is refused rather than

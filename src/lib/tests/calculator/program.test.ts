@@ -48,7 +48,9 @@ describe('calculator program parsing', () => {
     ['2 * 3 + 4', 10],
     ['2 + 3 * 4', 14],
     ['20 / 4 / 5', 1],
-    ['17 % 5', 2],
+    ['mod(17, 5)', 2],
+    ['mod(-7, 3)', -1],
+    ['mod(2.5, 1)', 0.5],
     ['2 ^ 3 ^ 2', 512],
     ['-2 ^ 2', -4],
     ['2 ^ -1', 0.5],
@@ -149,6 +151,82 @@ describe('calculator program parsing', () => {
     expect(calculate('2k * 3m')).toBe(6e9);
   });
 
+  it.each([
+    ['5%', 0.05],
+    ['0.5%', 0.005],
+    ['100%', 1],
+    ['.5%', 0.005],
+    ['$1,250%', 12.5],
+    ['-4%', -0.04],
+    ['2.5k%', 25],
+    ['income = $120k;\nincome * 24%', 28_800],
+    ['$1k * (1 + 4.5%)', 1045],
+    ['100 - 12.5%', 99.875],
+    ['2 ^ 50%', Math.SQRT2],
+    ['sum_i(i * 10%, 1, 3)', 0.6],
+    ['mod(25%, 10%)', 0.05],
+  ])('reads the percent suffix in %j', (source, expected) => {
+    expect(calculate(source)).toBeCloseTo(expected, 12);
+  });
+
+  it('divides a percent rather than scaling it, so 5% is exactly 0.05', () => {
+    expect(calculate('5%')).toBe(0.05);
+    expect(calculate('7%')).toBe(0.07);
+  });
+
+  it.each([
+    ['17 % 5', 1],
+    ['% 5', 1],
+    ['5%%', 1],
+    ['(1 + 2)%', 1],
+    ['x = 1;\nx %', 2],
+  ])('refuses the %j that follows no figure', (source, line) => {
+    expect(invalid(source)).toBe(
+      `'%' reads a figure as a percent and must follow one directly, as '4.5%'; the one on line ${line} follows none, and the remainder is 'mod(dividend, divisor)'`,
+    );
+  });
+
+  it('refuses a name that reads as a percent figure', () => {
+    expect(invalid('5% = 3;')).toBe(
+      "'5%' reads as a number and cannot be declared on line 1",
+    );
+    expect(run('rate % = 0.25;\nrate % * $1k')).toEqual({
+      value: 250,
+      bindings: [{ name: 'rate %', value: 0.25 }],
+    });
+  });
+
+  it.each([
+    ['mod(3,000, 7)', 4],
+    ['mod(8, 3) + mod(9, 4)', 3],
+    ['mod(sum_i(i, 1, 5), 4)', 3],
+    ['sum_i(mod(i, 3), 1, 5)', 6],
+    ['mod[8, 3] * mod{9, 4}', 2],
+    ['-mod(8, 3) ^ 2', -4],
+    ['x = 8;\nmod(x, 3)', 2],
+  ])('evaluates the remainder in %j', (source, expected) => {
+    expect(calculate(source)).toBe(expected);
+  });
+
+  it.each([
+    [
+      'mod(8)',
+      "'mod' on line 1 takes two arguments, as 'mod(dividend, divisor)'",
+    ],
+    [
+      'mod 8',
+      "'mod' must be followed by its arguments in brackets, as 'mod(dividend, divisor)', on line 1",
+    ],
+    [
+      'mod(pi, 3, 2)',
+      "Only the last ',' in 'mod' separates its arguments, as 'mod(dividend, divisor)', so the one on line 1 must sit between digits",
+    ],
+    ['mod = 5;', "'mod' is built in and cannot be declared on line 1"],
+    ['log(1, 2)', "',' must sit between digits on line 1"],
+  ])('rejects %j', (source, message) => {
+    expect(invalid(source)).toBe(message);
+  });
+
   it('leaves declared names alone, whatever a figure would make of them', () => {
     // The suffix is an expression rule. A name is matched before a number is,
     // so a member who declares `2k` gets their own value back, not 2,000.
@@ -194,7 +272,7 @@ describe('calculator program parsing', () => {
     expect(calculate('fact(-1)')).toBeNaN();
     expect(calculate('fact(171)')).toBe(Infinity);
     expect(calculate('inv(0)')).toBe(Infinity);
-    expect(calculate('5 % 0')).toBeNaN();
+    expect(calculate('mod(5, 0)')).toBeNaN();
   });
 
   it.each([

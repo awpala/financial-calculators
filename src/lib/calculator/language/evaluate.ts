@@ -1,5 +1,9 @@
 import type { Expression, Program } from '#lib/calculator/program.js';
-import { CONSTANTS, FUNCTIONS } from '#lib/calculator/language/syntax.js';
+import {
+  CONSTANTS,
+  FUNCTIONS,
+  type BuiltInFunction,
+} from '#lib/calculator/language/syntax.js';
 import {
   ITERATED_OPERATORS,
   TERM_LIMIT,
@@ -93,8 +97,12 @@ class ProgramEvaluator {
         return this.#read(this.#indices, expression.name);
       case 'negate':
         return -this.#evaluate(expression.operand);
-      case 'call':
-        return FUNCTIONS[expression.name](this.#evaluate(expression.argument));
+      case 'call': {
+        const { apply }: BuiltInFunction = FUNCTIONS[expression.name];
+        return apply(
+          ...expression.arguments.map((argument) => this.#evaluate(argument)),
+        );
+      }
       case 'iteration':
         return this.#iterate(expression);
       case 'binary': {
@@ -109,8 +117,6 @@ class ProgramEvaluator {
             return left * right;
           case '/':
             return left / right;
-          case '%':
-            return left % right;
           case '^':
             return left ** right;
         }

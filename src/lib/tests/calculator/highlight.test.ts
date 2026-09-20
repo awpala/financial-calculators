@@ -43,7 +43,7 @@ describe('calculator input highlighting', () => {
   });
 
   it('tones every operator, the functions and the declaring equals sign among them', () => {
-    expect(toned('a = log(8) + lg(8) - ln(e) * 2 / 3 % 4 ^ 5')).toEqual([
+    expect(toned('a = log(8) + lg(8) - ln(e) * 2 / 3 ^ 5')).toEqual([
       ['variable', 'a'],
       ['operator', '='],
       ['operator', 'log'],
@@ -54,17 +54,39 @@ describe('calculator input highlighting', () => {
       ['constant', 'e'],
       ['operator', '*'],
       ['operator', '/'],
-      ['operator', '%'],
       ['operator', '^'],
     ]);
   });
 
-  it.each(Object.keys(FUNCTIONS))('tones the function %s', (name) => {
-    expect(toned(`x = 1 + ${name}(2)`)).toEqual([
-      ['variable', 'x'],
+  it.each(Object.entries(FUNCTIONS))(
+    'tones the function %s and the commas dividing its arguments',
+    (name, { parameters }) => {
+      const call = `${name}(${parameters.map((_, at) => at + 1).join(', ')})`;
+      expect(toned(`x = 1 + ${call}`)).toEqual([
+        ['variable', 'x'],
+        ['operator', '='],
+        ['operator', '+'],
+        ['operator', name],
+        ...parameters.slice(1).map((): [string, string] => ['operator', ',']),
+      ]);
+    },
+  );
+
+  it('leaves a percent plain with the figure it ends, toning no remainder of its own', () => {
+    expect(toned('rate = 4.5%;\nmod($2k * rate, 10)')).toEqual([
+      ['variable', 'rate'],
       ['operator', '='],
-      ['operator', '+'],
-      ['operator', name],
+      ['operator', 'mod'],
+      ['operator', '*'],
+      ['variable', 'rate'],
+      ['operator', ','],
+    ]);
+  });
+
+  it("ends a call's first argument at its last comma, leaving a grouping one plain", () => {
+    expect(toned('mod(3,000, 7)')).toEqual([
+      ['operator', 'mod'],
+      ['operator', ','],
     ]);
   });
 

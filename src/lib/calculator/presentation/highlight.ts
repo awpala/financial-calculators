@@ -9,8 +9,10 @@
  * formed and not already taken colors that name, and references to it colored
  * from there on. A sum's or product's index is colored as a name where its head
  * binds it and within its first argument, the only place it means anything,
- * and the commas separating its arguments are colored with its operator.
- * Anything it cannot make sense of is simply left plain.
+ * and the commas separating a head's arguments — a sum's or product's, or
+ * `mod`'s — are colored with the head. A figure keeps its own plain tone whole,
+ * its `$`, digit grouping, magnitude, and `%` included. Anything it cannot make
+ * sense of is simply left plain.
  */
 
 import {
@@ -25,9 +27,11 @@ import {
 import {
   FUNCTIONS,
   isCalculatorConstant,
+  isCalculatorFunction,
   isOpeningBracket,
   isReservedName,
   OPERATOR_SYMBOLS,
+  readArgumentList,
 } from '#lib/calculator/language/syntax.js';
 import { readIterationHead } from '#lib/calculator/language/iteration.js';
 import { layOutArguments } from '#lib/calculator/parsers/arguments.js';
@@ -57,7 +61,7 @@ export function highlightInput(source: string): HighlightedSegment[] {
   const claimed = [
     ...named,
     ...constants,
-    ...iterationSpans(source, [...named, ...constants]),
+    ...argumentSpans(source, [...named, ...constants]),
   ].sort((left, right) => left.start - right.start);
   const spans = [...claimed, ...operatorSpans(source, claimed)].sort(
     (left, right) => left.start - right.start,
@@ -181,37 +185,52 @@ function referenceSpans(
 const WORD = /[\p{L}\p{N}_]+/gu;
 
 /**
- * Each sum's and product's operator and argument-separating commas, toned as
- * operators, and its index, toned as a name where the head binds it and wherever
- * its first argument reads it. The bounds and everything past the closing
- * bracket leave the index plain, since it means nothing there, and a comma that
- * groups digits stays plain like the figure it belongs to. Comments and declared
- * names keep what they claimed.
+ * The commas separating the arguments of each head that takes several, toned as
+ * operators, with a sum's or product's operator toned the same and its index
+ * toned as a name where the head binds it and wherever its first argument reads
+ * it. The bounds and everything past the closing bracket leave the index plain,
+ * since it means nothing there, and a comma that groups digits stays plain like
+ * the figure it belongs to. A head that means nothing as written — an index
+ * that is built in, or a bare `sum` with none — is left plain along with the
+ * commas after it. Comments and declared names keep what they claimed.
  */
-function iterationSpans(source: string, claimed: readonly Span[]): Span[] {
+function argumentSpans(source: string, claimed: readonly Span[]): Span[] {
   const claimedUntil = new Array<number | undefined>(source.length);
   for (const { start, end } of claimed) claimedUntil.fill(end, start, end);
   const skip = (index: number) => claimedUntil[index];
 
   const spans: Span[] = [];
   for (const word of source.matchAll(WORD)) {
+    const list = readArgumentList(word[0]);
     const head = readIterationHead(word[0]);
-    if (!head || isReservedName(head.index) || skip(word.index)) continue;
+    const usable = head
+      ? !isReservedName(head.index)
+      : isCalculatorFunction(word[0]);
+    if (!list || !usable || skip(word.index)) continue;
 
     const end = word.index + word[0].length;
-    const indexAt = end - head.index.length;
-    spans.push(
-      { start: word.index, end: indexAt, tone: 'operator' },
-      { start: indexAt, end, tone: 'variable' },
-    );
+    if (head) {
+      const indexAt = end - head.index.length;
+      spans.push(
+        { start: word.index, end: indexAt, tone: 'operator' },
+        { start: indexAt, end, tone: 'variable' },
+      );
+    }
 
     const open = openingBracketAfter(source, end, skip);
     if (open === undefined) continue;
-    const list = layOutArguments(source, open + 1, source.length, skip);
-    for (const separator of list.separators) {
+    const layout = layOutArguments(
+      source,
+      open + 1,
+      source.length,
+      list.parameters.length - 1,
+      skip,
+    );
+    for (const separator of layout.separators) {
       spans.push({ start: separator, end: separator + 1, tone: 'operator' });
     }
-    const bodyEnd = list.separators[0] ?? list.end;
+    if (!head) continue;
+    const bodyEnd = layout.separators[0] ?? layout.end;
     for (const reference of source.slice(open + 1, bodyEnd).matchAll(WORD)) {
       const start = open + 1 + reference.index;
       if (reference[0] === head.index && !skip(start)) {

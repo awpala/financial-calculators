@@ -2,7 +2,7 @@
 
 A full-page calculator for ad hoc financial working at `/scratchpad/`. Its route composes a highlighted editor beside a result card and named-bindings table on wider screens; the panels stack on small screens. Input is parsed as you type, evaluated when you press Calculate, and remembered in browser-local storage. It runs entirely in the browser without accounts or a runtime API.
 
-What a user types is a small program in a purpose-built language — named figures declared once and reused, arithmetic with the precedence of ordinary mathematics, a handful of built-in constants and functions, and figures written the way they appear on paper (`$1,250.50`, `$2.5k`). This document describes that language, how the input becomes a result, how the full-page workspace behaves around it, and which module owns each part. It is the authoritative account of the calculator; the rest of the application's documentation points here.
+What a user types is a small program in a purpose-built language — named figures declared once and reused, arithmetic with the precedence of ordinary mathematics, a handful of built-in constants and functions, and figures written the way they appear on paper (`$1,250.50`, `$2.5k`, `4.5%`). This document describes that language, how the input becomes a result, how the full-page workspace behaves around it, and which module owns each part. It is the authoritative account of the calculator; the rest of the application's documentation points here.
 
 ## At a glance
 
@@ -14,14 +14,15 @@ What a user types is a small program in a purpose-built language — named figur
 | `#` | Comment to the end of the line | `$1,000 # rent` | 1,000 |
 | `$` `,` `_` | Ignored dollar sign; digit grouping | `$1,000_000` | 1,000,000 |
 | `k` `m` `b` `t` | Thousand, million, billion, trillion, in either case | `$2.5k` | 2,500 |
+| `%` | A percent of the figure it ends | `$2k * 4.5%` | 90 |
 | `+` `-` `*` `/` | Arithmetic, with the usual precedence | `2 + 3 * 4` | 14 |
-| `%` | Remainder — not percent | `17 % 5` | 2 |
 | `^` | Exponentiation, right-associative | `2 ^ 3 ^ 2` | 512 |
 | `( )` `[ ]` `{ }` | Grouping, each closed by its own kind | `[1 + 2] * 3` | 9 |
 | `log` `lg` `ln` | Base-10, base-2, and natural logarithms | `lg(1,024)` | 10 |
 | `sqrt` `abs` | Square root and absolute value | `sqrt(3 ^ 2 + 4 ^ 2)` | 5 |
 | `floor` `ceil` | Round down and round up to a whole number | `ceil($1,234.56 / 100) * 100` | 1,300 |
 | `fact` `inv` | Factorial and reciprocal (`1 / x`) | `fact(5) * inv(4)` | 30 |
+| `mod` | Remainder after dividing, the sign of the dividend | `mod(17, 5)` | 2 |
 | `sum_i(expression, start, end)` | Add the expression for each whole `i` from `start` through `end` | `sum_i(i ^ 2, 0, 2)` | 5 |
 | `prod_i(expression, start, end)` | Multiply it instead | `prod_j(j + 4, -3, 5)` | 362,880 |
 | `e` `pi` `phi` | Euler's number, π, and the golden ratio | `2 * pi` | 6.2831853072 |
@@ -45,7 +46,7 @@ The result is **450**, and the variable list beneath it shows `pre tax` 1,000, `
 
 ```text
 gross pay = $85k;
-401(k) contribution = gross pay * 0.06;
+401(k) contribution = gross pay * 6%;
 gross pay - 401(k) contribution
 ```
 
@@ -62,14 +63,14 @@ circumference = 2 * pi * r;
 This input ends in a declaration, so it has no result: the workspace lists `r` 3, `area` 28.2743338823, and `circumference` 18.8495559215.
 
 ```text
-principal = $10k; rate = 0.05; years = 10;
+principal = $10k; rate = 5%; years = 10;
 principal * e ^ (rate * years)
 ```
 
 Continuous compounding: the result is **16,487.2127070013** (**16.487K**). Three declarations share the first line, because only `;` ends a statement.
 
 ```text
-rate = 0.07;
+rate = 7%;
 years to double = ln(2) / ln(1 + rate)
 ```
 
@@ -97,23 +98,23 @@ pairs = fact(5) / (fact(2) * fact(3));
 ```text
 # five years of free cash flow, growing 8% a year from $100k
 cash flow = $100k;
-growth = 0.08;
-discount rate = 0.10;
+growth = 8%;
+discount rate = 10%;
 # present value of the forecast years
 forecast = sum_t(cash flow * (1 + growth) ^ t / (1 + discount rate) ^ t, 1, 5);
 # Gordon growth terminal value at 3%, as of the end of year 5
-terminal growth = 0.03;
+terminal growth = 3%;
 terminal value = cash flow * (1 + growth) ^ 5 * (1 + terminal growth)
   / (discount rate - terminal growth);
 # enterprise value
 forecast + terminal value / (1 + discount rate) ^ 5
 ```
 
-A discounted cash flow with a terminal value: the result is **1,815,818.4042854216** (**1.816M**), from a `forecast` of 473,379.4793450522 and a `terminal value` of 2,162,011.313005715 discounted five years. `sum_t` adds its first argument once for each whole `t` from 1 through 5, and `t` means the year only inside that argument. It is not declared, so it is not in the variable list, and a later statement could declare a `t` of its own.
+A discounted cash flow with a terminal value: the result is **1,815,818.4042854216** (**1.816M**), from a `forecast` of 473,379.4793450522 and a `terminal value` of 2,162,011.313005715 discounted five years. Each rate is written as the percent it is read as on a term sheet; `growth` holds 0.08, as the variable list shows. `sum_t` adds its first argument once for each whole `t` from 1 through 5, and `t` means the year only inside that argument. It is not declared, so it is not in the variable list, and a later statement could declare a `t` of its own.
 
 ```text
 # 5-year bond: 4% annual coupon on $1,000 face, priced to yield 5%
-face = $1,000; coupon = face * 0.04; yield = 0.05;
+face = $1,000; coupon = face * 4%; yield = 5%;
 sum_t(coupon / (1 + yield) ^ t, 1, 5) + face / (1 + yield) ^ 5
 ```
 
@@ -122,7 +123,7 @@ The price is **956.7052332937**: each coupon discounted from its year, then the 
 ```text
 # 30-year mortgage: $400k at 6.5%, paid monthly
 principal = $400k;
-monthly rate = 0.065 / 12;
+monthly rate = 6.5% / 12;
 payment = principal * monthly rate / (1 - (1 + monthly rate) ^ -360);
 # interest paid in year one: each payment, less the principal it retires
 sum_m(payment - payment / (1 + monthly rate) ^ (361 - m), 1, 12)
@@ -159,7 +160,10 @@ The result is **28,429.910985**. Each deposit grows through every year from its 
 | `2 ^ 3 ^ 2` | 512 | `^` is right-associative: `2 ^ 9` |
 | `2 ^ -1` | 0.5 | An exponent may carry its own sign |
 | `2 * -3` | -6 | So may any operand |
-| `-7 % 3` | -1 | The remainder takes the dividend's sign |
+| `mod(-7, 3)` | -1 | The remainder takes the dividend's sign |
+| `4.5%` | 0.045 | A figure ending in `%` is that percent |
+| `$2k * (1 + 4.5%)` | 2,090 | Which is how a rate reads beside the amount it grows |
+| `2.5k%` | 25 | The percent comes last, after any magnitude |
 | `lg[1,024] - log(1k)` | 7 | Any bracket kind around an argument; figures keep their grouping and suffixes |
 | `phi ^ 2 - phi` | 1 | φ² = φ + 1 |
 | `sqrt(abs(-9))` | 3 | Calls nest |
@@ -190,7 +194,7 @@ A line break is written ↵ below, and quoted input is set as code, as the works
 | --- | --- | --- |
 | `2pi` | Missing operator before `pi` on line 1 | There is no implicit multiplication; write `2 * pi` |
 | `1e3` | Missing operator before `e3` on line 1 | There is no exponent notation; write `1k` or `1000` |
-| `rate = 5%;` | Expression ends where a value is expected on line 1 | `%` is the remainder, which needs a right operand; write `0.05` |
+| `17 % 5` | `%` reads a figure as a percent and must follow one directly, as `4.5%`; the one on line 1 follows none, and the remainder is `mod(dividend, divisor)` | `%` ends a figure rather than dividing two; write `mod(17, 5)` |
 | `1kg` | Missing operator before `kg` on line 1 | A magnitude suffix has to end the number |
 | `1 + 2` ↵ `3 + 4` | Missing operator before `3` on line 2 | A line break does not end a statement |
 | `a = 1` ↵ `b = 2` | Found a second `=` on line 2; a statement declares one name, so a `;` may be missing before it | The first declaration is missing its `;` |
@@ -203,6 +207,7 @@ A line break is written ↵ below, and quoted input is set as code, as the works
 | `sum_i(i, 0, 2) + i` | `i` is not declared by an earlier statement on line 1 | The index ends with its closing bracket |
 | `sum(i, 1, 10)` | `sum` needs an index that starts with a letter, as `sum_i(expression, start, end)`, on line 1 | The index is part of the word |
 | `sum_i(i, 1,000, 2,000)` | Only the last two `,` in `sum_i` separate its arguments, as `sum_i(expression, start, end)`, so the one on line 1 must sit between digits | Write a bound without grouping: `1000` or `1k` |
+| `mod(8)` | `mod` on line 1 takes two arguments, as `mod(dividend, divisor)` | A remainder needs both figures |
 | `sum_total = 5;` | `sum_total` reads as a sum over `total` and cannot be declared on line 1 | Every `sum_` or `prod_` word followed by a letter is a sum or product |
 
 ## Using the workspace
@@ -268,7 +273,7 @@ The [Scratchpad view components](../components/views/scratchpad/) separate worki
 
 ## Numeric fields in other views
 
-The [number-input adapter](presentation/number-input.ts) lets Amortization and Cashflow reuse this language’s number lexer without creating a calculator workspace. It accepts a single finite number with an optional sign, dollar signs, comma/underscore digit separators, and case-insensitive k/m/b/t suffixes. It returns `NaN` for empty or malformed input; each financial model owns nonnegative bounds, percentage units, and whether an invalid field blocks calculation or counts as zero. `parsePercentInput` reads percentage points: one plain number from 0 through 100, refusing letters outright, so a magnitude suffix cannot turn `0.24k` into 240%. `numberFieldIssues` reports the named fields whose text is present but unreadable, each with its problem: `malformed` when an amount is not one number, such as `$10km`, which stacks two suffixes where one number takes at most one, and `percent` when a listed percentage field fails `parsePercentInput`. Blank fields are incomplete rather than wrong and are left out. Both models build their invalid-field reports on it so the forms warn about the same text. Arithmetic expressions, declarations, and percentage operators are not evaluated in these scalar fields. The adapter also serializes mode-conversion results without rounding and expands JavaScript exponent notation into decimal text, preserving parser-compatible input even for very small or large finite values. It has no persistent state or teardown.
+The [number-input adapter](presentation/number-input.ts) lets Amortization and Cashflow reuse this language’s number lexer without creating a calculator workspace. It accepts a single finite number with an optional sign, dollar signs, comma/underscore digit separators, and case-insensitive k/m/b/t suffixes. Scratchpad's `%` suffix is refused rather than divided by a hundred: these fields carry their own units, and a rate field asking for percentage points would otherwise read `6.5%` as 0.065 where it means 6.5. It returns `NaN` for empty or malformed input; each financial model owns nonnegative bounds, percentage units, and whether an invalid field blocks calculation or counts as zero. `parsePercentInput` reads percentage points: one plain number from 0 through 100, refusing letters and `%` outright, so a magnitude suffix cannot turn `0.24k` into 240%. `numberFieldIssues` reports the named fields whose text is present but unreadable, each with its problem: `malformed` when an amount is not one number, such as `$10km`, which stacks two suffixes where one number takes at most one, and `percent` when a listed percentage field fails `parsePercentInput`. Blank fields are incomplete rather than wrong and are left out. Both models build their invalid-field reports on it so the forms warn about the same text. Arithmetic expressions and declarations are not evaluated in these scalar fields. The adapter also serializes mode-conversion results without rounding and expands JavaScript exponent notation into decimal text, preserving parser-compatible input even for very small or large finite values. It has no persistent state or teardown.
 
 ## The language
 
@@ -305,8 +310,9 @@ The name is everything left of `=`. It may contain spaces, digits, symbols, and 
 | `year-end bonus` | `year-end bonus` | Yes |
 | `größe` | `größe` | Yes; letters in any script |
 | `2k` | `2k` | Yes; it holds a letter, so it is not a figure |
+| `rate %` | `rate %` | Yes; it holds letters, so it is not a figure |
 | `PI` | `PI` | Yes; names are case-sensitive, so this is not the constant |
-| `100`, `$1,000.50` | — | No: it reads as a number |
+| `100`, `$1,000.50`, `5%` | — | No: it reads as a number |
 | `e`, `pi`, `phi` | — | No: a built-in constant cannot be redefined |
 | `log`, `sqrt`, `fact`, and the other functions | — | No: a built-in function |
 | `sum_total`, `prod_x` | — | No: it reads as a sum or product |
@@ -330,14 +336,15 @@ A reference is found by matching, not by splitting the expression into words —
 ```ebnf
 expression = sum ;
 sum        = product { ( "+" | "-" ) product } ;
-product    = unary { ( "*" | "/" | "%" ) unary } ;
+product    = unary { ( "*" | "/" ) unary } ;
 unary      = ( "+" | "-" ) unary | power ;
 power      = primary [ "^" unary ] ;
 primary    = number | reference | index | constant | call | iteration | group ;
-call       = function group ;
+call       = function group | "mod" brackets ;
 group      = "(" expression ")" | "[" expression "]" | "{" expression "}" ;
-iteration  = iterated "_" index ( "(" arguments ")" | "[" arguments "]" | "{" arguments "}" ) ;
-arguments  = expression "," expression "," expression ;  (* the last two "," directly within the brackets *)
+brackets   = "(" arguments ")" | "[" arguments "]" | "{" arguments "}" ;
+iteration  = iterated "_" index brackets ;
+arguments  = expression { "," expression } ;  (* the last commas directly within the brackets: two for an iteration, one for "mod" *)
 function   = "log" | "lg" | "ln" | "sqrt" | "abs" | "floor" | "ceil" | "fact" | "inv" ;
 iterated   = "sum" | "prod" ;
 constant   = "e" | "pi" | "phi" ;
@@ -348,12 +355,12 @@ index      = letter { letter | digit | "_" } ;  (* as a primary, the index of a 
 | Precedence, loosest first | Operators | Associativity | Example | Reads as |
 | --- | --- | --- | --- | --- |
 | 1 | `+` `-` | Left | `10 - 4 - 3` | `(10 - 4) - 3` = 3 |
-| 2 | `*` `/` `%` | Left | `20 / 4 / 5` | `(20 / 4) / 5` = 1 |
+| 2 | `*` `/` | Left | `20 / 4 / 5` | `(20 / 4) / 5` = 1 |
 | 3 | Unary `+` `-` | Prefix, repeatable | `-2 ^ 2`, `--5` | `-(2 ^ 2)` = -4, 5 |
 | 4 | `^` | Right | `2 ^ 3 ^ 2` | `2 ^ (3 ^ 2)` = 512 |
 | 5 | Grouping, calls, sums, and products | — | `lg[8] * 2` | 6 |
 
-The sign sits below `^` and above `*`, as it does in written mathematics: `-2 ^ 2` is the negative of a square, not the square of a negative. Because the right side of `^` and every operand of `*`, `/`, and `%` are read at the sign's level, an exponent or a factor may carry its own sign — `2 ^ -1` and `2 * -3` need no parentheses.
+The sign sits below `^` and above `*`, as it does in written mathematics: `-2 ^ 2` is the negative of a square, not the square of a negative. Because the right side of `^` and every operand of `*` and `/` are read at the sign's level, an exponent or a factor may carry its own sign — `2 ^ -1` and `2 * -3` need no parentheses.
 
 Parentheses, brackets, and braces group interchangeably and nest freely, but each closes with its own kind; mixing them is a way of making deep nesting legible, and a mismatch is reported with both lines.
 
@@ -371,11 +378,13 @@ Parentheses, brackets, and braces group interchangeably and nest freely, but eac
 | `ceil(x)` | Function | The least whole number not below *x* | `ceil(2.1)` = 3 |
 | `fact(x)` | Function | Factorial, *x*! | `fact(5)` = 120 |
 | `inv(x)` | Function | Reciprocal, shorthand for `1 / x` | `inv(4)` = 0.25 |
+| `mod(a, b)` | Function | The remainder of *a* ÷ *b*, with *a*'s sign | `mod(17, 5)` = 2 |
 | `sum_i(x, a, b)` | Iteration | Σ: *x* added up for each whole *i* from *a* through *b* | `sum_i(i, 1, 100)` = 5,050 |
 | `prod_i(x, a, b)` | Iteration | Π: *x* multiplied together for each whole *i* from *a* through *b* | `prod_i(i, 1, 5)` = 120 |
 
 - **Built-ins are reserved in exactly these spellings.** Names are case-sensitive, so `E`, `PI`, `Phi`, `Sqrt`, and `Sum_i` are ordinary names a user may declare; only the lowercase forms above are taken. For sums and products that means every single word of `sum_` or `prod_` and then a letter, whatever follows.
-- **A function takes one argument in a group** of any bracket kind: `log(100)`, `lg[8]`, `ceil{2.1}`, with any whitespace between the name and the bracket. A function named without one — `log 100`, `fact 5` — is reported. A call is a value like any other and binds tighter than every operator around it, so `-abs(-3)` is -3 and `abs(-2) ^ 2` is 4.
+- **A function takes its arguments in a group** of any bracket kind: `log(100)`, `lg[8]`, `ceil{2.1}`, `mod[9, 4]`, with any whitespace between the name and the bracket. A function named without one — `log 100`, `fact 5` — is reported, as is one given the wrong number of arguments: `mod(8)` says it takes two. A call is a value like any other and binds tighter than every operator around it, so `-abs(-3)` is -3 and `abs(-2) ^ 2` is 4.
+- **`mod` is the remainder, and the only place `%` used to be.** `mod(17, 5)` is 2 and `mod(-7, 3)` is -1, since the sign follows the dividend; its divisor may be any expression, and `mod(5, 0)` is *Undefined*. Its two arguments are divided by the last comma directly within its brackets, so `mod(3,000, 7)` keeps its grouped figure whole. `%` cannot be the remainder as well, because it ends a figure as a percent.
 - **`fact` is defined for whole numbers from 0 up.** A fraction or a negative number has no factorial and gives *Undefined*, as does anything past `170!`, which overflows. Past `18!` the product is larger than the whole numbers floating point holds exactly, so it carries the same rounding as the rest of the arithmetic. There is no postfix `!`.
 - **A constant is a value, not a function**, so `e(2)` is missing an operator.
 - **There is no implicit multiplication.** `2(3)`, `(2)(3)`, `2e`, `2pi`, and `2 x` are each missing an operator, not products; a juxtaposition in this language is always a mistake, never a meaning.
@@ -388,7 +397,7 @@ Parentheses, brackets, and braces group interchangeably and nest freely, but eac
 - **The index is any word that starts with a letter**: `sum_i`, `sum_year`, `prod_n2`, `sum_α`. A built-in cannot be one, so `sum_pi` and `sum_log` are refused, and `sum(…)` or `sum_1(…)` is reported as missing one.
 - **The index is bound in the first argument and nowhere else.** The bounds are read outside it, so `sum_i(i, 0, i)` is refused, and past the closing bracket the index means nothing, so `sum_i(i, 0, 2) + i` refers to an undeclared `i`. It is never declared: it is not in the variable list, it may share its spelling with a declared name, which it shadows within its first argument only, and a later statement may declare that spelling freely.
 - **Sums and products nest, and an index reaches everything within its first argument**, a nested sum's or product's arguments included, bounds among them: `sum_i(sum_j(i * j, 0, i), 1, 3)` is 25. A nested index spelled like an outer one shadows it within its own first argument.
-- **The last two commas directly within the brackets separate the arguments.** Any earlier comma belongs to the expression and groups digits as it does anywhere else, so `prod_i($3,000 * i, 1, 2)` reads `$3,000` whole. Reading from the right works because the bounds are whole numbers written without grouping; a bound written as `1,000` is divided at its comma like any of the last two. Commas inside a nested bracket never separate, and an earlier one that does not sit between digits is reported.
+- **The last two commas directly within the brackets separate the arguments**, as the last one does for `mod`'s two. Any earlier comma belongs to the expression and groups digits as it does anywhere else, so `prod_i($3,000 * i, 1, 2)` reads `$3,000` whole. Reading from the right works because the bounds are whole numbers written without grouping; a bound written as `1,000` is divided at its comma like any of the last two. Commas inside a nested bracket never separate, and an earlier one that does not sit between digits is reported.
 - **The bounds are inclusive, and any expression that comes to a whole number**: `1`, `-3`, `n`, `floor(n / 2)`. Both are evaluated once, before the first term. A bound that is not a whole number, or lies past 2⁵³ where floating point stops holding every whole number, leaves the sum or product *Undefined*, as a fraction does for `fact`.
 - **An empty range is the empty sum or product.** When the end comes before the start, a sum is 0 and a product is 1, the convention that also makes `fact(0)` 1, and the expression is never evaluated.
 - **One calculation evaluates at most 10,000,000 terms** across all its sums and products, each term of a nested one counted, so that a mistyped bound cannot stall the page. The sum or product that would pass the limit stops the calculation before any of its terms is evaluated; see [Results and errors](#results-and-errors).
@@ -407,44 +416,45 @@ flowchart TD
     NAME -- no --> DOLLAR{"#36;?"}
     DOLLAR -- yes --> PASS
     DOLLAR -- no --> DIGIT{"digit, or . before a digit?"}
-    DIGIT -- yes --> TNUM["number token<br/>digits, grouping, point, suffix"]
-    DIGIT -- no --> OP{"+ - * / % ^ ?"}
+    DIGIT -- yes --> TNUM["number token<br/>digits, grouping, point, suffixes"]
+    DIGIT -- no --> OP{"+ - * / ^ ?"}
     OP -- yes --> TOP["operator token"]
     OP -- no --> BR{"bracket?"}
     BR -- yes --> TBR["open or close token"]
-    BR -- no --> SEP{", separating a sum's<br/>or product's arguments?"}
+    BR -- no --> SEP{", separating a head's<br/>arguments?"}
     SEP -- yes --> TSEP["separator token"]
     SEP -- no --> LETTER{"letter?"}
     LETTER -- yes --> TWORD["word token<br/>letters, digits, _<br/>(resolved by the parser)"]
-    LETTER -- no --> ERR["✗ lexical error<br/>stray , _ . or unexpected character"]
+    LETTER -- no --> ERR["✗ lexical error<br/>stray , _ . #37; or unexpected character"]
 ```
 
 | Token | Recognized by | Examples |
 | --- | --- | --- |
 | Reference | The longest earlier-declared name that begins here | `pre tax`, `401(k) contribution` |
-| Number | A digit, or `.` followed by a digit | `1,000`, `.5`, `2.5k` |
-| Operator | One of `+` `-` `*` `/` `%` `^` | |
+| Number | A digit, or `.` followed by a digit | `1,000`, `.5`, `2.5k`, `4.5%` |
+| Operator | One of `+` `-` `*` `/` `^` | |
 | Bracket | `(` `[` `{` and their closers | |
-| Separator | One of the last two `,` directly within a sum's or product's brackets | `sum_i(i, 0, 2)` |
+| Separator | One of the last `,` directly within the brackets of a head that takes several arguments | `sum_i(i, 0, 2)`, `mod(8, 3)` |
 | Word | A letter, then letters, digits, and underscores | `pi`, `lg`, `taxes`, `sum_i` |
 | Skipped | Whitespace, line breaks, `$`, and comments | |
 
 A word is read whole and left for the parser to resolve as a constant, a function, a sum or product, an index, or an undeclared name — which is why `taxes` is one unknown word rather than `tax` followed by `es`.
 
-A bracket opened right after `sum`, `prod`, or a word beginning `sum_` or `prod_` holds arguments, so the reader looks ahead to its closing bracket, skipping comments and declared names, and marks the last two commas directly within it as separators. A figure there ends at a separator and keeps any grouping comma before one.
+A bracket opened right after `mod`, `sum`, `prod`, or a word beginning `sum_` or `prod_` holds arguments, so the reader looks ahead to its closing bracket, skipping comments and declared names, and marks the last commas directly within it as separators — one fewer than the head's arguments, so two for a sum or product and one for `mod`. A figure there ends at a separator and keeps any grouping comma before one. A function of one argument opens no such list, which is why the comma in `log(1,000)` groups its digits.
 
 Figures follow their own small grammar:
 
 ```ebnf
-number    = ( digits [ "." digits ] | "." digits ) [ magnitude ] ;
+number    = ( digits [ "." digits ] | "." digits ) [ magnitude ] [ "%" ] ;
 digits    = digit { [ "," | "_" ] digit } ;
 magnitude = "k" | "m" | "b" | "t" ;  (* either case, and not followed by a letter, digit, or "_" *)
 ```
 
 - **`$` is ignored anywhere** in an expression, so figures can be pasted as written.
-- **`,` and `_` group digits and are accepted only between two digits of one number**, apart from the two commas that separate a sum's or product's arguments. Anywhere else they would silently join or split values, so `1,,000`, `1, 2`, and `_5` are reported.
+- **`,` and `_` group digits and are accepted only between two digits of one number**, apart from the commas that separate a head's arguments. Anywhere else they would silently join or split values, so `1,,000`, `1, 2`, and `_5` are reported.
 - **`.` marks the fractional part.** A number has one, and a digit must follow it; a leading point (`.5`) is fine.
 - **A magnitude suffix multiplies by a thousand, a million, a billion, or a trillion** and comes after any `$` and digit grouping, so `$1.5k` is 1,500 and `2,500K` is 2,500,000. It binds to the digits it touches and has to end the number: `1kg`, `1kk`, and `1 k` are all reported rather than read as 1,000 with something after them.
+- **A final `%` divides the figure by a hundred**, so `4.5%` is 0.045, `$1,250%` is 12.5, and `2.5k%` is 25, the percent coming last of all. It binds as tightly as the digits it follows and cannot stand apart from them: `5 %`, `% 5`, and `(1 + 2)%` are reported. Dividing is what keeps `5%` exactly 0.05, and it is why the remainder is `mod` — one `%` reads one way everywhere it appears.
 - **The suffix is an expression rule only.** It says nothing about the name left of `=`, which is read whole, before any figure is; a user who declares `2k` gets their own value wherever `2k` appears.
 - **There is no exponent notation and no mixed fraction.** `1e3` is `1` followed by the word `e3`, and `1-2/3` is one minus two-thirds.
 
@@ -455,6 +465,8 @@ magnitude = "k" | "m" | "b" | "t" ;  (* either case, and not followed by a lette
 | `.5k` | 500 |
 | `$1,000.50` | 1,000.5 |
 | `1.234_5T` | 1,234,500,000,000 |
+| `4.5%` | 0.045 |
+| `$2.5k%` | 25 |
 | `1,,000` | ✗ `,` must sit between digits |
 | `5.` | ✗ A decimal point must be followed by a digit |
 | `1.2.3` | ✗ A number has more than one decimal point |
@@ -496,8 +508,8 @@ flowchart LR
 | 1 · Statement splitting | Characters | Each statement's extent, whether a `;` ends it, where its `=` signs are, and where its content starts | Nothing; it cannot fail | `parsers/` |
 | 2 · Program shape | Statements in order | A declaration, the result, or nothing | An empty statement; a bare expression that is not last | `parsers/` |
 | 3 · Declaration header | Text before `=` | The normalized name | A second `=`; a missing, built-in, numeric, or duplicate name | `parsers/` |
-| 4 · Tokenizing | One expression's text, and the names declared so far | Tokens, each with its line | A malformed figure, a stray separator, an unexpected character, a comma dividing a sum or product that neither separates its arguments nor groups digits; nothing after `=` | `parsers/` |
-| 5 · Expression parsing | Tokens | An expression tree | A missing value or operator, a bracket error, an undeclared name, a function without its argument, a sum or product without a usable index or three arguments, an index read outside its first argument | `parsers/` |
+| 4 · Tokenizing | One expression's text, and the names declared so far | Tokens, each with its line | A malformed figure, a stray separator or `%`, an unexpected character, a comma dividing an argument list that neither separates its arguments nor groups digits; nothing after `=` | `parsers/` |
+| 5 · Expression parsing | Tokens | An expression tree | A missing value or operator, a bracket error, an undeclared name, a function without its arguments or with the wrong number of them, a sum or product without a usable index or three arguments, an index read outside its first argument | `parsers/` |
 | 6 · Registration | An accepted declaration | A name later statements can refer to | Nothing | `parsers/` |
 | 7 · Evaluation | The parsed program | The result and every name's value | Only sums and products past the term limit; undefined arithmetic yields a non-finite value instead | `language/` |
 | 8 · Presentation | Numbers | Full or suffixed text | Nothing | `presentation/` |
@@ -564,23 +576,25 @@ sequenceDiagram
 
 ### The expression parser
 
-The expression parser is a recursive-descent parser with one rule per precedence level, written exactly as the [expression grammar](#expressions) reads. Each binary level parses an operand at the next tighter level and then loops over its own operators, building the tree leftward, which is what makes `+ -` and `* / %` left-associative. `^` instead reads its right side through the sign rule, which reaches `^` again — so it associates to the right, and its exponent may be signed. A group starts over at the loosest level, and its closing bracket must be the one that matches its opener.
+The expression parser is a recursive-descent parser with one rule per precedence level, written exactly as the [expression grammar](#expressions) reads. Each binary level parses an operand at the next tighter level and then loops over its own operators, building the tree leftward, which is what makes `+ -` and `* /` left-associative. `^` instead reads its right side through the sign rule, which reaches `^` again — so it associates to the right, and its exponent may be signed. A group starts over at the loosest level, and its closing bracket must be the one that matches its opener.
 
 ```mermaid
 flowchart TD
-    SUM["sum<br/>product, then any + − product"] --> PRODUCT["product<br/>unary, then any * / % unary"]
+    SUM["sum<br/>product, then any + − product"] --> PRODUCT["product<br/>unary, then any * / unary"]
     PRODUCT --> UNARY["unary<br/>a sign, then unary — or power"]
     UNARY --> POWER["power<br/>primary, then optionally ^ unary"]
     POWER --> PRIMARY["primary<br/>number · reference · index · constant ·<br/>call · iteration · group"]
     PRIMARY --> GROUP["group<br/>an expression between matching brackets"]
+    PRIMARY --> CALL["call<br/>one argument between matching brackets,<br/>or mod's two"]
     PRIMARY --> ITERATION["iteration<br/>three arguments between matching brackets,<br/>the index bound in the first"]
     GROUP -- "starts over at the loosest level" --> SUM
+    CALL -- "each argument starts over" --> SUM
     ITERATION -- "each argument starts over" --> SUM
     POWER -- "the exponent may carry a sign" --> UNARY
     UNARY -- "signs repeat" --> UNARY
 ```
 
-`primary` is where words are resolved. The index of a sum or product whose first argument is being read comes first, since it shadows every other reading there; then a declared reference becomes a variable; `e`, `pi`, or `phi` becomes a constant; a function name must be followed by a group and becomes a call; and a `sum_` or `prod_` head must be followed by its bracketed arguments and becomes an iteration, whose first argument is parsed with the index bound and whose bounds are parsed with it released again. Any other word is reported as undeclared, or, when it is the index of a sum or product whose bounds are being read, as bound only within that one's first argument. When the outermost `sum` returns, any token left over is reported — a closing bracket as unmatched, anything else as a missing operator.
+`primary` is where words are resolved. The index of a sum or product whose first argument is being read comes first, since it shadows every other reading there; then a declared reference becomes a variable; `e`, `pi`, or `phi` becomes a constant; a function name must be followed by a group holding as many arguments as it names and becomes a call; and a `sum_` or `prod_` head must be followed by its bracketed arguments and becomes an iteration, whose first argument is parsed with the index bound and whose bounds are parsed with it released again. Any other word is reported as undeclared, or, when it is the index of a sum or product whose bounds are being read, as bound only within that one's first argument. When the outermost `sum` returns, any token left over is reported — a closing bracket as unmatched, anything else as a missing operator.
 
 `-2 ^ 2 + 3 * 4` parses to the tree below and evaluates to 8:
 
@@ -619,15 +633,19 @@ Parsing stops at the first error. Every message names the one-based line it conc
 | Tokenizing | A decimal point must be followed by a digit on line *n* | `5.` |
 | Tokenizing | A number has more than one decimal point on line *n* | `1.2.3` |
 | Tokenizing | Unexpected '*character*' on line *n* | `1 < 2` |
+| Tokenizing | '%' reads a figure as a percent and must follow one directly, as '4.5%'; the one on line *n* follows none, and the remainder is 'mod(dividend, divisor)' | `17 % 5`, `(1 + 2)%` |
 | Tokenizing | Only the last two ',' in '*head*' separate its arguments, as '*head*(expression, start, end)', so the one on line *n* must sit between digits | `sum_i(i, 1, 2, 3)` |
+| Tokenizing | Only the last ',' in 'mod' separates its arguments, as 'mod(dividend, divisor)', so the one on line *n* must sit between digits | `mod(pi, 3, 2)` |
 | Expression parsing | Expected a value before '*token*' on line *n* | `* 2`, `()` |
-| Expression parsing | Expression ends where a value is expected on line *n* | `1 +`, `6%` |
+| Expression parsing | Expression ends where a value is expected on line *n* | `1 +`, `2 *` |
 | Expression parsing | Missing operator before '*token*' on line *n* | `2 3`, `2(3)`, `2pi` |
 | Expression parsing | Unmatched '*bracket*' on line *n* | `1 + 2)` |
 | Expression parsing | '*bracket*' on line *n* is never closed | `(1 + 2` |
 | Expression parsing | '*bracket*' on line *n* is closed by '*bracket*' on line *m*; expected '*bracket*' | `(1 + 2]` |
 | Expression parsing | '*name*' is not declared by an earlier statement on line *n* | `x = x + 1;`, `sin(1)` |
 | Expression parsing | '*name*' must be followed by a parenthesized argument on line *n* | `log 100` |
+| Expression parsing | 'mod' must be followed by its arguments in brackets, as 'mod(dividend, divisor)', on line *n* | `mod 8` |
+| Expression parsing | 'mod' on line *n* takes two arguments, as 'mod(dividend, divisor)' | `mod(8)` |
 | Expression parsing | '*head*' must be followed by its arguments in brackets, as '*head*(expression, start, end)', on line *n* | `sum_i` |
 | Expression parsing | '*head*' on line *n* takes three arguments, as '*head*(expression, start, end)' | `sum_i(i, 0)` |
 | Expression parsing | '*word*' needs an index that starts with a letter, as '*operator*_i(expression, start, end)', on line *n* | `sum(i, 0, 2)`, `sum_1(i, 0, 2)` |
@@ -640,7 +658,7 @@ Calculate reports one message of its own once parsing has succeeded, in the same
 
 Calculate evaluates the parsed program with a fresh scope and a fresh term budget: each declaration in order, then the result expression, if there is one. The parser has already guaranteed that every name and index is bound before it is read, so the only way evaluation stops short is a sum or product that would pass the term limit.
 
-- **Arithmetic is JavaScript's own**, on double-precision floating point, so results carry its rounding. `%` is the remainder, whose sign follows the dividend; `^` is exponentiation; the constants and every function but `fact` and `inv` are the standard library's.
+- **Arithmetic is JavaScript's own**, on double-precision floating point, so results carry its rounding. `mod` is its remainder, whose sign follows the dividend; `^` is exponentiation; the constants and every function but `fact`, `inv`, and `mod` are the standard library's.
 - **Undefined arithmetic is a value, not an error.** `1 / 0`, `inv(0)`, `ln(-1)`, `sqrt(-1)`, `fact(2.5)`, and `sum_i(i, 0.5, 2)` produce a value that is not finite, as does any declaration built from one, and each shows as *Undefined* rather than blocking the calculation.
 - **Sums and products fold their terms in order**, from the start upward, with JavaScript's own `+` and `*`, so a long sum carries the rounding a long chain of `+` would. The index is bound to each whole number in turn while the first argument is evaluated, and an outer index of the same spelling is restored afterward.
 - **The outcome is the result, if the input ends in an expression, and every declared name with its final value**, in the order declared.
@@ -672,7 +690,7 @@ The text reads like a highlighted file: comments recede, declared names use one 
 
 - **A name is colored where it is declared and at every later reference**, exactly as an identifier is in an editor, which is what makes an alias visible as one thing rather than as words. A reference before its declaration stays plain, and so does a name inside a longer word.
 - **A sum's or product's index is colored as a name** where its head binds it, the `i` of `sum_i`, and wherever its first argument reads it, and nowhere else: in the bounds and past the closing bracket it stays plain, which draws the index's scope on the text.
-- **Operators are `+ - * / % ^`, the function names — `log`, `sqrt`, `fact`, and the rest — the `sum_` or `prod_` of a head with the two commas that separate its arguments, and the `=` of a declaration.** A comma that groups digits stays plain, like the figure it belongs to. The last is not arithmetic, but it is what separates a declaration's two halves, and coloring it is what makes that separation visible. A function name that falls inside a declared name — `log book` — belongs to the name, and one inside a longer word — `absolute`, `factor` — is not a function at all.
+- **Operators are `+ - * / ^`, the function names — `log`, `sqrt`, `fact`, `mod`, and the rest — the `sum_` or `prod_` of a head, the commas that separate a head's arguments, and the `=` of a declaration.** A comma that groups digits stays plain, like the figure it belongs to, and so does a figure's `%`, which belongs to it as its `$` and magnitude do. The last is not arithmetic, but it is what separates a declaration's two halves, and coloring it is what makes that separation visible. A function name that falls inside a declared name — `log book` — belongs to the name, and one inside a longer word — `absolute`, `factor` — is not a function at all.
 - **The highlighter judges each statement on its own** rather than waiting for the whole input to parse. A user is mid-edit most of the time, and highlighting that vanished on every keystroke that broke the parse would flicker constantly. A declaration whose name is well formed and untaken colors that name; anything else is left plain, so an unusable declaration — `pi = 3`, say — is simply not highlighted rather than being marked wrong twice.
 
 | | Parser | Highlighter |
@@ -685,7 +703,7 @@ Both read the input through the same statement splitting, comment boundaries, de
 
 ## Who owns what
 
-This directory holds the calculator apart from any view. Its [`parsers/`](parsers/) directory separates statement splitting, name matching, declaration validation, tokenization, sum and product argument layout, number literals, and expression parsing; each parser class owns one input and lives in its own file. [`program.ts`](program.ts) defines the parsed types — expression trees, declarations, programs, and the three-way parse result — while [`language/`](language/) holds the shared comment, operator, function, constant, sum and product, and magnitude rules and evaluates parsed programs with a fresh name scope and term budget. [`presentation/`](presentation/) groups highlighting, result and diagnostic formatting, and keyboard shortcuts. Parsing and highlighting share declaration validation, comment boundaries, and argument layout; parsing, evaluation, highlighting, and formatting share the applicable operator, function, constant, and magnitude definitions. Highlighting still accepts incomplete expressions, while parsing reports errors before evaluation so Calculate can be disabled.
+This directory holds the calculator apart from any view. Its [`parsers/`](parsers/) directory separates statement splitting, name matching, declaration validation, tokenization, argument layout, number literals, and expression parsing; each parser class owns one input and lives in its own file. [`program.ts`](program.ts) defines the parsed types — expression trees, declarations, programs, and the three-way parse result — while [`language/`](language/) holds the shared comment, operator, function, constant, sum and product, and magnitude rules and evaluates parsed programs with a fresh name scope and term budget. [`presentation/`](presentation/) groups highlighting, result and diagnostic formatting, and keyboard shortcuts. Parsing and highlighting share declaration validation, comment boundaries, and argument layout; parsing, evaluation, highlighting, and formatting share the applicable operator, function, constant, and magnitude definitions. Highlighting still accepts incomplete expressions, while parsing reports errors before evaluation so Calculate can be disabled.
 
 ```mermaid
 flowchart TD
@@ -723,12 +741,12 @@ Most of the language is data. Constants, functions, sums and products, operators
 | To | Change | Follows automatically | Also |
 | --- | --- | --- | --- |
 | Add a constant | An entry in `CONSTANTS` in [`language/syntax.ts`](language/syntax.ts) | Reserved, with the constant-specific message; parsed; evaluated | Tests; the tables in this document |
-| Add a one-argument function | An entry in `FUNCTIONS` in the same file — a standard-library function, or one of the calculator's own, as factorial is | Reserved; parsed as a call; evaluated; highlighted as an operator | Tests; the tables in this document |
+| Add a function | An entry in `FUNCTIONS` in the same file, naming its parameters and what it applies — a standard-library function, or one of the calculator's own, as factorial is | Reserved; parsed as a call with that many arguments; its argument list divided; evaluated; highlighted as an operator | Tests; the tables in this document |
 | Add an iterated operator | An entry in `ITERATED_OPERATORS` in [`language/iteration.ts`](language/iteration.ts), with its empty-range value and how a term folds in | Its heads reserved; its argument lists read; parsed; evaluated; highlighted | Tests; the tables in this document |
 | Add a magnitude | An entry in [`language/magnitudes.ts`](language/magnitudes.ts) | Read as an input suffix in either case; offered by Suffixed output | Tests; the figure rules above |
 | Add a binary operator | `OPERATOR_SYMBOLS`, a precedence level in the expression parser, and a case in the evaluator | Tokenized and highlighted | Tests; the grammar and precedence table |
 
-Reserving a name is a change to what existing input means. A user whose remembered input declares a name that has since become built in will find it invalid on the next visit, with the message naming the conflict — which is the intended outcome, since the alternative is a name that silently means two things.
+Reserving a name is a change to what existing input means. A user whose remembered input declares a name that has since become built in will find it invalid on the next visit, with the message naming the conflict — which is the intended outcome, since the alternative is a name that silently means two things. Changing what a symbol means carries the same cost and is answered the same way: remembered input that used `%` as a remainder is refused on the next visit, by a message that names `mod`, rather than quietly reading `17 % 5` as 17 followed by a percent of nothing.
 
 
 ## Validation and provenance

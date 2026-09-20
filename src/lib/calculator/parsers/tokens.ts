@@ -15,11 +15,14 @@
  * — which multiplies it by a thousand, a million, a billion, or a trillion, so
  * `$1.5k` is 1,500. The suffix binds to the digits it touches and must end the
  * number, so `1kg` is a mistake to report rather than 1,000 with a stray `g`.
- * This is a rule about expressions only: a declared name is read before any of
- * this (see `names.ts`) and may spell whatever it likes.
+ * A number may then end with `%`, which divides it by a hundred, so `4.5%` is
+ * 0.045. The percent binds to the figure just as tightly: a `%` anywhere else
+ * is reported, and the remainder is `mod`, a function, so that nothing has to
+ * read one `%` two ways. This is a rule about expressions only: a declared name
+ * is read before any of this (see `names.ts`) and may spell whatever it likes.
  *
- * Within the brackets of a sum or product, the last two commas at their own
- * level separate its arguments instead (see `arguments.ts`), so `2,0,2` in
+ * Within the brackets of a head that takes several arguments, the last commas
+ * at their own level separate them instead (see `arguments.ts`), so `2,0,2` in
  * `sum_i(i ^ 2,0,2)` is three figures while `3,000` in
  * `prod_i(3,000 * i, 0, 1)` is one.
  */
@@ -34,20 +37,23 @@ import {
 } from '#lib/calculator/parsers/names.js';
 import { layOutArguments } from '#lib/calculator/parsers/arguments.js';
 import {
+  countWord,
+  describeArguments,
   isClosingBracket,
   isOpeningBracket,
   OPERATOR_SYMBOLS,
+  readArgumentList,
+  REMAINDER,
+  type ArgumentList,
   type OperatorSymbol,
   type OpeningBracket,
   type ClosingBracket,
 } from '#lib/calculator/language/syntax.js';
-import {
-  ARGUMENT_SEPARATOR,
-  iteratedOperatorOf,
-} from '#lib/calculator/language/iteration.js';
+import { ARGUMENT_SEPARATOR } from '#lib/calculator/language/iteration.js';
 import {
   DIGIT_SEPARATORS,
   isDigit,
+  PERCENT_SUFFIX,
   readNumber,
 } from '#lib/calculator/parsers/number.js';
 
@@ -91,7 +97,7 @@ export type Token = {
       declared: boolean;
     }
   | {
-      /** The comma between two arguments of a sum or product. */
+      /** The comma between two arguments of a call, a sum, or a product. */
       kind: 'separator';
     }
 );
@@ -126,23 +132,27 @@ export type ExpressionRange = {
   lineAt: (index: number) => number;
 };
 
-type NameToken = Extract<Token, { kind: 'name' }>;
-
-/** A sum's or product's open argument list, as written, and the commas that divide it. */
+/** An open argument list, as its head names it, and the commas that divide it. */
 type ArgumentGroup = {
-  /** The head that opened it, such as `sum_i`. */
-  head: string;
+  /** The parameters the head names, such as `mod`'s or `sum_i`'s. */
+  list: ArgumentList;
   /** Indices of the commas separating its arguments, in order. */
   separators: readonly number[];
 };
 
-/** Whether a group opened after `previous` holds a sum's or product's arguments. */
-function opensArguments(previous: Token | undefined): previous is NameToken {
-  return (
-    previous?.kind === 'name' &&
-    !previous.declared &&
-    iteratedOperatorOf(previous.name) !== undefined
-  );
+/** The argument list a group opened after `previous` holds, if it holds one. */
+function opensArguments(previous: Token | undefined): ArgumentList | undefined {
+  if (previous?.kind !== 'name' || previous.declared) return undefined;
+  return readArgumentList(previous.name);
+}
+
+/** The commas that divide a head's arguments, as its message names them. */
+function describeSeparators({ head, parameters }: ArgumentList): string {
+  const count = parameters.length - 1;
+  const comma = `'${ARGUMENT_SEPARATOR}'`;
+  return count === 1
+    ? `the last ${comma} in '${head}' separates its arguments`
+    : `the last ${countWord(count)} ${comma} in '${head}' separate its arguments`;
 }
 
 /** Split one expression into tokens, or report the first lexical error. */
@@ -151,8 +161,8 @@ export function tokenize(
   { start, end, names, lineAt }: ExpressionRange,
 ): TokenizeResult {
   const tokens: Token[] = [];
-  // One entry per open group, holding its argument layout when it is a sum's
-  // or product's; a comma that divides none of them groups digits.
+  // One entry per open group, holding its argument layout when its head takes
+  // several arguments; a comma that divides none of them groups digits.
   const groups: (ArgumentGroup | undefined)[] = [];
   const skip = (at: number): number | undefined => {
     if (source[at] === COMMENT_MARKER) return commentEnd(source, at, end);
@@ -203,15 +213,18 @@ export function tokenize(
       tokens.push({ kind: 'operator', symbol: char as OperatorSymbol, line });
       index += 1;
     } else if (isOpeningBracket(char)) {
-      const previous = tokens.at(-1);
+      const list = opensArguments(tokens.at(-1));
       groups.push(
-        opensArguments(previous)
-          ? {
-              head: previous.name,
-              separators: layOutArguments(source, index + 1, end, skip)
-                .separators,
-            }
-          : undefined,
+        list && {
+          list,
+          separators: layOutArguments(
+            source,
+            index + 1,
+            end,
+            list.parameters.length - 1,
+            skip,
+          ).separators,
+        },
       );
       tokens.push({ kind: 'open', bracket: char, line });
       index += 1;
@@ -223,7 +236,7 @@ export function tokenize(
       if (!group.separators.includes(index)) {
         return {
           ok: false,
-          message: `Only the last two '${ARGUMENT_SEPARATOR}' in '${group.head}' separate its arguments, as '${group.head}(expression, start, end)', so the one on line ${line} must sit between digits`,
+          message: `Only ${describeSeparators(group.list)}, as '${describeArguments(group.list)}', so the one on line ${line} must sit between digits`,
         };
       }
       tokens.push({ kind: 'separator', line });
@@ -234,6 +247,11 @@ export function tokenize(
       const name = source.slice(index, wordEnd);
       tokens.push({ kind: 'name', name, declared: false, line });
       index = wordEnd;
+    } else if (char === PERCENT_SUFFIX) {
+      return {
+        ok: false,
+        message: `'${PERCENT_SUFFIX}' reads a figure as a percent and must follow one directly, as '4.5${PERCENT_SUFFIX}'; the one on line ${line} follows none, and the remainder is '${describeArguments(REMAINDER)}'`,
+      };
     } else if (DIGIT_SEPARATORS.has(char)) {
       return {
         ok: false,

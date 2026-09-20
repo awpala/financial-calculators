@@ -21,23 +21,29 @@
  * line can hold several, as `assets = $100k; liabilities = $50k;`, and one
  * statement can span labeled rows and still total together.
  *
- * Within an expression, precedence, loosest first: `+ -`, then `* / %`, then
+ * Within an expression, precedence, loosest first: `+ -`, then `* /`, then
  * unary sign, then `^` (right-associative, so `-2^2` is `-4` and `2^3^2` is
  * `512`). Parentheses, brackets, and braces group interchangeably but must close
  * with their own kind. `log` (base 10), `lg` (base 2), `ln`, `sqrt`, `abs`,
  * `floor`, `ceil`, `fact` (factorial), and `inv` (`1 / x`) take one grouped
- * argument; `e` is Euler's number, `pi` is π, and `phi` is the golden ratio.
- * These twelve names are reserved: a declaration of one is refused, and one of
- * a constant says so. Names are case-sensitive and there is no implicit
- * multiplication: `2(3)` and `2pi` are missing an operator, not products.
+ * argument, and `mod` (`mod(8, 3)` is 2) takes two; `e` is Euler's number,
+ * `pi` is π, and `phi` is the golden ratio. These thirteen names are reserved:
+ * a declaration of one is refused, and one of a constant says so. Names are
+ * case-sensitive and there is no implicit multiplication: `2(3)` and `2pi` are
+ * missing an operator, not products.
+ *
+ * A figure may end with `%`, which divides it by a hundred, so `4.5%` is 0.045
+ * and `income * 4.5%` is a rate applied to it. The suffix belongs to the figure
+ * it follows, which is why the remainder is `mod` rather than `%`: one symbol
+ * reads one way everywhere.
  *
  * `sum_i(expression, start, end)` and `prod_i(expression, start, end)` add or
  * multiply the expression for each whole-number `i` from `start` through `end`.
  * The index is bound only within the expression, nested sums and products
  * included, and is never a declared name (see `language/iteration.ts`).
  *
- * Arithmetic itself is JavaScript's, so `%` is the remainder and results carry
- * ordinary floating-point rounding.
+ * Arithmetic itself is JavaScript's, so `mod` is its remainder — the sign
+ * follows the dividend — and results carry ordinary floating-point rounding.
  */
 
 import type { IteratedOperator } from '#lib/calculator/language/iteration.js';
@@ -88,8 +94,8 @@ export type Expression =
       kind: 'call';
       /** The function to evaluate. */
       name: CalculatorFunction;
-      /** The grouped argument passed to the function. */
-      argument: Expression;
+      /** The grouped arguments passed to the function, one per parameter, in the order written. */
+      arguments: Expression[];
     }
   | {
       /** A sum or product of its body over a whole-number range of its index. */

@@ -1,4 +1,5 @@
 import { DeclaredNames } from '#lib/calculator/parsers/names.js';
+import { PERCENT_SUFFIX } from '#lib/calculator/parsers/number.js';
 import { tokenize } from '#lib/calculator/parsers/tokens.js';
 
 /**
@@ -7,8 +8,13 @@ import { tokenize } from '#lib/calculator/parsers/tokens.js';
  * suffixes have exactly the same meaning. Empty or malformed input returns
  * NaN; expressions and declarations belong in Scratchpad. Callers own bounds,
  * percentage units, and their treatment of missing/invalid values.
+ *
+ * Scratchpad's `%` suffix is refused here rather than divided by a hundred.
+ * These fields carry their own units, and a rate field asking for percentage
+ * points would otherwise read `6.5%` as 0.065 where it means 6.5.
  */
 export function parseNumberInput(source: string): number {
+  if (source.includes(PERCENT_SUFFIX)) return Number.NaN;
   const lexed = tokenize(source, {
     start: 0,
     end: source.length,
@@ -38,8 +44,9 @@ export function parseNumberInput(source: string): number {
 /**
  * Read percentage points: one plain number from 0 through 100. Letters are
  * refused outright, magnitude suffixes included, because `0.24k` would
- * otherwise read as 240 and `0.0005m` as 500 behind a percent label. Dollar
- * signs and digit separators follow `parseNumberInput`. Empty, malformed, or
+ * otherwise read as 240 and `0.0005m` as 500 behind a percent label. A `%` sign
+ * is refused with them, since the field is already labeled one. Dollar signs
+ * and digit separators follow `parseNumberInput`. Empty, malformed, or
  * out-of-range input returns NaN.
  */
 export function parsePercentInput(source: string): number {

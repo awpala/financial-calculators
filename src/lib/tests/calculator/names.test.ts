@@ -18,10 +18,10 @@ describe('calculator names', () => {
   });
 
   it('recognizes names that read as numbers', () => {
-    for (const name of ['1', '1,000.50', '$5', '1_000', '. $']) {
+    for (const name of ['1', '1,000.50', '$5', '1_000', '. $', '5%']) {
       expect(isNumericName(name)).toBe(true);
     }
-    for (const name of ['1st', 'q1', '$x', '-5', '5%']) {
+    for (const name of ['1st', 'q1', '$x', '-5', 'rate %']) {
       expect(isNumericName(name)).toBe(false);
     }
   });

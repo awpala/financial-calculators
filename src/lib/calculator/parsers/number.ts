@@ -3,6 +3,11 @@ import { isWordCharacter } from '#lib/calculator/parsers/names.js';
 
 /** Separators permitted only between digits within a number literal. */
 export const DIGIT_SEPARATORS = new Set([',', '_']);
+
+/** The suffix reading a figure as a percent, which divides it by a hundred. */
+export const PERCENT_SUFFIX = '%';
+
+const PERCENT_DIVISOR = 100;
 const DIGIT = /[0-9]/;
 
 /** Whether a character is an ASCII digit used by number literals. */
@@ -33,6 +38,10 @@ type NumberRead =
  * Read one number literal starting at `start`, which is a digit or a point
  * before one. The literal ends before `limit`, where a comma separates a sum's
  * or product's arguments rather than grouping digits.
+ *
+ * A magnitude suffix scales the digits it touches, and a final `%` divides what
+ * they come to by a hundred, so `4.5%` is 0.045 and `$2.5k` is 2,500. Dividing
+ * is what keeps `5%` exactly 0.05, which multiplying by a hundredth would not.
  */
 export function readNumber(
   source: string,
@@ -77,11 +86,14 @@ export function readNumber(
   // this number, so the mistake is reported rather than read as a magnitude.
   const scale =
     suffix !== undefined && !isWordCharacter(source[index + 1]) ? suffix : 1;
-  const end = scale === 1 ? index : index + 1;
+  const afterMagnitude = scale === 1 ? index : index + 1;
+  const percent = source[afterMagnitude] === PERCENT_SUFFIX;
+  const end = percent ? afterMagnitude + 1 : afterMagnitude;
+  const scaled = Number(digits) * scale;
 
   return {
     ok: true,
-    value: Number(digits) * scale,
+    value: percent ? scaled / PERCENT_DIVISOR : scaled,
     text: source.slice(start, end),
     end,
   };

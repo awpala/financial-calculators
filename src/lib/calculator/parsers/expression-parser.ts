@@ -1,13 +1,18 @@
 import type { Expression } from '#lib/calculator/program.js';
 import {
+  countWord,
+  describeArguments,
+  FUNCTIONS,
   isCalculatorConstant,
   isCalculatorFunction,
   isReservedName,
   MATCHING_BRACKET,
+  type CalculatorFunction,
   type OperatorSymbol,
 } from '#lib/calculator/language/syntax.js';
 import {
   ARGUMENT_SEPARATOR,
+  ITERATION_PARAMETERS,
   iteratedOperatorOf,
   readIterationHead,
   type IterationHead,
@@ -92,7 +97,7 @@ export class ExpressionParser {
   }
 
   #product(): Expression {
-    return this.#binary(['*', '/', '%'], () => this.#unary());
+    return this.#binary(['*', '/'], () => this.#unary());
   }
 
   #binary(
@@ -151,21 +156,14 @@ export class ExpressionParser {
 
   #named(name: string, line: number): Expression {
     if (isCalculatorConstant(name)) return { kind: 'constant', name };
-    if (isCalculatorFunction(name)) {
-      if (this.#peek()?.kind !== 'open') {
-        throw new ParseError(
-          `'${name}' must be followed by a parenthesized argument on line ${line}`,
-        );
-      }
-      return { kind: 'call', name, argument: this.#group() };
-    }
+    if (isCalculatorFunction(name)) return this.#call(name, line);
     const head = readIterationHead(name);
     if (head) return this.#iteration(head, name, line);
 
     const operator = iteratedOperatorOf(name);
     if (operator && this.#peek()?.kind === 'open') {
       throw new ParseError(
-        `'${name}' needs an index that starts with a letter, as '${operator}_i(expression, start, end)', on line ${line}`,
+        `'${name}' needs an index that starts with a letter, as '${describeArguments({ head: `${operator}_i`, parameters: ITERATION_PARAMETERS })}', on line ${line}`,
       );
     }
     const outOfScope = this.#iterations.find(({ index }) => index === name);
@@ -177,6 +175,40 @@ export class ExpressionParser {
     throw new ParseError(
       `'${name}' is not declared by an earlier statement on line ${line}`,
     );
+  }
+
+  /**
+   * Read a call's bracketed arguments, each in the scope around it, and refuse
+   * a count its function does not take. A function of one argument keeps the
+   * message naming a single parenthesized argument, since its brackets divide
+   * at no comma to explain.
+   */
+  #call(name: CalculatorFunction, line: number): Expression {
+    const { parameters } = FUNCTIONS[name];
+    const list = { head: name, parameters };
+    const open = this.#peek();
+    if (open?.kind !== 'open') {
+      throw new ParseError(
+        parameters.length > 1
+          ? `'${name}' must be followed by its arguments in brackets, as '${describeArguments(list)}', on line ${line}`
+          : `'${name}' must be followed by a parenthesized argument on line ${line}`,
+      );
+    }
+    this.#index += 1;
+
+    const argumentsRead = [this.#sum()];
+    while (this.#peek()?.kind === 'separator') {
+      this.#index += 1;
+      argumentsRead.push(this.#sum());
+    }
+    this.#close(open);
+
+    if (argumentsRead.length !== parameters.length) {
+      throw new ParseError(
+        `'${name}' on line ${line} takes ${countWord(parameters.length)} arguments, as '${describeArguments(list)}'`,
+      );
+    }
+    return { kind: 'call', name, arguments: argumentsRead };
   }
 
   /** Whether a name is the index of a sum or product whose first argument is being read. */
@@ -201,10 +233,11 @@ export class ExpressionParser {
         `'${index}' is built in and cannot be an index on line ${line}`,
       );
     }
+    const list = { head, parameters: ITERATION_PARAMETERS };
     const open = this.#peek();
     if (open?.kind !== 'open') {
       throw new ParseError(
-        `'${head}' must be followed by its arguments in brackets, as '${head}(expression, start, end)', on line ${line}`,
+        `'${head}' must be followed by its arguments in brackets, as '${describeArguments(list)}', on line ${line}`,
       );
     }
     this.#index += 1;
@@ -224,7 +257,7 @@ export class ExpressionParser {
     const [start, end] = bounds;
     if (!start || !end || bounds.length > 2) {
       throw new ParseError(
-        `'${head}' on line ${line} takes three arguments, as '${head}(expression, start, end)'`,
+        `'${head}' on line ${line} takes ${countWord(ITERATION_PARAMETERS.length)} arguments, as '${describeArguments(list)}'`,
       );
     }
     return { kind: 'iteration', operator, index, body, start, end, line };

@@ -54,7 +54,7 @@ Presents highlighted Scratchpad syntax and runnable examples, including nested i
           />, <HighlightedExpression source="3M" />,
           <HighlightedExpression source="1b" />, <HighlightedExpression
             source="1t"
-          />
+          />, <HighlightedExpression source="4.5%" />
         </p>
         <HighlightedExpression
           source={bindingsExample}
@@ -72,17 +72,20 @@ Presents highlighted Scratchpad syntax and runnable examples, including nested i
           Arithmetic & functions
         </h3>
         <p>
-          <HighlightedExpression source="+ - * / ^ %" /> with <HighlightedExpression
+          <HighlightedExpression source="+ - * / ^" /> with <HighlightedExpression
             source={'() [] {}'}
           />
-          grouping. <HighlightedExpression source="%" /> means remainder; write 5%
-          as
-          <HighlightedExpression source="0.05" />.
+          grouping. A figure may end in <HighlightedExpression source="%" />, so
+          <HighlightedExpression source="4.5%" /> is
+          <HighlightedExpression source="0.045" />.
         </p>
         <p>
           <HighlightedExpression
             source="log lg ln sqrt abs floor ceil fact inv"
           />
+        </p>
+        <p>
+          <HighlightedExpression source="mod(8, 3)" /> is the remainder, 2.
         </p>
         <p>
           Constants: <HighlightedExpression source="e pi phi" />.

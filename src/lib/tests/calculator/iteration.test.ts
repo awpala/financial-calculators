@@ -78,8 +78,11 @@ describe('term counts', () => {
 });
 
 describe('argument layout', () => {
-  const layOut = (text: string, skip: (index: number) => number | undefined) =>
-    layOutArguments(text, 0, text.length, skip);
+  const layOut = (
+    text: string,
+    skip: (index: number) => number | undefined,
+    count = 2,
+  ) => layOutArguments(text, 0, text.length, count, skip);
   const skipNothing = () => undefined;
 
   it('divides at the last two commas directly within the brackets', () => {
@@ -104,6 +107,13 @@ describe('argument layout', () => {
   it('takes whatever commas there are when there are fewer than two', () => {
     expect(layOut('i, 0)', skipNothing).separators).toEqual([1]);
     expect(layOut('i)', skipNothing).separators).toEqual([]);
+  });
+
+  it('divides a two-argument list at its last comma alone', () => {
+    expect(layOut('3,000, 7)', skipNothing, 1)).toEqual({
+      separators: [5],
+      end: 8,
+    });
   });
 
   it('stops without a closing bracket at the end of its statement or text', () => {
