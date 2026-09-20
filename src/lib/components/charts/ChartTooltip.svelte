@@ -3,19 +3,22 @@
 Displays a pointer-anchored chart value using the reference calculator's floating bubble presentation. Svelte owns the size and viewport subscriptions; the caller owns visibility and content.
 -->
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import { innerHeight, innerWidth } from 'svelte/reactivity/window';
 
   /** Public content and viewport anchor for a noninteractive chart tooltip. */
   type Props = {
-    /** Plain text describing the hovered chart value. */
-    text: string;
+    /** Plain text describing the hovered chart value; ignored when children is supplied. */
+    text?: string;
+    /** Optional bubble content, such as an emphasized label; replaces text when provided. */
+    children?: Snippet;
     /** Pointer position in viewport pixels on the horizontal axis. */
     clientX: number;
     /** Pointer position in viewport pixels on the vertical axis. */
     clientY: number;
   };
 
-  let { text, clientX, clientY }: Props = $props();
+  let { text, children, clientX, clientY }: Props = $props();
   let width = $state(0);
   let height = $state(0);
   const left = $derived(
@@ -39,5 +42,9 @@ Displays a pointer-anchored chart value using the reference calculator's floatin
   style:top={`${top}px`}
   class="pointer-events-none fixed z-50 w-max max-w-[min(16rem,calc(100vw-1rem))] rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
 >
-  {text}
+  {#if children}
+    {@render children()}
+  {:else}
+    {text}
+  {/if}
 </div>

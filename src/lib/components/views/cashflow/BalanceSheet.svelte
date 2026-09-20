@@ -1,10 +1,9 @@
 <!--
 @component
-Presents income and deductions annually or as monthly averages. It divides the supplied annual figures for display only; the route owns the period preference and persistence.
+Presents income and deductions annually or as monthly averages. It divides the supplied annual figures for display only; the route owns the period preference, its rail control, and persistence.
 -->
 <script lang="ts">
   import Card from '#lib/components/elements/Card.svelte';
-  import OptionSwitch from '#lib/components/elements/OptionSwitch.svelte';
   import WarnIcon from '#lib/icons/status/WarnIcon.svelte';
   import { formatCurrencyUSD as money } from '#lib/text/format.js';
   import type { Cashflow, CashflowAmountField } from '#lib/cashflow/income.js';
@@ -14,17 +13,10 @@ Presents income and deductions annually or as monthly averages. It divides the s
     cashflow?: Cashflow;
     /** True displays monthly averages; false displays annual figures. */
     monthlyBalance: boolean;
-    /** Reports the selected period so the route can persist it. */
-    onPeriodChange: (monthly: boolean) => void;
     /** Fields whose text is not a number; figures they feed are shown as errors. Defaults to none. */
     invalid?: readonly CashflowAmountField[];
   };
-  let {
-    cashflow,
-    monthlyBalance,
-    onPeriodChange,
-    invalid = [],
-  }: Props = $props();
+  let { cashflow, monthlyBalance, invalid = [] }: Props = $props();
   const invalidGross = $derived(
     invalid.some(
       (field) =>
@@ -68,16 +60,7 @@ Presents income and deductions annually or as monthly averages. It divides the s
   class="space-y-5 p-5 sm:p-6"
   aria-label={`${balancePeriod} balance sheet`}
 >
-  <div class="flex flex-wrap items-center justify-between gap-3">
-    <h2 class="text-base font-semibold">{balancePeriod} balance sheet</h2>
-    <OptionSwitch
-      firstLabel="Annual"
-      secondLabel="Monthly"
-      checked={monthlyBalance}
-      label="Show monthly balance sheet"
-      onChange={onPeriodChange}
-    />
-  </div>
+  <h2 class="text-base font-semibold">{balancePeriod} balance sheet</h2>
   <dl class="space-y-4 text-sm">
     {#each rows as row (row.label)}
       <div

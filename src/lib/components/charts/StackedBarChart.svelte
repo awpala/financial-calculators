@@ -6,6 +6,7 @@ Renders caller-owned signed stacks as grouped SVG bars, with optional annotation
   import { scaleBand, scaleLinear } from 'd3-scale';
   import {
     DEFAULT_MARGIN,
+    DIMMED_MARK_OPACITY,
     paletteColor,
     type BarSegmentHoverInfo,
     type BarStackSegment,
@@ -289,7 +290,18 @@ Renders caller-owned signed stacks as grouped SVG bars, with optional annotation
     return out;
   });
 
+  // Which segment reads as accented is a drawing decision, so it stays here
+  // even when an owner also tracks the hover for a tooltip. It is presentation
+  // only: a stale key simply matches nothing once the groups are replaced.
+  let hoveredKey = $state.raw<string | null>(null);
+
+  /** Opacity that recedes every segment except the hovered one. */
+  function segmentOpacity(key: string): number {
+    return hoveredKey === null || hoveredKey === key ? 1 : DIMMED_MARK_OPACITY;
+  }
+
   function reportHover(segment: ResolvedSegment, event: PointerEvent): void {
+    hoveredKey = segment.key;
     onSegmentHover?.({
       seriesId: segment.seriesId,
       seriesLabel: segment.seriesLabel,
@@ -299,6 +311,11 @@ Renders caller-owned signed stacks as grouped SVG bars, with optional annotation
       clientX: event.clientX,
       clientY: event.clientY,
     });
+  }
+
+  function endHover(): void {
+    hoveredKey = null;
+    onSegmentHover?.(null);
   }
 
   const zeroY = $derived(yScale(0));
@@ -551,26 +568,19 @@ Renders caller-owned signed stacks as grouped SVG bars, with optional annotation
 
         {#each rects as r (r.key)}
           <rect
-            class="hover:cursor-pointer"
+            class="transition-opacity duration-150 hover:cursor-pointer"
             x={r.x}
             y={r.y}
             width={r.width}
             height={r.height}
             fill={r.color}
+            opacity={segmentOpacity(r.key)}
             rx="1.5"
-            role={onSegmentHover ? 'img' : undefined}
-            aria-label={onSegmentHover
-              ? `${r.seriesLabel}, ${r.groupLabel}, ${r.segment.label}, ${formatY(r.segment.value)}`
-              : undefined}
-            onpointerenter={onSegmentHover
-              ? (event: PointerEvent) => reportHover(r, event)
-              : undefined}
-            onpointermove={onSegmentHover
-              ? (event: PointerEvent) => reportHover(r, event)
-              : undefined}
-            onpointerleave={onSegmentHover
-              ? () => onSegmentHover(null)
-              : undefined}
+            role="img"
+            aria-label={`${r.seriesLabel}, ${r.groupLabel}, ${r.segment.label}, ${formatY(r.segment.value)}`}
+            onpointerenter={(event: PointerEvent) => reportHover(r, event)}
+            onpointermove={(event: PointerEvent) => reportHover(r, event)}
+            onpointerleave={endHover}
           >
             {#if !onSegmentHover}
               <title>

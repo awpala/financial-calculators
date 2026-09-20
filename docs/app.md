@@ -26,7 +26,7 @@ Home links to three full-page routes in navigation order: Scratchpad, Amortizati
 
 Scratchpad owns a [calculator controller](../src/lib/calculator/README.md) that parses on input, evaluates on request, clears stale results on edits, and restores browser-local source and its paired calculation. The editor sits beside result and bindings panels on desktop and above them on mobile. The route owns keyboard registration and releases it on navigation. No dropdown, pin, account context, or server state is needed.
 
-Cashflow adapts the reference annual/hourly income calculator. A [pure model](../src/lib/cashflow/README.md) annualizes hourly work, applies the supplied effective tax rate to gross income, subtracts annual contributions and deductions, and floors net income at zero. The route presents monthly take-home pay beside a signed balance sheet with its own remembered Annual/Monthly display choice, with browser-local inputs and Clear/Reset controls.
+Cashflow adapts the reference annual/hourly income calculator. A [pure model](../src/lib/cashflow/README.md) annualizes hourly work, applies the supplied effective tax rate to gross income, subtracts annual contributions and deductions, and floors net income at zero. The route presents take-home pay beneath its inputs, beside a signed balance sheet and a pie of each figure's share of gross income, with browser-local inputs and Clear/Reset controls. Its contextual rail owns the remembered Annual/Monthly choice that every figure on the page follows, and the assumptions behind them.
 
 `/examples/` and `/docs/` are no longer routes. The reusable document pipeline remains available: the local catalog provides summaries and exact source lookups, and consumers can prepare a fresh AST, render Mermaid, highlight code, and extract headings. A document route would enumerate every catalog slug for prerendering and register headings as a contextual rail with teardown.
 
@@ -68,7 +68,7 @@ The component hierarchy follows responsibility: elements own controls and surfac
 
 Shared field/surface classes remain beside the components whose native roots or geometry require them. Routes compose components instead of importing styling constants. Native dialog behavior, async confirmation failures, viewport-positioned hover text, file-picker/drop mechanics, and swim-lane ordering have detailed contracts in the component guide; they are reusable lessons rather than hidden route implementation details.
 
-Charts use D3 scale and shape functions but render SVG declaratively through Svelte. They do not retain imperative D3 selections. Their caller owns data policy and tooltip content, while timer and scroll-lock helpers have explicit release obligations.
+Charts use D3 scale and shape functions but render SVG declaratively through Svelte. They do not retain imperative D3 selections. Their caller owns data policy and tooltip content, while the charts themselves accent the mark under the pointer and recede the rest; timer and scroll-lock helpers have explicit release obligations.
 
 The markdown library parses before rendering, so syntax extensions belong in typed nodes and parser productions instead of postprocessing final HTML with regex. Authored HTML tables cross an allowlist sanitizer after expansion/normalization; safe links reject executable schemes. Highlighted HTML and diagram SVG come from known server transforms. An arbitrary externally supplied AST is not a trusted substitute for that pipeline.
 

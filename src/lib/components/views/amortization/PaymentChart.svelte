@@ -114,11 +114,17 @@ Owns payment-chart presentation, responsive label density, and transient segment
 />
 
 {#if tooltipsEnabled && hover && hoveredPeriod}
-  <ChartTooltip
-    clientX={hover.clientX}
-    clientY={hover.clientY}
-    text={`${hover.groupLabel} · ${hover.segment.label}: ${money(hover.segment.id === 'principal' ? hoveredPeriod.principal : hoveredPeriod.interest)}`}
-  />
+  <ChartTooltip clientX={hover.clientX} clientY={hover.clientY}>
+    {hover.groupLabel} ·
+    <span class="font-semibold text-slate-900 dark:text-slate-100"
+      >{hover.segment.label}:</span
+    >
+    {money(
+      hover.segment.id === 'principal'
+        ? hoveredPeriod.principal
+        : hoveredPeriod.interest,
+    )}
+  </ChartTooltip>
 {/if}
 
 <Card

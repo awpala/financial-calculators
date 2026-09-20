@@ -1,27 +1,30 @@
 <!--
 @component
-Shows the monthly take-home estimate independently of the balance sheet’s selected period. Calculation and input state belong to the route.
+Shows the headline take-home estimate for the route's selected display period. Calculation, period selection, and input state belong to the route.
 -->
 <script lang="ts">
   import Card from '#lib/components/elements/Card.svelte';
   import { formatCurrencyUSD as money } from '#lib/text/format.js';
-  /** Monthly output from the route's income calculation. */
+  /** Net income for the period the route currently displays. */
   type Props = {
-    /** Monthly net income, or undefined when the calculation cannot produce a finite value. */
+    /** Net income already divided for the selected period, or undefined when the calculation cannot produce a finite value. */
     value?: number;
+    /** True labels the figure as monthly; false labels it as annual. */
+    monthly: boolean;
     /** Whether the estimate reads unparseable input as zero, shown as an error. Defaults to false. */
     invalid?: boolean;
   };
-  let { value, invalid = false }: Props = $props();
+  let { value, monthly, invalid = false }: Props = $props();
+  const period = $derived(monthly ? 'Monthly' : 'Annual');
 </script>
 
 <Card
   as="section"
   class="space-y-3 p-5 sm:p-6"
-  aria-label="Monthly take-home pay"
+  aria-label={`${period} take-home pay`}
 >
   <h2 class="text-sm font-medium text-slate-600 dark:text-slate-400">
-    Monthly net income
+    {period} net income
   </h2>
   <output
     aria-live="polite"
@@ -33,7 +36,8 @@ Shows the monthly take-home estimate independently of the balance sheet’s sele
     ]}>{value !== undefined ? money(value) : '—'}</output
   >
   <p class="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-    After estimated taxes, retirement contributions, and other deductions,
-    averaged over 12 months.
+    After estimated taxes, retirement contributions, and other deductions{monthly
+      ? ', averaged over 12 months'
+      : ''}.
   </p>
 </Card>

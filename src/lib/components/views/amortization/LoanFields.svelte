@@ -9,6 +9,7 @@ Edits caller-owned loan assumptions for the calculator or its saved Reset preset
   } from '#lib/components/elements/InvalidFieldsNote.svelte';
   import TextField from '#lib/components/elements/TextField.svelte';
   import OptionSwitch from '#lib/components/elements/OptionSwitch.svelte';
+  import HoverText from '#lib/components/behaviors/HoverText.svelte';
   import {
     invalidLoanFields,
     parseDownPayment,
@@ -99,21 +100,26 @@ Edits caller-owned loan assumptions for the calculator or its saved Reset preset
       onkeydown={handleKeyDown}
     />
     <div class="flex justify-end">
-      <OptionSwitch
-        firstLabel="Amount"
-        secondLabel="Percentage"
-        checked={value.downPaymentPercent}
-        label="Use a percentage down payment"
-        disabled={!canConvert}
-        onChange={(percent) => {
-          if (canConvert)
-            value = {
-              ...value,
-              downPaymentPercent: percent,
-              downPayment: formatNumberInput(converted),
-            };
-        }}
-      />
+      <HoverText
+        text="Convert the down payment between a dollar amount and a percentage of the purchase price."
+        align="end"
+      >
+        <OptionSwitch
+          firstLabel="Amount"
+          secondLabel="Percentage"
+          checked={value.downPaymentPercent}
+          label="Use a percentage down payment"
+          disabled={!canConvert}
+          onChange={(percent) => {
+            if (canConvert)
+              value = {
+                ...value,
+                downPaymentPercent: percent,
+                downPayment: formatNumberInput(converted),
+              };
+          }}
+        />
+      </HoverText>
     </div>
   </div>
   <TextField

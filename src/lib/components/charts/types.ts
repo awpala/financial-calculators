@@ -84,6 +84,36 @@ export type StackedBarSeries = {
   stacks: BarStackSegment[][];
 };
 
+/** One wedge of a pie chart, sized by its share of every wedge's total. */
+export type PieSlice = {
+  /** Stable unique slice key. */
+  id: string;
+  /** Legend and hover label. */
+  label: string;
+  /** Caller-owned magnitude; a value that is not finite and positive contributes nothing. */
+  value: number;
+  /** Optional CSS color; defaults to the categorical palette. */
+  color?: string;
+};
+
+/** Hover payload for a single pie slice. */
+export type PieSliceHoverInfo = {
+  /** Stable key of the hovered slice. */
+  sliceId: string;
+  /** Display label of the hovered slice. */
+  label: string;
+  /** Weight the hovered wedge was drawn from. */
+  value: number;
+  /** Share of every slice's total, from 0 through 1. */
+  share: number;
+  /** Resolved CSS color of the hovered slice. */
+  color: string;
+  /** Pointer x coordinate in the viewport. */
+  clientX: number;
+  /** Pointer y coordinate in the viewport. */
+  clientY: number;
+};
+
 /** Hover payload for a single stacked-bar segment. */
 export type BarSegmentHoverInfo = {
   /** Stable key of the hovered series. */
@@ -125,6 +155,13 @@ export const DEFAULT_MARGIN: ChartMargin = {
   /** Default left axis allowance in pixels. */
   left: 56,
 };
+
+/**
+ * Opacity applied to the marks a chart is not currently hovering, so the
+ * hovered mark reads as the accented one. Shared so pies and bars recede by
+ * the same amount and a chart switching forms does not change how hover feels.
+ */
+export const DIMMED_MARK_OPACITY = 0.45;
 
 /** Extended categorical palette (12) — readable in both light and dark modes. */
 export const DEFAULT_PALETTE = [
