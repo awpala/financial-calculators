@@ -34,7 +34,7 @@ Lists evaluated named bindings with their declaration lines and full numeric val
       >{result?.bindings.length ?? 0} defined</span
     >
   </div>
-  {#if result && result.bindings.length > 0}
+  {#if result}
     <div class="max-h-128 overflow-auto">
       <table aria-label="Variables" class="w-full text-sm">
         <thead
