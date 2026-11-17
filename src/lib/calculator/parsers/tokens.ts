@@ -8,8 +8,9 @@
  * tried first (see `names.ts`); failing that, a word — a letter followed by
  * letters, digits, and underscores — is read as a name for the parser to
  * resolve. Outside a name, commas and underscores group digits and are accepted
- * only between two digits of one number: anywhere else they would silently join
- * or split values.
+ * only between two digits of one number, except for argument separators and an
+ * optional trailing comma in a call: anywhere else they would silently join or
+ * split values.
  *
  * A number may carry a magnitude suffix — `k`, `m`, `b`, or `t`, in either case
  * — which multiplies it by a thousand, a million, a billion, or a trillion, so
@@ -24,7 +25,8 @@
  * Within the brackets of a head that takes several arguments, the last commas
  * at their own level separate them instead (see `arguments.ts`), so `2,0,2` in
  * `sum_i(i ^ 2,0,2)` is three figures while `3,000` in
- * `prod_i(3,000 * i, 0, 1)` is one.
+ * `prod_i(3,000 * i, 0, 1)` is one. A trailing comma before a call's closing
+ * bracket is marked separately from digit grouping, including one-argument calls.
  */
 
 import {
@@ -97,7 +99,7 @@ export type Token = {
       declared: boolean;
     }
   | {
-      /** The comma between two arguments of a call, a sum, or a product. */
+      /** An argument separator or optional trailing comma in a call, sum, or product. */
       kind: 'separator';
     }
 );
@@ -136,7 +138,7 @@ export type ExpressionRange = {
 type ArgumentGroup = {
   /** The parameters the head names, such as `mod`'s or `sum_i`'s. */
   list: ArgumentList;
-  /** Indices of the commas separating its arguments, in order. */
+  /** Indices of argument separators and the optional trailing comma, in order. */
   separators: readonly number[];
 };
 
@@ -161,8 +163,8 @@ export function tokenize(
   { start, end, names, lineAt }: ExpressionRange,
 ): TokenizeResult {
   const tokens: Token[] = [];
-  // One entry per open group, holding its argument layout when its head takes
-  // several arguments; a comma that divides none of them groups digits.
+  // One entry per open group, holding its argument separators and optional
+  // trailing comma; other commas within a call must group digits.
   const groups: (ArgumentGroup | undefined)[] = [];
   const skip = (at: number): number | undefined => {
     if (source[at] === COMMENT_MARKER) return commentEnd(source, at, end);
@@ -236,7 +238,10 @@ export function tokenize(
       if (!group.separators.includes(index)) {
         return {
           ok: false,
-          message: `Only ${describeSeparators(group.list)}, as '${describeArguments(group.list)}', so the one on line ${line} must sit between digits`,
+          message:
+            group.list.parameters.length === 1
+              ? `',' must sit between digits on line ${line}`
+              : `Only ${describeSeparators(group.list)}, as '${describeArguments(group.list)}', so the one on line ${line} must sit between digits`,
         };
       }
       tokens.push({ kind: 'separator', line });

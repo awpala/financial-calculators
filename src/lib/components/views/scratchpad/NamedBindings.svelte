@@ -1,18 +1,42 @@
 <!--
 @component
-Lists evaluated named bindings with their declaration lines and full numeric values. Reads the route-owned calculator without changing or persisting it.
+Lists evaluated named bindings with their declaration lines and full numeric values. Reports column-sort changes to the route, which owns the saved preference and calculator.
 -->
 <script lang="ts">
   import Card from '#lib/components/elements/Card.svelte';
+  import TriangleIcon from '#lib/icons/navigation/TriangleIcon.svelte';
   import type { CalculatorStore } from '#lib/calculator/calculator.svelte.js';
   import { formatCalculatedValue } from '#lib/calculator/presentation/format.js';
-  /** Source and evaluated bindings owned by the route. */
+  import type { CalculatorBindingsSort } from '#lib/calculator/persistence/preferences.js';
+  /** Source, evaluated bindings, and sort preference owned by the route. */
   type Props = {
     /** Calculator supplying the evaluated bindings and their parsed declarations. */
     calculator: CalculatorStore;
+    /** Current table sort, restored and persisted by the route. */
+    sort: CalculatorBindingsSort;
+    /** Reports the selected column and direction for the route to apply and save. */
+    onSortChange: (sort: CalculatorBindingsSort) => void;
   };
-  let { calculator }: Props = $props();
+  let { calculator, sort, onSortChange }: Props = $props();
+  const columns = [
+    {
+      key: 'line',
+      label: 'Line',
+      class: 'px-2 py-3 text-center font-medium',
+    },
+    {
+      key: 'name',
+      label: 'Name',
+      class: 'px-5 py-3 text-center font-medium',
+    },
+    {
+      key: 'value',
+      label: 'Value',
+      class: 'px-5 py-3 text-right font-medium',
+    },
+  ] as const;
   const result = $derived(calculator.calculation);
+  const canSort = $derived((result?.bindings.length ?? 0) > 1);
   const declarationLines = $derived(
     calculator.parsed.status === 'valid'
       ? new Map(
@@ -23,6 +47,40 @@ Lists evaluated named bindings with their declaration lines and full numeric val
         )
       : new Map<string, number>(),
   );
+  const sortedBindings = $derived.by(() =>
+    (result?.bindings ?? []).toSorted((left, right) => {
+      let comparison: number;
+      switch (sort.column) {
+        case 'line':
+          comparison =
+            (declarationLines.get(left.name) ?? 0) -
+            (declarationLines.get(right.name) ?? 0);
+          break;
+        case 'name':
+          comparison = left.name.localeCompare(right.name, 'en-US');
+          break;
+        case 'value': {
+          const leftFinite = Number.isFinite(left.value);
+          const rightFinite = Number.isFinite(right.value);
+          // Undefined values stay together after numeric values in either direction.
+          if (leftFinite !== rightFinite) return leftFinite ? -1 : 1;
+          comparison = leftFinite ? left.value - right.value : 0;
+          break;
+        }
+      }
+      return sort.direction === 'ascending' ? comparison : -comparison;
+    }),
+  );
+
+  function sortBy(column: CalculatorBindingsSort['column']): void {
+    onSortChange({
+      column,
+      direction:
+        sort.column === column && sort.direction === 'ascending'
+          ? 'descending'
+          : 'ascending',
+    });
+  }
 </script>
 
 <Card as="section" class="min-w-0 overflow-hidden" aria-label="Named bindings">
@@ -40,26 +98,52 @@ Lists evaluated named bindings with their declaration lines and full numeric val
         <thead
           class="sticky top-0 bg-slate-50 text-xs text-slate-500 dark:bg-slate-900 dark:text-slate-400"
         >
-          <tr
-            ><th scope="col" class="px-5 py-3 text-left font-medium">Name</th
-            ><th scope="col" class="px-2 py-3 text-center font-medium">Line</th
-            ><th scope="col" class="px-5 py-3 text-right font-medium">Value</th
-            ></tr
-          >
+          <tr>
+            {#each columns as column (column.key)}
+              <th
+                scope="col"
+                class={column.class}
+                aria-sort={canSort && sort.column === column.key
+                  ? sort.direction
+                  : undefined}
+              >
+                {#if canSort}
+                  <button
+                    type="button"
+                    class="relative cursor-pointer rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-sky-500"
+                    title={`Sort by ${column.label} ${sort.column === column.key && sort.direction === 'ascending' ? 'descending' : 'ascending'}`}
+                    onclick={() => sortBy(column.key)}
+                  >
+                    {column.label}
+                    {#if sort.column === column.key}
+                      <TriangleIcon
+                        class={[
+                          'absolute top-1/2 left-full ml-1 size-2.5 -translate-y-1/2',
+                          sort.direction === 'descending' && 'rotate-180',
+                        ]}
+                      />
+                    {/if}
+                  </button>
+                {:else}
+                  {column.label}
+                {/if}
+              </th>
+            {/each}
+          </tr>
         </thead>
         <tbody
           class="divide-y divide-slate-100 font-mono dark:divide-slate-800"
         >
-          {#each result.bindings as binding (binding.name)}
+          {#each sortedBindings as binding (binding.name)}
             <tr>
+              <td
+                class="px-2 py-3 text-right text-xs text-slate-500 dark:text-slate-400"
+                >{declarationLines.get(binding.name)}</td
+              >
               <th
                 scope="row"
                 class="max-w-48 px-5 py-3 text-left font-normal wrap-break-word text-sky-700 dark:text-sky-300"
                 >{binding.name}</th
-              >
-              <td
-                class="px-2 py-3 text-center text-xs text-slate-500 dark:text-slate-400"
-                >{declarationLines.get(binding.name)}</td
               >
               <td
                 class={[

@@ -13,6 +13,8 @@ Prioritize observable defects: request ownership leaks, stale authorization, uns
 
 Check public documentation against the actual contract, including defaults and teardown. Dependency changes require auditing duplicated executable pins and affected major-version prose. Check mirrored skills and behaviorally equivalent agent pairs when the harness changes. Do not treat a passing compiler as proof of runtime behavior or a public build as proof of password protection.
 
+For Scratchpad changes, enforce the [required documentation check](../../../docs/agents/documentation.md#required-scratchpad-documentation-check). Compare `docs/scratchpad.md` and the calculator library guide with the behavioral diff, including language design, syntax, semantics, and examples. Report missing true-up or missing documentation-review evidence as a required correction even when code checks pass.
+
 Review directory READMEs as stable module contracts: responsibility, boundaries, relationships, detailed usage, and extension criteria. Flag exhaustive file/component/export inventories and guides that equate a module with its initial file. Specific references must materially support the explanation, example, command, idiosyncrasy, or audit evidence. Preserve useful tables, diagrams, and comprehensive exposition. Check that moves update imports and relevant examples without leaving forwarding shims.
 
 Determine exact versions before consulting first-party Svelte documentation. For the other ecosystems use the [controlled official sources](../../../docs/agents/tooling.md#mcp-servers) selected through AGENTS.md. Respect environment limits; report checks that were unavailable rather than installing tools or implying they passed.

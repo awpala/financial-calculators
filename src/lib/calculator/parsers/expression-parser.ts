@@ -179,8 +179,9 @@ export class ExpressionParser {
 
   /**
    * Read a call's bracketed arguments, each in the scope around it, and refuse
-   * a count its function does not take. A function of one argument keeps the
-   * message naming a single parenthesized argument, since its brackets divide
+   * a count its function does not take. One trailing comma is allowed before
+   * the closing bracket. A function of one argument keeps the message naming
+   * a single parenthesized argument, since its brackets divide
    * at no comma to explain.
    */
   #call(name: CalculatorFunction, line: number): Expression {
@@ -199,6 +200,7 @@ export class ExpressionParser {
     const argumentsRead = [this.#sum()];
     while (this.#peek()?.kind === 'separator') {
       this.#index += 1;
+      if (this.#peek()?.kind === 'close') break;
       argumentsRead.push(this.#sum());
     }
     this.#close(open);
@@ -221,7 +223,8 @@ export class ExpressionParser {
   /**
    * Read a sum's or product's three arguments. The index is bound while the
    * first is read, which is what lets a nested one's arguments read it too, and
-   * released before the bounds, which are read in the enclosing scope.
+   * released before the bounds, which are read in the enclosing scope. One
+   * trailing comma may follow the last bound without adding an argument.
    */
   #iteration(
     { operator, index }: IterationHead,
@@ -249,6 +252,7 @@ export class ExpressionParser {
     const bounds: Expression[] = [];
     while (this.#peek()?.kind === 'separator') {
       this.#index += 1;
+      if (this.#peek()?.kind === 'close') break;
       bounds.push(this.#sum());
     }
     this.#iterations.pop();

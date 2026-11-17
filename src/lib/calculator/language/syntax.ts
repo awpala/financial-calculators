@@ -79,7 +79,7 @@ export function isReservedName(name: string): boolean {
   );
 }
 
-/** A head that takes several arguments between its brackets, and the parameters it names. */
+/** A head's bracketed arguments and the parameters it names. */
 export type ArgumentList = {
   /** The head as written, such as `mod` or `sum_i`. */
   head: string;
@@ -88,16 +88,16 @@ export type ArgumentList = {
 };
 
 /**
- * The argument list a word opens, if it opens one: a function of more than one
- * argument, or a sum's or product's head, well formed or not — `sum` and
+ * The argument list a word opens, if it opens one: a function, or a sum's or
+ * product's head, well formed or not — `sum` and
  * `sum_2023` divide their brackets like `sum_i`, so that the parser can report
- * the missing index rather than a stray comma. A function of one argument opens
- * none, since a comma within its brackets only ever groups digits.
+ * the missing index rather than a stray comma. A function of one argument has
+ * no separating commas, but can still end with an optional trailing comma.
  */
 export function readArgumentList(word: string): ArgumentList | undefined {
   if (isCalculatorFunction(word)) {
     const { parameters } = FUNCTIONS[word];
-    return parameters.length > 1 ? { head: word, parameters } : undefined;
+    return { head: word, parameters };
   }
   if (iteratedOperatorOf(word) === undefined) return undefined;
   return { head: word, parameters: ITERATION_PARAMETERS };

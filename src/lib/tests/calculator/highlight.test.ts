@@ -6,10 +6,12 @@ import {
 import { parseProgram } from '#lib/calculator/parsers/program-parser.js';
 import { FUNCTIONS } from '#lib/calculator/language/syntax.js';
 
-function toned(source: string): [string, string][] {
+function toned(source: string, includeBrackets = false): [string, string][] {
   return highlightInput(source)
-    .filter((segment): segment is Required<HighlightedSegment> =>
-      Boolean(segment.tone),
+    .filter(
+      (segment): segment is Required<HighlightedSegment> =>
+        Boolean(segment.tone) &&
+        (includeBrackets || !segment.tone?.startsWith('bracket-')),
     )
     .map((segment) => [segment.tone, segment.text]);
 }
@@ -72,6 +74,18 @@ describe('calculator input highlighting', () => {
     },
   );
 
+  it.each(Object.entries(FUNCTIONS))(
+    'tones a trailing comma in %s without recoloring digit grouping',
+    (name, { parameters }) => {
+      const call = `${name}(${parameters.map((_, at) => (at === 0 ? '1,000' : '3')).join(', ')},)`;
+      expect(toned(call)).toEqual([
+        ['operator', name],
+        ...parameters.map((): [string, string] => ['operator', ',']),
+      ]);
+      assertLossless(call);
+    },
+  );
+
   it('leaves a percent plain with the figure it ends, toning no remainder of its own', () => {
     expect(toned('rate = 4.5%;\nmod($2k * rate, 10)')).toEqual([
       ['variable', 'rate'],
@@ -131,10 +145,61 @@ describe('calculator input highlighting', () => {
     ]);
   });
 
-  it('never tones a bracket or a figure', () => {
-    expect(toned('(1 + [2]) * {3}')).toEqual([
+  it('colors matching bracket pairs by nesting depth while leaving figures plain', () => {
+    expect(
+      toned('(1 + [2 * {3 + (4)}])', true).filter(([tone]) =>
+        tone.startsWith('bracket-'),
+      ),
+    ).toEqual([
+      ['bracket-1', '('],
+      ['bracket-2', '['],
+      ['bracket-3', '{'],
+      ['bracket-1', '('],
+      ['bracket-1', ')'],
+      ['bracket-3', '}'],
+      ['bracket-2', ']'],
+      ['bracket-1', ')'],
+    ]);
+    expect(toned('(1) + [2] + {3}', true)).toEqual([
+      ['bracket-1', '('],
+      ['bracket-1', ')'],
       ['operator', '+'],
+      ['bracket-1', '['],
+      ['bracket-1', ']'],
+      ['operator', '+'],
+      ['bracket-1', '{'],
+      ['bracket-1', '}'],
+    ]);
+  });
+
+  it('ignores brackets in names and comments and does not pair across invalid nesting or statements', () => {
+    const source =
+      'net (after tax) = 2; # [ignored]\nsqrt{net (after tax) + [3]}';
+    expect(
+      toned(source, true).filter(([tone]) => tone.startsWith('bracket-')),
+    ).toEqual([
+      ['bracket-1', '{'],
+      ['bracket-2', '['],
+      ['bracket-2', ']'],
+      ['bracket-1', '}'],
+    ]);
+    expect(toned('([1)] ; (2;', true)).toEqual([]);
+    expect(toned('(1; [2]', true)).toEqual([
+      ['bracket-1', '['],
+      ['bracket-1', ']'],
+    ]);
+    assertLossless(source);
+  });
+
+  it('keeps a sum index in its body when the argument list ends with a trailing comma', () => {
+    expect(toned('sum_i(i * 1,000, 1, 3,)')).toEqual([
+      ['operator', 'sum_'],
+      ['variable', 'i'],
+      ['variable', 'i'],
       ['operator', '*'],
+      ['operator', ','],
+      ['operator', ','],
+      ['operator', ','],
     ]);
   });
 

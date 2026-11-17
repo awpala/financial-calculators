@@ -1,6 +1,6 @@
 /**
  * Split calculator input into the runs the editor colors: comments, declared
- * names, operators, and the plain figures between them.
+ * names, operators, matching bracket pairs, and the plain figures between them.
  *
  * This reads the input the same way the parser does, but it never refuses one.
  * A member is mid-edit most of the time, and highlighting that disappeared
@@ -10,8 +10,9 @@
  * from there on. A sum's or product's index is colored as a name where its head
  * binds it and within its first argument, the only place it means anything,
  * and the commas separating a head's arguments — a sum's or product's, or
- * `mod`'s — are colored with the head. A figure keeps its own plain tone whole,
- * its `$`, digit grouping, magnitude, and `%` included. Anything it cannot make
+ * `mod`'s — and optional trailing commas are colored with the head. Matching
+ * brackets cycle through three tones by nesting depth. A figure keeps its own
+ * plain tone whole, its `$`, digit grouping, magnitude, and `%` included. Anything it cannot make
  * sense of is simply left plain.
  */
 
@@ -28,10 +29,13 @@ import {
   FUNCTIONS,
   isCalculatorConstant,
   isCalculatorFunction,
+  isClosingBracket,
   isOpeningBracket,
   isReservedName,
   OPERATOR_SYMBOLS,
+  MATCHING_BRACKET,
   readArgumentList,
+  type OpeningBracket,
 } from '#lib/calculator/language/syntax.js';
 import { readIterationHead } from '#lib/calculator/language/iteration.js';
 import { layOutArguments } from '#lib/calculator/parsers/arguments.js';
@@ -42,9 +46,16 @@ import {
 } from '#lib/calculator/parsers/statements.js';
 
 /** What a run of input says, for the editor to color it by. */
-export type SourceTone = 'comment' | 'constant' | 'variable' | 'operator';
+export type SourceTone =
+  | 'comment'
+  | 'constant'
+  | 'variable'
+  | 'operator'
+  | 'bracket-1'
+  | 'bracket-2'
+  | 'bracket-3';
 
-/** One run of input, toned when it is a comment, a declared name, or an operator. */
+/** One run of input, optionally toned by its semantic role or bracket nesting depth. */
 export type HighlightedSegment = {
   /** The run's text, exactly as it appears in the input. */
   text: string;
@@ -63,9 +74,11 @@ export function highlightInput(source: string): HighlightedSegment[] {
     ...constants,
     ...argumentSpans(source, [...named, ...constants]),
   ].sort((left, right) => left.start - right.start);
-  const spans = [...claimed, ...operatorSpans(source, claimed)].sort(
-    (left, right) => left.start - right.start,
-  );
+  const spans = [
+    ...claimed,
+    ...operatorSpans(source, claimed),
+    ...bracketSpans(source, claimed),
+  ].sort((left, right) => left.start - right.start);
 
   const segments: HighlightedSegment[] = [];
   let index = 0;
@@ -185,7 +198,7 @@ function referenceSpans(
 const WORD = /[\p{L}\p{N}_]+/gu;
 
 /**
- * The commas separating the arguments of each head that takes several, toned as
+ * The commas separating or ending the arguments of each head, toned as
  * operators, with a sum's or product's operator toned the same and its index
  * toned as a name where the head binds it and wherever its first argument reads
  * it. The bounds and everything past the closing bracket leave the index plain,
@@ -239,6 +252,46 @@ function argumentSpans(source: string, claimed: readonly Span[]): Span[] {
     }
   }
 
+  return spans;
+}
+
+/** Color matching bracket pairs by nesting depth outside comments and names. */
+function bracketSpans(source: string, claimed: readonly Span[]): Span[] {
+  const claimedUntil = new Array<number | undefined>(source.length);
+  for (const { start, end } of claimed) claimedUntil.fill(end, start, end);
+  const tones = ['bracket-1', 'bracket-2', 'bracket-3'] as const;
+  const open: { index: number; bracket: OpeningBracket; tone: SourceTone }[] =
+    [];
+  const spans: Span[] = [];
+
+  for (let index = 0; index < source.length; index += 1) {
+    const skipped = claimedUntil[index];
+    if (skipped !== undefined) {
+      index = skipped - 1;
+      continue;
+    }
+    const char = source[index];
+    if (char === ';') {
+      open.length = 0;
+    } else if (isOpeningBracket(char)) {
+      open.push({
+        index,
+        bracket: char,
+        tone: tones[open.length % tones.length],
+      });
+    } else if (isClosingBracket(char)) {
+      const pair = open.pop();
+      if (pair && MATCHING_BRACKET[pair.bracket] === char) {
+        spans.push(
+          { start: pair.index, end: pair.index + 1, tone: pair.tone },
+          { start: index, end: index + 1, tone: pair.tone },
+        );
+      } else {
+        // An unmatched closer cannot pair across an invalid nesting boundary.
+        open.length = 0;
+      }
+    }
+  }
   return spans;
 }
 

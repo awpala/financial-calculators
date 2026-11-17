@@ -1,6 +1,6 @@
 <!--
 @component
-Provides a labeled multi-line text input with a bindable value; the multi-line sibling of TextField, where Enter inserts a newline. Optionally mutes spans of its own text.
+Provides a labeled multi-line text input with a bindable value; the multi-line sibling of TextField, where Enter inserts a newline. Optionally colors caller-supplied text segments.
 -->
 <script lang="ts">
   import type { HTMLTextareaAttributes } from 'svelte/elements';
@@ -14,7 +14,13 @@ Provides a labeled multi-line text input with a bindable value; the multi-line s
 
   /** How a run of the field's text is drawn against the ordinary text color. */
   export type TextAreaSegmentTone =
-    'muted' | 'accent' | 'accent-alt' | 'accent-constant';
+    | 'muted'
+    | 'accent'
+    | 'accent-alt'
+    | 'accent-constant'
+    | 'accent-bracket-1'
+    | 'accent-bracket-2'
+    | 'accent-bracket-3';
 
   /** A run of the field's text, drawn in the tone the owner gives it. */
   export type TextAreaSegment = {
@@ -77,13 +83,15 @@ Provides a labeled multi-line text input with a bindable value; the multi-line s
   const textareaId = $derived(id ?? `textarea-${uid}`);
   let overlayElement = $state<HTMLElement>();
 
-  // Three accents, each with its dark-theme counterpart, beside the muted tone
-  // the comment rule already used.
+  // Semantic accents and three nesting accents each have a dark-theme counterpart.
   const TONE_CLASS: Record<TextAreaSegmentTone, string> = {
     muted: 'text-slate-400 dark:text-slate-500',
     accent: 'text-sky-700 dark:text-sky-300',
     'accent-alt': 'text-violet-700 dark:text-violet-300',
     'accent-constant': 'text-emerald-700 dark:text-emerald-300',
+    'accent-bracket-1': 'text-amber-700 dark:text-amber-300',
+    'accent-bracket-2': 'text-rose-700 dark:text-rose-300',
+    'accent-bracket-3': 'text-cyan-700 dark:text-cyan-300',
   };
 
   // The two layers wrap and scroll identically only if they reserve the same

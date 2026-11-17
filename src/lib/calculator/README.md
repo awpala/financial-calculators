@@ -218,13 +218,13 @@ The editor occupies the wider left column; the right column separates the large 
 
 | Chord or gesture | Where it works | What it does |
 | --- | --- | --- |
-| Shift Enter | The input | Calculates |
+| Shift Enter | The input and elsewhere on Scratchpad | Calculates |
 | Ctrl L | The input or elsewhere on the Scratchpad route | Clears the input |
 | Enter | The input | Inserts a new line |
 | Try an example | Empty input only | Inserts a labeled budget without calculating it |
 | Example clipboard button | Expanded syntax reference | Replaces Input, calculates, and focuses the editor |
 
-- **Shift Enter calculates and Ctrl L clears**, matching the two buttons and their keycaps. Enter alone inserts a new line, so input can span labeled rows. Ctrl L also answers outside text fields while this route is mounted; the route-owned keyboard registration is released on navigation.
+- **Shift Enter calculates anywhere on Scratchpad and Ctrl L clears**, matching the two buttons and their keycaps. Enter alone inserts a new line in the editor, so input can span labeled rows. The editor handles its textarea's shortcuts, while the route registers Calculate and Clear Inputs outside text fields. Those global registrations yield to open dialogs and are released on navigation.
 - **Browsers may claim Ctrl L first.** Chrome and Firefox bind it to the address bar and may handle it ahead of the page; the Clear Inputs button is always available.
 - **Text editing stays ordinary.** Space and Shift Space separate words; there is no panel visibility shortcut. Modified chords and composition events are filtered by [the shortcut rules](presentation/shortcuts.ts).
 
@@ -232,7 +232,7 @@ The editor occupies the wider left column; the right column separates the large 
 
 - **Calculate is disabled while the input is invalid**, with an amber notice naming the first problem and its line. Empty input — nothing, or nothing but whitespace and comments — disables it without a notice. The notice sets the pieces of input it quotes — a character, a name, a figure — as code, so they stand apart from the prose around them; the message itself stays a plain sentence, since it is also read where nothing can be marked up.
 - **Input whose last statement is a declaration has no result.** Its names are the whole of what it says, so the workspace shows the variable list and explains that a final expression would produce a result.
-- **Every declared name is listed with its final value** beneath the result, in the order declared, and always as a full figure.
+- **Every declared name is listed with its declaration line and final value** beneath the result, with columns ordered Line, Name, Value and values always shown as full figures. When there are more than one named binding, each column header sorts ascending on selection and reverses direction on another selection; a triangle marks the active direction. With zero or one binding, the headers are plain labels with no sort controls or indicator; the saved sort preference is retained. The default is Line ascending, with declaration order retained for ties. Name sorts alphabetically, while Line and Value sort numerically; *Undefined* values follow numeric values in either direction. The selected column and direction are remembered across navigation and reload.
 - **Undefined arithmetic does not block a calculation.** A value that is not finite — `1/0`, `ln(-1)` — shows as *Undefined*, in amber, wherever it lands.
 - **A calculation that would pass 10,000,000 terms stops instead.** Sums and products share that budget across the whole input, each term of a nested one counted, and the one that would pass it is refused before any of its terms is evaluated, so a mistyped bound such as `1t` answers at once rather than stalling the page. Calculate then shows an amber *Cannot calculate* notice naming that sum or product and its line, with no result and no variable list. The notice lasts until the text next changes and is never stored.
 
@@ -245,6 +245,7 @@ The editor occupies the wider left column; the right column separates the large 
 | *Cannot calculate* notice | Memory only | Mounted route | Dropped by any change to the text |
 | Suffixed | Browser storage | This browser profile | Off until enabled |
 | Syntax & examples expanded | Browser storage | This browser profile | Restored on navigation and reload; initially collapsed |
+| Named bindings sort | Browser storage | This browser profile | Restored on navigation and reload; missing or malformed preferences default to Line ascending |
 
 The [persistence keys](persistence/preferences.ts) belong to Scratchpad. The [storage primitive](../state/README.md) tolerates unavailable storage; its callers normalize successfully parsed JSON. There is one local workspace per browser profile, with no account namespace or cross-tab synchronization. A fresh route owner is created on navigation, then restores its input, matching result, and presentation preference on mount. SSR renders the empty editor and never reads or writes a visitor's work.
 
@@ -269,7 +270,7 @@ stateDiagram-v2
     Stopped --> Editing: any change to the text drops the notice
 ```
 
-The [Scratchpad view components](../components/views/scratchpad/) separate working-source editing, result presentation, the bindings table, and the syntax reference. All consume the same route-owned calculator instance or explicit callbacks. The editor owns syntax-highlight presentation and textarea shortcuts; the route owns global Clear Inputs registration, example execution/focus, and persistence. Result and bindings cards do not allocate their own calculator stores. The syntax reference reports expansion changes and selected example source to the route rather than writing storage itself.
+The [Scratchpad view components](../components/views/scratchpad/) separate working-source editing, result presentation, the bindings table, and the syntax reference. All consume the same route-owned calculator instance or explicit callbacks. The editor owns syntax-highlight presentation and textarea shortcuts; the route owns global Calculate and Clear Inputs registration, example execution/focus, and persistence. Result and bindings cards do not allocate their own calculator stores. The bindings table reports sort changes to the route, and the syntax reference reports expansion changes and selected example source; neither writes storage itself.
 
 ## Numeric fields in other views
 
@@ -340,11 +341,11 @@ product    = unary { ( "*" | "/" ) unary } ;
 unary      = ( "+" | "-" ) unary | power ;
 power      = primary [ "^" unary ] ;
 primary    = number | reference | index | constant | call | iteration | group ;
-call       = function group | "mod" brackets ;
+call       = ( function | "mod" ) brackets ;
 group      = "(" expression ")" | "[" expression "]" | "{" expression "}" ;
 brackets   = "(" arguments ")" | "[" arguments "]" | "{" arguments "}" ;
 iteration  = iterated "_" index brackets ;
-arguments  = expression { "," expression } ;  (* the last commas directly within the brackets: two for an iteration, one for "mod" *)
+arguments  = expression { "," expression } [ "," ] ;  (* excluding an optional trailing comma, the last commas divide arguments: two for an iteration, one for "mod", none for a one-argument function *)
 function   = "log" | "lg" | "ln" | "sqrt" | "abs" | "floor" | "ceil" | "fact" | "inv" ;
 iterated   = "sum" | "prod" ;
 constant   = "e" | "pi" | "phi" ;
@@ -384,7 +385,8 @@ Parentheses, brackets, and braces group interchangeably and nest freely, but eac
 
 - **Built-ins are reserved in exactly these spellings.** Names are case-sensitive, so `E`, `PI`, `Phi`, `Sqrt`, and `Sum_i` are ordinary names a user may declare; only the lowercase forms above are taken. For sums and products that means every single word of `sum_` or `prod_` and then a letter, whatever follows.
 - **A function takes its arguments in a group** of any bracket kind: `log(100)`, `lg[8]`, `ceil{2.1}`, `mod[9, 4]`, with any whitespace between the name and the bracket. A function named without one — `log 100`, `fact 5` — is reported, as is one given the wrong number of arguments: `mod(8)` says it takes two. A call is a value like any other and binds tighter than every operator around it, so `-abs(-3)` is -3 and `abs(-2) ^ 2` is 4.
-- **`mod` is the remainder, and the only place `%` used to be.** `mod(17, 5)` is 2 and `mod(-7, 3)` is -1, since the sign follows the dividend; its divisor may be any expression, and `mod(5, 0)` is *Undefined*. Its two arguments are divided by the last comma directly within its brackets, so `mod(3,000, 7)` keeps its grouped figure whole. `%` cannot be the remainder as well, because it ends a figure as a percent.
+- **One trailing comma is optional in function calls, sums, and products.** `sqrt(16,)`, `mod(8, 3,)`, and `sum_i(i, 1, 3,)` mean the same as their forms without it. Whitespace and comments may follow the comma before the closing bracket. It neither supplies a missing argument nor permits another trailing comma; `mod(8,)`, `sqrt(16,,)`, and an ordinary group `(16,)` remain invalid.
+- **`mod` is the remainder, and the only place `%` used to be.** `mod(17, 5)` is 2 and `mod(-7, 3)` is -1, since the sign follows the dividend; its divisor may be any expression, and `mod(5, 0)` is *Undefined*. After setting aside an optional trailing comma, its two arguments are divided by the last comma directly within its brackets, so `mod(3,000, 7,)` keeps its grouped figure whole. `%` cannot be the remainder as well, because it ends a figure as a percent.
 - **`fact` is defined for whole numbers from 0 up.** A fraction or a negative number has no factorial and gives *Undefined*, as does anything past `170!`, which overflows. Past `18!` the product is larger than the whole numbers floating point holds exactly, so it carries the same rounding as the rest of the arithmetic. There is no postfix `!`.
 - **A constant is a value, not a function**, so `e(2)` is missing an operator.
 - **There is no implicit multiplication.** `2(3)`, `(2)(3)`, `2e`, `2pi`, and `2 x` are each missing an operator, not products; a juxtaposition in this language is always a mistake, never a meaning.
@@ -397,7 +399,7 @@ Parentheses, brackets, and braces group interchangeably and nest freely, but eac
 - **The index is any word that starts with a letter**: `sum_i`, `sum_year`, `prod_n2`, `sum_α`. A built-in cannot be one, so `sum_pi` and `sum_log` are refused, and `sum(…)` or `sum_1(…)` is reported as missing one.
 - **The index is bound in the first argument and nowhere else.** The bounds are read outside it, so `sum_i(i, 0, i)` is refused, and past the closing bracket the index means nothing, so `sum_i(i, 0, 2) + i` refers to an undeclared `i`. It is never declared: it is not in the variable list, it may share its spelling with a declared name, which it shadows within its first argument only, and a later statement may declare that spelling freely.
 - **Sums and products nest, and an index reaches everything within its first argument**, a nested sum's or product's arguments included, bounds among them: `sum_i(sum_j(i * j, 0, i), 1, 3)` is 25. A nested index spelled like an outer one shadows it within its own first argument.
-- **The last two commas directly within the brackets separate the arguments**, as the last one does for `mod`'s two. Any earlier comma belongs to the expression and groups digits as it does anywhere else, so `prod_i($3,000 * i, 1, 2)` reads `$3,000` whole. Reading from the right works because the bounds are whole numbers written without grouping; a bound written as `1,000` is divided at its comma like any of the last two. Commas inside a nested bracket never separate, and an earlier one that does not sit between digits is reported.
+- **After setting aside an optional trailing comma, the last two commas directly within the brackets separate the arguments**, as the last one does for `mod`'s two. Any earlier comma belongs to the expression and groups digits as it does anywhere else, so `prod_i($3,000 * i, 1, 2,)` reads `$3,000` whole. Reading from the right works because the bounds are whole numbers written without grouping; a bound written as `1,000` is divided at its comma like any of the last two. Commas inside a nested bracket never separate, and an earlier one that does not sit between digits is reported.
 - **The bounds are inclusive, and any expression that comes to a whole number**: `1`, `-3`, `n`, `floor(n / 2)`. Both are evaluated once, before the first term. A bound that is not a whole number, or lies past 2⁵³ where floating point stops holding every whole number, leaves the sum or product *Undefined*, as a fraction does for `fact`.
 - **An empty range is the empty sum or product.** When the end comes before the start, a sum is 0 and a product is 1, the convention that also makes `fact(0)` 1, and the expression is never evaluated.
 - **One calculation evaluates at most 10,000,000 terms** across all its sums and products, each term of a nested one counted, so that a mistyped bound cannot stall the page. The sum or product that would pass the limit stops the calculation before any of its terms is evaluated; see [Results and errors](#results-and-errors).
@@ -421,7 +423,7 @@ flowchart TD
     OP -- yes --> TOP["operator token"]
     OP -- no --> BR{"bracket?"}
     BR -- yes --> TBR["open or close token"]
-    BR -- no --> SEP{", separating a head's<br/>arguments?"}
+    BR -- no --> SEP{", separating or ending<br/>a head's arguments?"}
     SEP -- yes --> TSEP["separator token"]
     SEP -- no --> LETTER{"letter?"}
     LETTER -- yes --> TWORD["word token<br/>letters, digits, _<br/>(resolved by the parser)"]
@@ -434,13 +436,13 @@ flowchart TD
 | Number | A digit, or `.` followed by a digit | `1,000`, `.5`, `2.5k`, `4.5%` |
 | Operator | One of `+` `-` `*` `/` `^` | |
 | Bracket | `(` `[` `{` and their closers | |
-| Separator | One of the last `,` directly within the brackets of a head that takes several arguments | `sum_i(i, 0, 2)`, `mod(8, 3)` |
+| Separator | An argument separator or optional trailing comma directly within a call's brackets | `sum_i(i, 0, 2,)`, `mod(8, 3)`, `sqrt(16,)` |
 | Word | A letter, then letters, digits, and underscores | `pi`, `lg`, `taxes`, `sum_i` |
 | Skipped | Whitespace, line breaks, `$`, and comments | |
 
 A word is read whole and left for the parser to resolve as a constant, a function, a sum or product, an index, or an undeclared name — which is why `taxes` is one unknown word rather than `tax` followed by `es`.
 
-A bracket opened right after `mod`, `sum`, `prod`, or a word beginning `sum_` or `prod_` holds arguments, so the reader looks ahead to its closing bracket, skipping comments and declared names, and marks the last commas directly within it as separators — one fewer than the head's arguments, so two for a sum or product and one for `mod`. A figure there ends at a separator and keeps any grouping comma before one. A function of one argument opens no such list, which is why the comma in `log(1,000)` groups its digits.
+A bracket opened right after a function, `sum`, `prod`, or a word beginning `sum_` or `prod_` holds arguments, so the reader looks ahead to its closing bracket, skipping comments and declared names. It sets aside one optional trailing comma, then marks the last remaining commas directly within the brackets as separators — one fewer than the head's arguments, so two for a sum or product, one for `mod`, and none for a one-argument function. The trailing comma is also emitted as a separator token; expression parsing accepts it before the closing bracket without adding an argument. A figure ends at a marked comma and keeps any grouping comma before one, which is why `log(1,000,)` still reads one argument of 1,000.
 
 Figures follow their own small grammar:
 
@@ -451,7 +453,7 @@ magnitude = "k" | "m" | "b" | "t" ;  (* either case, and not followed by a lette
 ```
 
 - **`$` is ignored anywhere** in an expression, so figures can be pasted as written.
-- **`,` and `_` group digits and are accepted only between two digits of one number**, apart from the commas that separate a head's arguments. Anywhere else they would silently join or split values, so `1,,000`, `1, 2`, and `_5` are reported.
+- **`,` and `_` group digits and are accepted only between two digits of one number**, apart from argument separators and a call's optional trailing comma. Anywhere else they would silently join or split values, so `1,,000`, `1, 2`, and `_5` are reported.
 - **`.` marks the fractional part.** A number has one, and a digit must follow it; a leading point (`.5`) is fine.
 - **A magnitude suffix multiplies by a thousand, a million, a billion, or a trillion** and comes after any `$` and digit grouping, so `$1.5k` is 1,500 and `2,500K` is 2,500,000. It binds to the digits it touches and has to end the number: `1kg`, `1kk`, and `1 k` are all reported rather than read as 1,000 with something after them.
 - **A final `%` divides the figure by a hundred**, so `4.5%` is 0.045, `$1,250%` is 12.5, and `2.5k%` is 25, the percent coming last of all. It binds as tightly as the digits it follows and cannot stand apart from them: `5 %`, `% 5`, and `(1 + 2)%` are reported. Dividing is what keeps `5%` exactly 0.05, and it is why the remainder is `mod` — one `%` reads one way everywhere it appears.
@@ -686,11 +688,12 @@ The result reads in full unless the **Suffixed** toggle beside it is on. The tog
 
 - **The input is numbered by line**, in a gutter immediately left of the field's box. The numbers start at the left edge of the column the buttons below share, and the box gives up exactly that width, so the two together still span the editor. Numbering follows the text, growing and shrinking as lines are added and removed, and it is what the error messages' line numbers point at.
 
-The text reads like a highlighted file: comments recede, declared names use one accent, operators another, and built-in constants a third. Figures, brackets, and digit separators remain ordinary text. Every tone has a dark-theme counterpart defined by `TextAreaField`; the calculator emits semantic tones rather than colors.
+The text reads like a highlighted file: comments recede, declared names use one accent, operators another, and built-in constants a third. Matching bracket pairs cycle through three additional accents by nesting depth. Figures and digit separators remain ordinary text. Every tone has a dark-theme counterpart defined by `TextAreaField`; the calculator emits semantic tones rather than colors.
 
 - **A name is colored where it is declared and at every later reference**, exactly as an identifier is in an editor, which is what makes an alias visible as one thing rather than as words. A reference before its declaration stays plain, and so does a name inside a longer word.
 - **A sum's or product's index is colored as a name** where its head binds it, the `i` of `sum_i`, and wherever its first argument reads it, and nowhere else: in the bounds and past the closing bracket it stays plain, which draws the index's scope on the text.
-- **Operators are `+ - * / ^`, the function names — `log`, `sqrt`, `fact`, `mod`, and the rest — the `sum_` or `prod_` of a head, the commas that separate a head's arguments, and the `=` of a declaration.** A comma that groups digits stays plain, like the figure it belongs to, and so does a figure's `%`, which belongs to it as its `$` and magnitude do. The last is not arithmetic, but it is what separates a declaration's two halves, and coloring it is what makes that separation visible. A function name that falls inside a declared name — `log book` — belongs to the name, and one inside a longer word — `absolute`, `factor` — is not a function at all.
+- **Operators are `+ - * / ^`, the function names — `log`, `sqrt`, `fact`, `mod`, and the rest — the `sum_` or `prod_` of a head, the commas that separate or end a head's arguments, and the `=` of a declaration.** A comma that groups digits stays plain, like the figure it belongs to, and so does a figure's `%`, which belongs to it as its `$` and magnitude do. The last is not arithmetic, but it is what separates a declaration's two halves, and coloring it is what makes that separation visible. A function name that falls inside a declared name — `log book` — belongs to the name, and one inside a longer word — `absolute`, `factor` — is not a function at all.
+- **Matching `()`, `[]`, and `{}` share a tone for their nesting level**, cycling after three levels. Comments and declared names keep their existing tones even when they contain brackets. Unmatched or mismatched brackets stay plain; a semicolon resets nesting so an unfinished expression does not shift later statements' colors. The same pairing applies in syntax-reference examples.
 - **The highlighter judges each statement on its own** rather than waiting for the whole input to parse. A user is mid-edit most of the time, and highlighting that vanished on every keystroke that broke the parse would flicker constantly. A declaration whose name is well formed and untaken colors that name; anything else is left plain, so an unusable declaration — `pi = 3`, say — is simply not highlighted rather than being marked wrong twice.
 
 | | Parser | Highlighter |
@@ -730,7 +733,7 @@ flowchart TD
 
 [`calculator.svelte.ts`](calculator.svelte.ts) is the `CalculatorStore`: input, parse, last result or the reason Calculate stopped short, and result presentation. It owns its adopted input/result cells and Suffixed preference. [`persistence/`](persistence/) separates browser keys from input/result normalization and JSON conversion. Changing input invalidates the result or error, adopting saved cells replaces both together, and construction only reads supplied preferences. The [Scratchpad route](../../routes/scratchpad/+page.svelte) creates an instance per mount; no global store or shell context is required. The controller acquires no timers or listeners, while the route's keyboard hook owns its listener and teardown. [`CalculatorNotice`](../components/views/scratchpad/CalculatorNotice.svelte) draws amber diagnostics.
 
-The coloring and line numbers use `TextAreaField`'s `segments` and `lineNumbers` props. A text area cannot color part of its text, so the field draws toned runs over a transparent-text area that retains the caret, selection, and editing, with both layers wrapping and scrolling identically. The field owns the colors for `muted`, `accent`, `accent-alt`, and `accent-constant`; the calculator identifies comments, names, operators, and constants.
+The coloring and line numbers use `TextAreaField`'s `segments` and `lineNumbers` props. A text area cannot color part of its text, so the field draws toned runs over a transparent-text area that retains the caret, selection, and editing, with both layers wrapping and scrolling identically. The field owns the muted and accent palettes, including three bracket accents; the calculator identifies comments, names, operators, constants, and bracket-pair nesting levels.
 
 The gutter is drawn in that same layer rather than beside it, one row per logical line holding the number and its text together. That is what keeps a number level with the line it counts when the line wraps: the wrapped remainder indents under the text, as in an editor, instead of pushing every later number out of step.
 

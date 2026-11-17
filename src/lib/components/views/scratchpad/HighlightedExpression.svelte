@@ -34,6 +34,9 @@ Renders escaped calculator source with the same semantic highlighting as the Scr
     variable: 'text-sky-700 dark:text-sky-300',
     operator: 'text-violet-700 dark:text-violet-300',
     constant: 'text-emerald-700 dark:text-emerald-300',
+    'bracket-1': 'text-amber-700 dark:text-amber-300',
+    'bracket-2': 'text-rose-700 dark:text-rose-300',
+    'bracket-3': 'text-cyan-700 dark:text-cyan-300',
   };
 </script>
 

@@ -147,6 +147,8 @@ Parentheses `()`, square brackets `[]`, and braces `{}` all group expressions. T
 
 A function call consists of its name followed by arguments inside any of these bracket pairs. Whitespace between the name and the opening bracket is allowed. `sqrt(25)`, `sqrt[25]`, and `sqrt {25}` all give 5. Calls may be nested and their arguments may be full expressions.
 
+Matching bracket pairs share a color in the editor and syntax examples, with colors cycling by nesting level. Brackets within comments or declared names keep their comment or name color; unmatched or mismatched brackets stay plain.
+
 ## Constants and functions
 
 ### Constants
@@ -184,13 +186,15 @@ There are no other built-in functions or user-defined functions. Common operatio
 
 ### Commas in argument lists
 
-Because commas can group digits as well as separate arguments, calls use a specific rule: **the last required commas directly inside a call's brackets separate its arguments**. Commas inside nested brackets, comments, or matched declared names do not count as separators for the surrounding call.
+Function calls, sums, and products allow one optional trailing comma after the final argument: `sqrt(25,)`, `mod(14, 4,)`, and `sum_i(i, 1, 3,)` are valid. Whitespace and comments may follow that comma before the closing bracket. The comma does not supply a missing argument: `mod(14,)` is still invalid, as are repeated trailing commas and commas in ordinary expression groups such as `(25,)`.
+
+Because commas can group digits as well as separate arguments, calls use a specific rule: **after setting aside an optional trailing comma, the last required commas directly inside a call's brackets separate its arguments**. Commas inside nested brackets, comments, or matched declared names do not count as separators for the surrounding call.
 
 | Call | Argument separators | Example |
 | --- | --- | --- |
-| A one-argument function | None; commas can only group digits | `log(10,000)` is the logarithm of 10,000. |
-| `mod(a, b)` | The last comma at that bracket level | `mod(10,000, 6)` has dividend 10,000 and divisor 6. |
-| `sum_i(body, start, end)` or `prod_i(body, start, end)` | The last two commas at that bracket level | `sum_i(1,500 * i, 1, 3)` has body `1,500 * i` and bounds 1 and 3. |
+| A one-argument function | None; other than the optional trailing comma, commas only group digits | `log(10,000,)` is the logarithm of 10,000. |
+| `mod(a, b)` | The last comma at that bracket level before any trailing comma | `mod(10,000, 6,)` has dividend 10,000 and divisor 6. |
+| `sum_i(body, start, end)` or `prod_i(body, start, end)` | The last two commas at that bracket level before any trailing comma | `sum_i(1,500 * i, 1, 3,)` has body `1,500 * i` and bounds 1 and 3. |
 
 Use ungrouped digits, underscores, magnitude suffixes, or declared names for the divisor of `mod` and the bounds of sums and products. For example, write `mod(12000, 1000)` or `mod(12000, 1_000)`, and write `sum_i(i, 1000, 2000)` or `sum_i(i, 1k, 2k)`. An extra pair of brackets can also protect grouped digits: `mod(12000, (1,000))` and `sum_i(i, (1,000), (2,000))` are valid.
 
@@ -258,7 +262,7 @@ Undefined arithmetic does not disable Calculate or stop the rest of a program fr
 
 ### Syntax errors and calculation workflow
 
-Scratchpad checks syntax as the input changes and reports the first problem with a line number. Calculate is disabled while the input is invalid or empty. Valid input is evaluated when Calculate is selected or **Shift Enter** is pressed in the editor; editing the input clears the previous calculation. Enter by itself inserts a line break.
+Scratchpad checks syntax as the input changes and reports the first problem with a line number. Calculate is disabled while the input is invalid or empty. Valid input is evaluated when Calculate is selected or **Shift Enter** is pressed anywhere on the Scratchpad page, including the editor; editing the input clears the previous calculation. Enter by itself inserts a line break in the editor. The page shortcut is released when navigating away and yields to open dialogs.
 
 | Problem | Explanation or correction |
 | --- | --- |

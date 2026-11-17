@@ -37,6 +37,9 @@ Presents Scratchpad source editing, live highlighting, input diagnostics, and ca
     constant: 'accent-constant',
     variable: 'accent',
     operator: 'accent-alt',
+    'bracket-1': 'accent-bracket-1',
+    'bracket-2': 'accent-bracket-2',
+    'bracket-3': 'accent-bracket-3',
   } as const satisfies Record<SourceTone, TextAreaSegmentTone>;
   const segments = $derived(
     highlightInput(calculator.source).map(({ text, tone }) => ({

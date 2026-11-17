@@ -116,6 +116,22 @@ describe('argument layout', () => {
     });
   });
 
+  it('sets aside a trailing comma before choosing separators and retains it for tokenizing', () => {
+    expect(layOut('3,000 * i, 0, 1,)', skipNothing)).toEqual({
+      separators: [9, 12, 15],
+      end: 16,
+    });
+    expect(layOut('3,000, 7,)', skipNothing, 1)).toEqual({
+      separators: [5, 8],
+      end: 9,
+    });
+    expect(layOut('1,000,)', skipNothing, 0)).toEqual({
+      separators: [5],
+      end: 6,
+    });
+    expect(layOut('1,000)', skipNothing, 0).separators).toEqual([]);
+  });
+
   it('stops without a closing bracket at the end of its statement or text', () => {
     expect(layOut('i, 0, 2; x = 1', skipNothing)).toEqual({
       separators: [1, 4],

@@ -11,13 +11,19 @@ Owns a full-page Scratchpad, restoring browser-local work on mount and presentin
   import NamedBindings from '#lib/components/views/scratchpad/NamedBindings.svelte';
   import SyntaxReference from '#lib/components/views/scratchpad/SyntaxReference.svelte';
   import { CalculatorStore } from '#lib/calculator/calculator.svelte.js';
-  import { isClearInputsShortcut } from '#lib/calculator/presentation/shortcuts.js';
   import {
+    isCalculateShortcut,
+    isClearInputsShortcut,
+  } from '#lib/calculator/presentation/shortcuts.js';
+  import {
+    CALCULATOR_BINDINGS_SORT_STORAGE_KEY,
     CALCULATOR_INPUT_STORAGE_KEY,
     CALCULATOR_RESULT_STORAGE_KEY,
     CALCULATOR_SUFFIXED_STORAGE_KEY,
     CALCULATOR_SYNTAX_EXPANDED_STORAGE_KEY,
+    normalizeCalculatorBindingsSort,
     normalizeCalculatorFlag,
+    type CalculatorBindingsSort,
   } from '#lib/calculator/persistence/preferences.js';
   import { persisted, type Persisted } from '#lib/state/storage.svelte.js';
   import { useKeyboard } from '#lib/hooks/useKeyboard.js';
@@ -29,6 +35,8 @@ Owns a full-page Scratchpad, restoring browser-local work on mount and presentin
   );
   let syntaxExpanded = $state(false);
   let syntaxStorage: Persisted<unknown> | undefined;
+  let bindingsSort = $state.raw(normalizeCalculatorBindingsSort(undefined));
+  let bindingsSortStorage: Persisted<unknown> | undefined;
 
   onMount(() => {
     const restored = new CalculatorStore({
@@ -44,11 +52,21 @@ Owns a full-page Scratchpad, restoring browser-local work on mount and presentin
       false,
     );
     syntaxExpanded = normalizeCalculatorFlag(syntaxStorage.value);
+    bindingsSortStorage = persisted<unknown>(
+      CALCULATOR_BINDINGS_SORT_STORAGE_KEY,
+      null,
+    );
+    bindingsSort = normalizeCalculatorBindingsSort(bindingsSortStorage.value);
   });
 
   function setSyntaxExpanded(expanded: boolean): void {
     syntaxExpanded = expanded;
     if (syntaxStorage) syntaxStorage.value = expanded;
+  }
+
+  function setBindingsSort(sort: CalculatorBindingsSort): void {
+    bindingsSort = sort;
+    if (bindingsSortStorage) bindingsSortStorage.value = sort;
   }
 
   function clearInputs(): void {
@@ -65,7 +83,10 @@ Owns a full-page Scratchpad, restoring browser-local work on mount and presentin
   }
 
   useKeyboard((event) => {
-    if (isClearInputsShortcut(event)) {
+    if (isCalculateShortcut(event)) {
+      event.preventDefault();
+      calculator.calculate();
+    } else if (isClearInputsShortcut(event)) {
       event.preventDefault();
       clearInputs();
     }
@@ -93,7 +114,11 @@ Owns a full-page Scratchpad, restoring browser-local work on mount and presentin
     <WorkingEditor {calculator} {inputId} onClear={clearInputs} />
     <div class="min-w-0 space-y-6">
       <CalculationResult {calculator} />
-      <NamedBindings {calculator} />
+      <NamedBindings
+        {calculator}
+        sort={bindingsSort}
+        onSortChange={setBindingsSort}
+      />
     </div>
   </div>
   <SyntaxReference

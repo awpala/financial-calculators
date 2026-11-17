@@ -16,6 +16,17 @@ READMEs explain how the subsystem works and how to use and extend it. ADRs retai
 
 **Provisioning comments are part of the operational documentation.** Keep [.devcontainer/scripts/setup-env.sh](../../.devcontainer/scripts/setup-env.sh) comprehensively annotated: execution context, step ordering, package/tool choices, pin alignment, shell behavior, generated artifacts, service ownership, failure handling, and recovery explain how to maintain the environment. Apply the same standard to other infrastructure files where the reasoning belongs beside the setting. Update comments when behavior changes; do not strip them as stylistic cleanup or replace them with a link to a separate guide.
 
+### Required Scratchpad documentation check
+
+Documentation review and true-up are a completion requirement for every change affecting Scratchpad's language or user-visible workspace behavior, even when the user requests only code. Language design, syntax, operators, function arguments, grouping and separators, numeric semantics, parsing, evaluation, diagnostics, highlighting, keyboard shortcuts, named bindings, and persistence all fall within this requirement. Changes through shared components or helpers count when they affect Scratchpad; parser or evaluator refactors must still confirm that documented behavior is preserved.
+
+1. Before implementation, read the affected sections of the [Scratchpad language specification](../scratchpad.md) and [calculator library guide](../../src/lib/calculator/README.md). The specification owns the user's supported language and workflow; the library guide explains the implemented grammar, semantics, contracts, and ownership.
+2. Compare the intended and implemented behavior with both documents. Update every affected explanation, grammar rule, syntax/reference table, example, accepted or rejected input, diagnostic, default, limit, and workflow in the same change. Review the [in-app syntax reference](../../src/lib/components/views/scratchpad/SyntaxReference.svelte) and [application overview](../../README.md#scratchpad) when their descriptions or examples are affected. Preserve explanatory depth, and label proposed behavior explicitly rather than presenting unimplemented syntax as supported.
+3. Validate changed claims and examples against the implementation and relevant parser/evaluator tests or browser behavior. Run the affected gates within the authorized environment. Passing code checks or the ADR-index gate does not establish that prose, examples, or the documented language remain accurate.
+4. Before reporting completion, identify the documentation reviewed, the sections updated, and the validation performed. If a reviewed document needs no edit, state why its current content still covers the change; do not make a cosmetic edit merely to produce a documentation diff.
+
+Do not report a Scratchpad task complete until this check is satisfied. Reviewers must check the specification and library guide against the behavioral diff and report missing documentation updates or missing review evidence as a required correction, even when code checks pass. Documentation already corrected during implementation still requires this explicit completion check; accuracy must not depend on an incidental edit or a later user reminder.
+
 ## Documentation version policy
 
 This policy is repository-wide. It applies to READMEs, ADRs, runbooks, `AGENTS.md`, `docs/agents/`, `.agents/skills/`, `.claude/agents/`, `.codex/agents/`, `.claude/skills/`, and dependency-version claims in comments.

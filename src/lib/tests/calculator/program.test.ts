@@ -209,6 +209,59 @@ describe('calculator program parsing', () => {
   });
 
   it.each([
+    ['log(100,)', 2],
+    ['lg[8,]', 3],
+    ['ln{e,}', 1],
+    ['sqrt(16,)', 4],
+    ['abs(-3, )', 3],
+    ['floor(2.7,\n)', 2],
+    ['ceil(2.1, # final argument\n)', 3],
+    ['fact(5,)', 120],
+    ['inv(4,)', 0.25],
+    ['mod(3,000, 7,)', 4],
+    ['mod(12000, (1,000),)', 0],
+    ['sqrt(abs(-9,),)', 3],
+    ['sum_i(i, 1, 3,)', 6],
+    ['prod_i{i, 1, 4,}', 24],
+    ['sum_i[i ^ 2, 0, 2,]', 5],
+    ['sum_i(prod_j(i + j, 1, 2,), 1, 2,)', 18],
+    ['sum_i(mod(i, 2,), 1, 4,)', 2],
+    ['mod(sum_i(i, 1, 5,), 4,)', 3],
+    ['sum_i(3,000 * i, 1, 2,)', 9000],
+    ['sum_i(log(1,000,) * i, 0, 2,)', 9],
+    ['sum_i(i, 1, 3, # commas , and brackets ) ignored\n)', 6],
+    ['n = 3; sum_i(i, 1, n,)', 6],
+    ['amount, = 2; abs(amount,)', 2],
+    ['amount, = 2; mod(amount,, 3,)', 2],
+  ])('accepts an optional trailing comma in %j', (source, expected) => {
+    expect(calculate(source)).toBeCloseTo(expected, 12);
+  });
+
+  it.each([
+    'sqrt(,)',
+    'sqrt(1,,)',
+    'sqrt(1, 2,)',
+    'mod(1,,)',
+    'mod(8,)',
+    'mod(pi, 3, 2,)',
+    'sum_i(i, 1, 2,,)',
+    'sum_i(i, 1,)',
+    'prod_i(i,, 3,)',
+    'sum_i(i, 1, i,)',
+    'sum_i(i, 1, 3,) + i',
+    'sum_i(i, 1, 3,]',
+    'log(100,, # final argument\n)',
+    'mod(8, 3,',
+    '(1,)',
+    '[1,]',
+  ])(
+    'still rejects missing arguments, extra commas, and invalid groups in %j',
+    (source) => {
+      expect(parseProgram(source).status).toBe('invalid');
+    },
+  );
+
+  it.each([
     [
       'mod(8)',
       "'mod' on line 1 takes two arguments, as 'mod(dividend, divisor)'",
@@ -834,7 +887,10 @@ describe('calculator program parsing', () => {
       ],
       ['sum_i(, 0, 2)', "Expected a value before ',' on line 1"],
       ['sum_i(i,, 2)', "Expected a value before ',' on line 1"],
-      ['sum_i(i, 0, )', "Expected a value before ')' on line 1"],
+      [
+        'sum_i(i, 0, )',
+        "'sum_i' on line 1 takes three arguments, as 'sum_i(expression, start, end)'",
+      ],
       ['sum_i(i 2, 0, 3)', "Missing operator before '2' on line 1"],
       ['sum_i(i, 0, 2', "'(' on line 1 is never closed"],
       [
