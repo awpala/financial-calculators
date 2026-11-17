@@ -2,6 +2,8 @@
 
 These decisions document Financial Calculators' architecture, rationale, and operational lessons. It is one public static application with explicit library organization, presentation contracts, and ownership conventions.
 
+For a user-facing reference, see the [Scratchpad language specification](scratchpad.md), covering syntax, names, numeric notation, arithmetic, functions, sums and products, precision, errors, and representative examples across several domains.
+
 | Decision | Status | Scope |
 | --- | --- | --- |
 | [Local development](adrs/local-development-environment.md) | Accepted | One devcontainer, setup ordering, persistence, live helpers |
