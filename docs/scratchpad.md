@@ -337,11 +337,19 @@ This definition provides static highlighting. It cannot follow declared names or
 
 ## Representative examples
 
-Each block below is a complete, independent program that can be pasted into Scratchpad. Results are described using normal display unless an approximation is stated. Units in names and comments document the intended interpretation; Scratchpad does not check units or convert them automatically.
+Each `text` code block below is a complete, independent program that can be pasted into Scratchpad. The LaTeX equations describe the mathematical models; they are explanatory notation, not Scratchpad input. Results are described using normal display unless an approximation is stated. Units in names and comments document the intended interpretation; Scratchpad does not check units or convert them automatically.
 
 ### Finance: net present value of a project
 
 A project requires a $60,000 outlay today and is expected to generate $16,000 in net cash inflows at the end of each of the next five years. Equipment is expected to sell for another $8,000 at the end of year five. Using an illustrative annual discount rate of 8%, calculate the present value of the future cash flows and subtract the initial outlay.
+
+With initial outlay $I_0$, annual net cash inflow $C$, resale proceeds $S$, annual discount rate $r$, and project duration $N$ years, the model is:
+
+$$
+\operatorname{NPV} = -I_0 + \sum_{t=1}^{N}\frac{C}{(1+r)^t} + \frac{S}{(1+r)^N}.
+$$
+
+Here $t$ counts year-end cash flows, and $r=0.08$ is the rate as a fraction.
 
 ```text
 initial outlay = $60k;
@@ -366,6 +374,17 @@ The sum's `year` index supplies each discount exponent, and its inclusive range 
 ### Accounting: periodic weighted-average inventory cost
 
 A retailer begins a period with 120 units carried at $18 each and purchases another 80 units at $21 each. During the period, it sells 150 units for $32 each. Under the periodic weighted-average method, divide the total cost of goods available for sale by the total units available, then use that average to allocate cost between units sold and ending inventory.
+
+Let $q_b$ and $q_p$ be beginning and purchased quantities, $c_b$ and $c_p$ their unit costs, $q_s$ the quantity sold, and $p$ the selling price per unit. The weighted-average unit cost $\bar c$ allocates the available cost between cost of goods sold and ending inventory:
+
+$$
+\begin{aligned}
+\bar c &= \frac{q_b c_b + q_p c_p}{q_b+q_p}, \\
+\operatorname{COGS} &= q_s\bar c, \\
+V_{\text{ending}} &= (q_b+q_p-q_s)\bar c, \\
+\operatorname{Gross\ profit} &= q_s p-\operatorname{COGS}.
+\end{aligned}
+$$
 
 ```text
 beginning units = 120;
@@ -407,9 +426,63 @@ cartons needed * cost per carton
 
 The result is **20.35**, the cost of 11 cartons. The named values also show 10 full cartons, 17 loose parts, and 7 unused spaces in the purchased cartons. `floor` counts complete groups, `mod` finds the remainder, and `ceil` includes a partly filled carton.
 
+### Physics: conservation of energy with air drag
+
+A 2-kilogram object is released from rest 5 meters above the ground. Calculate its speed just before reaching the ground after allowing for energy transferred to the surroundings by air drag. Take the ground as zero potential energy, use a constant gravitational acceleration of 9.81 meters per second squared, and assume a drag force averaging 4 newtons over the distance fallen.
+
+For mass $m$, gravitational acceleration $g$, heights $h_i,h_f$, and speeds $v_i,v_f$, include the positive energy transfer $E_{\text{drag}}$ in the energy balance:
+
+$$
+\begin{aligned}
+mgh_i+\frac12 mv_i^2 &= mgh_f+\frac12 mv_f^2+E_{\text{drag}}, \\
+E_{\text{drag}} &= \bar F_{\text{drag}}(h_i-h_f), \\
+v_f &= \sqrt{v_i^2+2g(h_i-h_f)-\frac{2E_{\text{drag}}}{m}}.
+\end{aligned}
+$$
+
+Subscripts $i$ and $f$ mean initial and final. The force magnitude $\bar F_{\text{drag}}$ is averaged over the downward travel distance; $E_{\text{drag}}$ is energy transferred out of mechanical motion, not energy destroyed.
+
+```text
+mass = 2; # kilograms
+gravity = 9.81; # meters per second squared
+initial height = 5; # meters above the ground
+final height = 0; # meters above the ground
+initial speed = 0; # meters per second
+average drag force = 4; # newtons; distance-averaged over this fall
+distance fallen = initial height - final height;
+energy lost to drag = average drag force * distance fallen; # joules
+initial potential energy = mass * gravity * initial height;
+initial kinetic energy = 0.5 * mass * initial speed ^ 2;
+initial mechanical energy = initial potential energy + initial kinetic energy;
+final potential energy = mass * gravity * final height;
+final kinetic energy = initial mechanical energy - final potential energy
+  - energy lost to drag;
+final mechanical energy = final potential energy + final kinetic energy;
+accounted energy = final mechanical energy + energy lost to drag;
+final speed = sqrt(2 * final kinetic energy / mass);
+final speed
+```
+
+The result is approximately **8.83742 meters per second**. Named values show 98.1 joules of initial potential energy and zero initial kinetic energy. Drag transfers 20 joules to the surroundings over the 5-meter fall, leaving 78.1 joules of kinetic energy just before impact, when potential energy is zero. The `accounted energy` remains 98.1 joules: final mechanical energy plus the energy transferred by drag equals initial mechanical energy. The calculation rearranges `kinetic energy = 0.5 * mass * speed ^ 2` to obtain speed; Scratchpad evaluates that formula rather than solving an equation symbolically.
+
+Mechanical energy decreases, while total energy is conserved when the surroundings are included; energy lost to drag is transferred into air motion and ultimately thermal energy. The assumed drag force is an average over distance, not time, so multiplying it by distance gives the work against drag. This example does not predict that average from speed, air density, or object shape, and changing the fall conditions may require a different average. Setting `average drag force` to zero recovers the drag-free speed of approximately 9.90454 meters per second. The model stops before impact and assumes a straight downward fall, positive mass, and nonnegative drag loss. Inputs that give negative final kinetic energy are inconsistent with reaching the stated height and make the square root undefined. Units are recorded in comments and prose, since Scratchpad does not check them.
+
 ### Engineering: AC series RLC circuit analysis
 
 A 120-volt RMS, 60-hertz sinusoidal source drives a series circuit with a 40-ohm resistor, a 0.1-henry inductor, and a 100-microfarad capacitor. Calculate the steady-state RMS current, impedance phase angle, power factor, and average real power. Use volts, hertz, ohms, henries, and farads throughout; `0.0001` farad is 100 microfarads. Units belong in the explanation or declared names, since Scratchpad does not convert units.
+
+For source frequency $f$, resistance $R$, inductance $L$, capacitance $C$, and RMS voltage $V_{\mathrm{rms}}$, calculate angular frequency $\omega$, net reactance $X$, impedance magnitude $|Z|$, RMS current $I_{\mathrm{rms}}$, impedance phase angle $\theta$, and average real power $P$:
+
+$$
+\begin{aligned}
+\omega &= 2\pi f, & X &= \omega L-\frac{1}{\omega C}, \\
+|Z| &= \sqrt{R^2+X^2}, & I_{\mathrm{rms}} &= \frac{V_{\mathrm{rms}}}{|Z|}, \\
+\theta &= \operatorname{atan2}(X,R), & \operatorname{PF} &= \cos\theta, \\
+P &= I_{\mathrm{rms}}^2R &= V_{\mathrm{rms}}I_{\mathrm{rms}}\operatorname{PF}.
+\end{aligned}
+$$
+
+Here $\operatorname{PF}$ is the power factor. The program expresses $\theta$ in degrees and pairs `arctan2_d` with `cos_d` to keep the angle convention consistent.
 
 ```text
 source RMS voltage = 120;
@@ -437,7 +510,17 @@ This model assumes ideal components in sinusoidal steady state, with the resisto
 
 An ideal continuous stirred-tank reactor (CSTR) converts species A to B in an irreversible, first-order reaction with one mole of B formed per mole of A consumed. Its liquid volume is 100 liters, the feed and outlet flow rates are both 10 liters per minute, the feed contains 2 moles of A per liter and no B, and the rate constant is 0.08 per minute. Calculate the outlet concentrations and percentage conversion of A.
 
-At steady state, accumulation is zero: `feed flow * inlet A - feed flow * outlet A - rate constant * reactor volume * outlet A = 0`. Here that equation explains the balance; the runnable program below evaluates its rearranged formula rather than asking Scratchpad to solve an equation.
+Let $Q$ be the common inlet and outlet volumetric flow rate, $V$ the reactor volume, $k$ the first-order rate constant, and $C_{A,\mathrm{in}}$ and $C_A$ the inlet and outlet concentrations of A. Zero accumulation gives the species balance and its explicit solution:
+
+$$
+\begin{aligned}
+0 &= Q C_{A,\mathrm{in}}-Q C_A-kVC_A, \\
+\tau &= \frac{V}{Q}, & C_A &= \frac{C_{A,\mathrm{in}}}{1+k\tau}, \\
+C_B &= C_{A,\mathrm{in}}-C_A, & X_A &= 1-\frac{C_A}{C_{A,\mathrm{in}}}.
+\end{aligned}
+$$
+
+Here $\tau$ is residence time, $C_B$ is outlet B concentration for the stated one-to-one reaction with no B in the feed, and $X_A$ is the fractional conversion. The program evaluates the rearranged formula and reports $100X_A$ as a percentage; it does not solve the balance symbolically.
 
 ```text
 reactor volume = 100; # liters
@@ -458,6 +541,86 @@ balance residual = A fed per minute - A leaving per minute - A consumed per minu
 The result is approximately **44.4444**, meaning 44.4444% conversion. Named values show a residence time of 10 minutes, an outlet A concentration of approximately 1.11111 moles per liter, and an outlet B concentration of 0.888889 moles per liter. The A balance reconciles 20 moles per minute entering with 11.1111 leaving and 8.88889 consumed; `balance residual` is zero for these inputs, subject to floating-point rounding after edits.
 
 The model assumes perfect mixing, constant liquid density and volume, constant temperature, and a positive flow rate. The reactor concentration therefore equals the outlet concentration, and the reaction rate is evaluated at `outlet A`. The rate constant is fixed at the operating temperature; the calculation does not solve an energy balance, predict temperature changes, or model startup accumulation or additional reactions.
+
+### Control theory: a discrete-time PID control update
+
+A position controller commands a force to move an object toward a 1-meter setpoint. Its current measured position is 0.8 meter, the previous position error was 0.15 meter, and the stored integral of error before this update is 0.4 meter-seconds. Calculate one proportional-integral-derivative (PID) update with a sampling interval of 0.1 second and gains of 20 newtons per meter, 5 newtons per meter-second, and 2 newton-seconds per meter, respectively.
+
+At sample $k$, let $r_k$ be the position setpoint, $y_k$ the measured position, $e_k$ the error, $J_k$ the accumulated error integral, and $u_k$ the commanded force. With sampling interval $\Delta t>0$ and gains $K_p,K_i,K_d$, use a rectangular integral update based on the current error and a backward difference for its derivative:
+
+$$
+\begin{aligned}
+e_k &= r_k-y_k, \\
+J_k &= J_{k-1}+e_k\Delta t, \\
+\dot e_k &\approx \frac{e_k-e_{k-1}}{\Delta t}, \\
+u_k &= K_p e_k+K_i J_k+K_d\frac{e_k-e_{k-1}}{\Delta t}.
+\end{aligned}
+$$
+
+The proportional term responds to the current error, the integral term includes accumulated error, and the derivative term responds to its rate of change. Each gain converts its term into newtons, so the three contributions can be added.
+
+```text
+position setpoint = 1; # meters
+measured position = 0.8; # meters
+previous error = 0.15; # meters
+previous error integral = 0.4; # meter-seconds
+sample interval = 0.1; # seconds
+proportional gain = 20; # newtons per meter
+integral gain = 5; # newtons per meter-second
+derivative gain = 2; # newton-seconds per meter
+current error = position setpoint - measured position;
+updated error integral = previous error integral + current error * sample interval;
+error rate = (current error - previous error) / sample interval;
+proportional force = proportional gain * current error;
+integral force = integral gain * updated error integral;
+derivative force = derivative gain * error rate;
+commanded force = proportional force + integral force + derivative force;
+commanded force
+```
+
+The result is **7.1 newtons**. Named values show a current error of 0.2 meter, an updated error integral of 0.42 meter-seconds, and an error rate of 0.5 meter per second. The proportional, integral, and derivative forces are 4, 2.1, and 1 newtons, respectively. Positive force is assumed to act in the direction of increasing position.
+
+This is one controller update, not a simulation of the object's motion or a demonstration of closed-loop stability. For the next sample, supply the new measured position and carry the current error and updated integral into the two previous-value inputs; Scratchpad does not advance controller state automatically. The example assumes an actuator that can supply the requested force, no output bias, and unfiltered differentiation of error. It does not include force limits, integral anti-windup, or derivative filtering; measurement noise or a sudden setpoint change can produce a large derivative contribution. The illustrative gains are not a tuning recommendation for a physical system.
+
+### Engineering mechanics: stress and strain in a LEHI material
+
+A straight bar made from a linear elastic, homogeneous, isotropic (LEHI) material carries a centered axial tensile load of 20,000 newtons. Its original length is 1,000 millimeters and its rectangular cross section is 20 millimeters wide by 10 millimeters thick. Assume Young's modulus is 200,000 megapascals (200 gigapascals) and Poisson's ratio is 0.30. Calculate axial stress, axial and lateral strain, elongation, and the change in width.
+
+Linear elasticity makes stress proportional to strain with recoverable deformation; homogeneity means the material properties are uniform throughout the bar, and isotropy means they are independent of direction. For uniaxial stress with traction-free lateral surfaces, Hooke's law gives axial strain and Poisson contraction. See the [MIT lecture on constitutive material response](https://ocw.mit.edu/courses/16-001-unified-engineering-materials-and-structures-fall-2021/mit16_001_f21_lec15.pdf) for the underlying stress-strain relations.
+
+Let $F$ be tensile force, $L_0$ original length, $b_0$ original width, $t_0$ original thickness, $A_0$ original cross-sectional area, $E$ Young's modulus, and $\nu$ Poisson's ratio. With the $x$ axis along the bar and $y,z$ transverse to it, the small-strain model is:
+
+$$
+\begin{aligned}
+A_0 &= b_0t_0, & \sigma_x &= \frac{F}{A_0}, & \sigma_y &= \sigma_z=0, \\
+\varepsilon_x &= \frac{\sigma_x}{E}, & \varepsilon_y &= \varepsilon_z=-\nu\varepsilon_x, \\
+\Delta L &= \varepsilon_x L_0=\frac{FL_0}{EA_0}, & \Delta b &= \varepsilon_y b_0.
+\end{aligned}
+$$
+
+Stress $\sigma_x$ is positive in tension. Strains $\varepsilon_x,\varepsilon_y,\varepsilon_z$ are dimensionless ratios of dimensional change to original dimension. Use newtons and millimeters consistently: one newton per square millimeter equals one megapascal, so stress and modulus have matching units without an extra conversion.
+
+```text
+tensile force = 20k; # newtons
+original length = 1k; # millimeters
+original width = 20; # millimeters
+original thickness = 10; # millimeters
+Young modulus = 200k; # megapascals = newtons per square millimeter
+Poisson ratio = 0.30;
+original area = original width * original thickness; # square millimeters
+axial stress = tensile force / original area; # megapascals
+axial strain = axial stress / Young modulus;
+lateral strain = -Poisson ratio * axial strain;
+elongation = axial strain * original length; # millimeters
+width change = lateral strain * original width; # millimeters
+loaded length = original length + elongation;
+loaded width = original width + width change;
+elongation
+```
+
+The result is **0.5 millimeter** of elongation. Named values show an original area of 200 square millimeters, an axial stress of 100 megapascals, an axial strain of 0.0005 (0.05%), and a lateral strain of -0.00015 (-0.015%). The width change is -0.003 millimeter, indicating contraction. The loaded length and width are 1,000.5 and 19.997 millimeters, respectively.
+
+This model assumes small deformation, loading within the material's linear elastic range, and uniform axial stress away from load introduction and support regions. It uses original dimensions for engineering stress and strain and neglects bending, thermal strain, plastic deformation, and local stress concentrations. The lateral faces must be free to contract; lateral restraint would require a multiaxial stress-strain model. The supplied modulus and Poisson's ratio do not establish a yield strength or allowable load, and this calculation does not check either.
 
 ### Geometry and measurement error
 
@@ -495,6 +658,16 @@ The result is **76.8** decimal megabytes. The named values show that 16 bits pro
 
 For an intensity ratio, the decibel difference is ten times its base-10 logarithm. This example uses explicit powers of ten for small quantities because scientific input notation is unsupported.
 
+For positive intensities $I_A,I_B$ and a common positive reference intensity $I_0$, define intensity levels $L_A,L_B$ in decibels:
+
+$$
+L_A=10\log_{10}\!\left(\frac{I_A}{I_0}\right),\qquad
+L_B=10\log_{10}\!\left(\frac{I_B}{I_0}\right),\qquad
+L_A-L_B=10\log_{10}\!\left(\frac{I_A}{I_B}\right).
+$$
+
+The common reference cancels in the difference; each intensity ratio is dimensionless.
+
 ```text
 reference intensity = 10 ^ -12;
 intensity A = 2 * 10 ^ -6;
@@ -509,6 +682,16 @@ The result is approximately **6.0206** decibels. Intensity A is four times inten
 ### Exponential decay and a target fraction
 
 An illustrative tracer has a half-life of eight days. Use the natural logarithm to obtain its exponential decay constant, then calculate both the fraction remaining after 20 days and the time required to reach 10%.
+
+For half-life $T_{1/2}$, decay constant $\lambda$, elapsed time $t$, remaining fraction $f(t)$, and target fraction $q$, the exponential model gives:
+
+$$
+\lambda=\frac{\ln 2}{T_{1/2}},\qquad
+f(t)=e^{-\lambda t},\qquad
+t_q=-\frac{\ln q}{\lambda}.
+$$
+
+Use $T_{1/2}>0$ and $0<q\leq1$ for a nonnegative target time $t_q$. With time measured in days, $\lambda$ has units of inverse days.
 
 ```text
 half life (days) = 8;
@@ -525,6 +708,14 @@ The result is approximately **26.5754** days. The named `remaining fraction` is 
 ### Probability of passing a sampling check
 
 Suppose eight independently sampled items each have a 10% chance of a defect. A check passes if at most one is defective. Sum the binomial probabilities for zero and one defect.
+
+Let $D$ be the number of defective items among $n$ independent items, each with defect probability $p$. For an allowed defect count $a$, the binomial model is:
+
+$$
+\Pr(D\leq a)=\sum_{d=0}^{a}\binom{n}{d}p^d(1-p)^{n-d}.
+$$
+
+Here $n=8$, $p=0.10$, and $a=1$. The program's `nCr` supplies the binomial coefficient, and multiplying the probability by 100 expresses it as a percentage.
 
 ```text
 sample size = 8;
@@ -544,6 +735,15 @@ The result is **81.310473**, a pass probability of 81.310473%. `nCr` counts whic
 ### Reliability across stages
 
 Consider a process with four independent stages whose success rates are 99%, 98%, 97%, and 96%. Every stage must succeed for the process to succeed.
+
+For $N$ independent stages with success probabilities $p_j$, the probability that at least one fails is the complement of all stages succeeding:
+
+$$
+\Pr(\text{at least one failure})=1-\prod_{j=1}^{N}p_j,\qquad
+p_j=p_1-(j-1)\delta.
+$$
+
+Here $N=4$, $p_1=0.99$, and $\delta=0.01$ is the absolute probability decrease per stage. Each $p_j$ must remain between zero and one.
 
 ```text
 stages = 4;
