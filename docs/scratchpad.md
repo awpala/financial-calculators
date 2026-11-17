@@ -327,6 +327,14 @@ Scratchpad checks syntax as the input changes and reports the first problem with
 
 The language has no strings, booleans, comparisons, conditional expressions, arrays, assignments that update an existing name, or general-purpose loops. `=` declares a name; it does not test equality. A declaration with parentheses in its name does not define a callable function. Built-in functions and finite sums and products provide the supported forms of repeated calculation.
 
+## Notepad++ highlighting
+
+The optional [Notepad++ language definition](../misc/scratchpad.notepad-plus-plus.udl.xml) highlights case-sensitive built-in functions and constants, `sum_` and `prod_` heads, `#` line comments, arithmetic and grouping punctuation, `=`, and `;`. The file contains Notepad++'s XML language-definition format. Import it through **Language > User Defined Language > Define your language > Import**, choosing `scratchpad.notepad-plus-plus.udl.xml`. After importing, select **Language > Scratchpad** to activate highlighting in the current document. Files ending in `.scratchpad` select it automatically. Default text, numbers, fonts, and backgrounds use Notepad++'s settings; accent foreground colors can be adjusted in the UDL Styler dialog.
+
+`min` and `max` receive highlighting only when immediately followed by `(`, `[`, or `{`, as in `min(4, 2)` and `max[4, 2]`. The name and attached opening bracket share the operator color. Bare words, including those in descriptive names such as `min value`, stay plain. Whitespace-separated forms such as `min (4, 2)` also leave the name plain in Notepad++, even though Scratchpad accepts whitespace before a call's bracket.
+
+This definition provides static highlighting. It cannot follow declared names or index scope, distinguish grouping commas from argument separators, validate bracket pairs, or check whether a statement requires a semicolon. Keywords and punctuation within descriptive names can receive their ordinary token colors. The literal `min` and `max` call-head rules can also match within longer names, such as `min(` within `admin(`, and prefix matching colors invalid iteration heads such as `sum_2023`. Use Scratchpad to validate and evaluate the program; the language rules above still apply.
+
 ## Representative examples
 
 Each block below is a complete, independent program that can be pasted into Scratchpad. Results are described using normal display unless an approximation is stated. Units in names and comments document the intended interpretation; Scratchpad does not check units or convert them automatically.
