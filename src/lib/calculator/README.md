@@ -19,9 +19,16 @@ What a user types is a small program in a purpose-built language — named figur
 | `^` | Exponentiation, right-associative | `2 ^ 3 ^ 2` | 512 |
 | `( )` `[ ]` `{ }` | Grouping, each closed by its own kind | `[1 + 2] * 3` | 9 |
 | `log` `lg` `ln` | Base-10, base-2, and natural logarithms | `lg(1,024)` | 10 |
+| `log_n(x, base)` | A logarithm in a chosen positive base other than 1 | `log_n(81, 3)` | 4 |
+| `n_root(x, n)` | A real root; a negative degree takes its reciprocal | `n_root(-8, 3)` | -2 |
 | `sqrt` `abs` | Square root and absolute value | `sqrt(3 ^ 2 + 4 ^ 2)` | 5 |
-| `floor` `ceil` | Round down and round up to a whole number | `ceil($1,234.56 / 100) * 100` | 1,300 |
+| `floor` `ceil` `round` | Round down, up, or to the nearest whole number | `round(2.5)` | 3 |
+| `min(x, ...)` `max(x, ...)` | Least or greatest of one or more expressions | `max(4, -2, 8)` | 8 |
 | `fact` `inv` | Factorial and reciprocal (`1 / x`) | `fact(5) * inv(4)` | 30 |
+| `nCr(n, r)` `nPr(n, r)` | Unordered or ordered selections without replacement | `nCr(5, 2)` | 10 |
+| `sin` `cos` `tan` `sec` `csc` `cot` | Circular functions in radians; `_d` accepts degrees | `sin_d(30)` | 0.5 |
+| `arcsin` `arccos` `arctan` `arcsec` `arccsc` `arccot` `arctan2` | Circular inverses; `_d` returns degrees | `arctan2_d(1, -1)` | 135 |
+| `sinh` `cosh` `tanh` `sech` `csch` `coth` | Unitless hyperbolic functions; `arc` prefixes their inverses | `cosh(0)` | 1 |
 | `mod` | Remainder after dividing, the sign of the dividend | `mod(17, 5)` | 2 |
 | `sum_i(expression, start, end)` | Add the expression for each whole `i` from `start` through `end` | `sum_i(i ^ 2, 0, 2)` | 5 |
 | `prod_i(expression, start, end)` | Multiply it instead | `prod_j(j + 4, -3, 5)` | 362,880 |
@@ -87,8 +94,8 @@ Each share is 47, and the result, **0.65**, is what rounding up overpays in tota
 
 ```text
 # orders of 5 study units, and pairs among them
-orderings = fact(5);
-pairs = fact(5) / (fact(2) * fact(3));
+orderings = nPr(5, 5);
+pairs = nCr(5, 2);
 ```
 
 `orderings` is 120 and `pairs` is 10.
@@ -341,12 +348,16 @@ product    = unary { ( "*" | "/" ) unary } ;
 unary      = ( "+" | "-" ) unary | power ;
 power      = primary [ "^" unary ] ;
 primary    = number | reference | index | constant | call | iteration | group ;
-call       = ( function | "mod" ) brackets ;
+call       = function brackets ;
 group      = "(" expression ")" | "[" expression "]" | "{" expression "}" ;
 brackets   = "(" arguments ")" | "[" arguments "]" | "{" arguments "}" ;
 iteration  = iterated "_" index brackets ;
-arguments  = expression { "," expression } [ "," ] ;  (* excluding an optional trailing comma, the last commas divide arguments: two for an iteration, one for "mod", none for a one-argument function *)
-function   = "log" | "lg" | "ln" | "sqrt" | "abs" | "floor" | "ceil" | "fact" | "inv" ;
+arguments  = expression { "," expression } [ "," ] ;  (* fixed-arity calls use the last required commas; variadic min/max use every comma at their bracket level *)
+function   = unary_function | binary_function | "min" | "max" ;
+unary_function = "log" | "lg" | "ln" | "sqrt" | "abs" | "floor" | "ceil" | "round" | "fact" | "inv" | circular | hyperbolic ;
+binary_function = "mod" | "nCr" | "nPr" | "n_root" | "log_n" | "arctan2" [ "_d" ] ;
+circular   = ( "sin" | "cos" | "tan" | "sec" | "csc" | "cot" | "arcsin" | "arccos" | "arctan" | "arcsec" | "arccsc" | "arccot" ) [ "_d" ] ;
+hyperbolic = "sinh" | "cosh" | "tanh" | "sech" | "csch" | "coth" | "arcsinh" | "arccosh" | "arctanh" | "arcsech" | "arccsch" | "arccoth" ;
 iterated   = "sum" | "prod" ;
 constant   = "e" | "pi" | "phi" ;
 reference  = ? a name declared by an earlier statement ? ;
@@ -373,24 +384,71 @@ Parentheses, brackets, and braces group interchangeably and nest freely, but eac
 | `log(x)` | Function | Base-10 logarithm | `log(1k)` = 3 |
 | `lg(x)` | Function | Base-2 logarithm | `lg(1,024)` = 10 |
 | `ln(x)` | Function | Natural logarithm | `ln(e ^ 2)` = 2 |
+| `log_n(x, base)` | Function | Logarithm in a finite positive base other than 1 | `log_n(81, 3)` = 4 |
 | `sqrt(x)` | Function | Square root | `sqrt(16)` = 4 |
+| `n_root(x, n)` | Function | Real nth root; negative degrees take reciprocal roots | `n_root(-8, 3)` = -2 |
 | `abs(x)` | Function | Absolute value | `abs(-3)` = 3 |
 | `floor(x)` | Function | The greatest whole number not above *x* | `floor(-2.5)` = -3 |
 | `ceil(x)` | Function | The least whole number not below *x* | `ceil(2.1)` = 3 |
+| `round(x)` | Function | Nearest integer, half ties toward positive infinity | `round(-2.5)` = -2 |
+| `min(x, ...)` | Function | Least of one or more expressions | `min(4, -2, 8)` = -2 |
+| `max(x, ...)` | Function | Greatest of one or more expressions | `max(4, -2, 8)` = 8 |
 | `fact(x)` | Function | Factorial, *x*! | `fact(5)` = 120 |
+| `nCr(n, r)` | Function | Unordered selections without replacement | `nCr(5, 2)` = 10 |
+| `nPr(n, r)` | Function | Ordered selections without replacement | `nPr(5, 2)` = 20 |
 | `inv(x)` | Function | Reciprocal, shorthand for `1 / x` | `inv(4)` = 0.25 |
 | `mod(a, b)` | Function | The remainder of *a* ÷ *b*, with *a*'s sign | `mod(17, 5)` = 2 |
 | `sum_i(x, a, b)` | Iteration | Σ: *x* added up for each whole *i* from *a* through *b* | `sum_i(i, 1, 100)` = 5,050 |
 | `prod_i(x, a, b)` | Iteration | Π: *x* multiplied together for each whole *i* from *a* through *b* | `prod_i(i, 1, 5)` = 120 |
 
-- **Built-ins are reserved in exactly these spellings.** Names are case-sensitive, so `E`, `PI`, `Phi`, `Sqrt`, and `Sum_i` are ordinary names a user may declare; only the lowercase forms above are taken. For sums and products that means every single word of `sum_` or `prod_` and then a letter, whatever follows.
+- **Built-ins are reserved in exactly these spellings.** Names are case-sensitive, so `E`, `PI`, `Phi`, `Sqrt`, and `Sum_i` are ordinary names a user may declare; only the registered spellings are taken, including the mixed-case `nCr` and `nPr`. Every [trigonometric function spelling](#trigonometric-functions) is also reserved; `asin`, `atan2`, and `asinh` are ordinary user names rather than inverse aliases. For sums and products that means every single word of `sum_` or `prod_` and then a letter, whatever follows.
 - **A function takes its arguments in a group** of any bracket kind: `log(100)`, `lg[8]`, `ceil{2.1}`, `mod[9, 4]`, with any whitespace between the name and the bracket. A function named without one — `log 100`, `fact 5` — is reported, as is one given the wrong number of arguments: `mod(8)` says it takes two. A call is a value like any other and binds tighter than every operator around it, so `-abs(-3)` is -3 and `abs(-2) ^ 2` is 4.
 - **One trailing comma is optional in function calls, sums, and products.** `sqrt(16,)`, `mod(8, 3,)`, and `sum_i(i, 1, 3,)` mean the same as their forms without it. Whitespace and comments may follow the comma before the closing bracket. It neither supplies a missing argument nor permits another trailing comma; `mod(8,)`, `sqrt(16,,)`, and an ordinary group `(16,)` remain invalid.
 - **`mod` is the remainder, and the only place `%` used to be.** `mod(17, 5)` is 2 and `mod(-7, 3)` is -1, since the sign follows the dividend; its divisor may be any expression, and `mod(5, 0)` is *Undefined*. After setting aside an optional trailing comma, its two arguments are divided by the last comma directly within its brackets, so `mod(3,000, 7,)` keeps its grouped figure whole. `%` cannot be the remainder as well, because it ends a figure as a percent.
 - **`fact` is defined for whole numbers from 0 up.** A fraction or a negative number has no factorial and gives *Undefined*, as does anything past `170!`, which overflows. Past `18!` the product is larger than the whole numbers floating point holds exactly, so it carries the same rounding as the rest of the arithmetic. There is no postfix `!`.
 - **A constant is a value, not a function**, so `e(2)` is missing an operator.
 - **There is no implicit multiplication.** `2(3)`, `(2)(3)`, `2e`, `2pi`, and `2 x` are each missing an operator, not products; a juxtaposition in this language is always a mistake, never a meaning.
-- **A word that is neither declared nor built in is an error**, including functions the calculator does not have: `sin(1)` reports `sin` as undeclared.
+- **A word that is neither declared nor built in is an error**, including functions the calculator does not have: `median(1)` reports `median` as undeclared.
+- **`round` rounds to a whole number, with half ties toward positive infinity.** `round(2.5)` is 3 and `round(-2.5)` is -2. It takes one argument; write `round(x * 100) / 100` for two decimal places.
+- **`min` and `max` take one or more expressions.** Empty lists are invalid; a single argument returns that value. Every comma at their own bracket level divides arguments, with one optional trailing comma, so `min(1,000)` means the minimum of 1 and 0. Use underscores, suffixes, names, or nested ordinary groups for grouped figures: `min((1,000), 900)` and `min(1_000, 900)` are both 900. Nested calls, comments, and declared names retain their own commas. All arguments are evaluated; nonfinite arithmetic retains its usual behavior, so `min(1 / 0, 3)` is 3 and `min(sqrt(-1), 3)` is *Undefined*.
+- **`nCr` and `nPr` require nonnegative integers with `r <= n`.** They count unordered and ordered selections without replacement: mathematically `n! / (r! * (n - r)!)` and `n! / (n - r)!`. Both return 1 for `r = 0`, including `(0, 0)`. Invalid inputs give *Undefined*. Exact integer intermediates avoid factorial overflow and round to the calculator's number type on return; input precision remains floating point. `nCr(200, 2)` is 19,900 and `nPr(200, 2)` is 39,800 even though `fact(200)` overflows. Symmetry shortens combinations, and overflow ends either calculation promptly even for enormous selections; nonfinite results display as *Undefined*.
+- **`n_root(x, n)` accepts any finite nonzero real degree for nonnegative inputs.** Degree 2 matches `sqrt`, and `n_root(16, 0.5)` is 256. A negative degree takes a reciprocal root: `n_root(16, -2)` is 0.25. Negative inputs require odd integer degrees: `n_root(-8, 3)` is -2 and `n_root(-8, -3)` is -0.5. Zero degrees, negative-degree roots of zero, and negative inputs with even or fractional degrees give *Undefined*.
+- **`log_n(x, base)` requires a finite positive base other than 1.** Bases 10, 2, and `e` use the same calculation as `log`, `lg`, and `ln`. Other bases use `ln(x) / ln(base)`, so `log_n(81, 3)` is 4 and `log_n(8, 0.5)` is -3. Invalid bases, nonpositive inputs, and nonfinite results display as *Undefined*.
+
+### Trigonometric functions
+
+Circular functions use radians by default. A `_d` suffix makes direct functions accept degrees and inverse functions return degrees: `sin(pi / 6)` and `sin_d(30)` are 0.5; `arcsin(0.5)` is approximately `pi / 6`, and `arcsin_d(0.5)` is approximately 30. Inverse names always start with `arc`. Their arguments are ratios, not angles. `arctan2(y, x)` takes the vertical coordinate first and chooses the correct quadrant for the point `(x, y)`.
+
+| Radian call | Degree call | Meaning and principal range |
+| --- | --- | --- |
+| `sin(x)` | `sin_d(x)` | Sine. |
+| `cos(x)` | `cos_d(x)` | Cosine. |
+| `tan(x)` | `tan_d(x)` | Tangent. |
+| `sec(x)` | `sec_d(x)` | Secant, `1 / cos(x)`. |
+| `csc(x)` | `csc_d(x)` | Cosecant, `1 / sin(x)`. |
+| `cot(x)` | `cot_d(x)` | Cotangent, `1 / tan(x)`. |
+| `arcsin(x)` | `arcsin_d(x)` | Inverse sine: `-pi/2` through `pi/2`, or -90° through 90°; requires `abs(x) <= 1`. |
+| `arccos(x)` | `arccos_d(x)` | Inverse cosine: 0 through `pi`, or 0° through 180°; requires `abs(x) <= 1`. |
+| `arctan(x)` | `arctan_d(x)` | Inverse tangent: between `-pi/2` and `pi/2`, or -90° and 90°. |
+| `arcsec(x)` | `arcsec_d(x)` | Inverse secant: 0 through `pi`, or 0° through 180°, excluding `pi/2` or 90°; requires `abs(x) >= 1`. |
+| `arccsc(x)` | `arccsc_d(x)` | Inverse cosecant: `-pi/2` through `pi/2`, or -90° through 90°, excluding 0; requires `abs(x) >= 1`. |
+| `arccot(x)` | `arccot_d(x)` | Inverse cotangent: between 0 and `pi`, or 0° and 180°; `arccot(-1)` is `3 * pi / 4`. |
+| `arctan2(y, x)` | `arctan2_d(y, x)` | Point angle: `-pi` through `pi`, or -180° through 180°; `arctan2_d(1, -1)` is 135. |
+
+Degree functions preserve exact sine and cosine values at multiples of 90°, so `sin_d(180)` and `cos_d(90)` are exactly 0. Poles such as `tan_d(90)`, `sec_d(90)`, `csc_d(0)`, and `cot_d(180)` display as *Undefined*. Radian functions use floating-point approximations of angles: `sin(pi)` may leave a small residual, and `tan(pi / 2)` may be a large finite number. Invalid real domains and nonfinite results display as *Undefined*.
+
+Hyperbolic functions and their inverses are unitless and have no `_d` variants. They also use `arc` for inverse names.
+
+| Function | Inverse | Real inverse domain and range |
+| --- | --- | --- |
+| `sinh(x)` | `arcsinh(x)` | Any real input and output. |
+| `cosh(x)` | `arccosh(x)` | Input at least 1; nonnegative output. |
+| `tanh(x)` | `arctanh(x)` | Input strictly between -1 and 1 for finite output. |
+| `sech(x)` | `arcsech(x)` | Input greater than 0 and at most 1 for finite, nonnegative output. |
+| `csch(x)` | `arccsch(x)` | Nonzero input and output. |
+| `coth(x)` | `arccoth(x)` | Input with absolute value greater than 1 for finite output. |
+
+The reciprocal hyperbolic functions are `1 / cosh(x)`, `1 / sinh(x)`, and `1 / tanh(x)`. Their inverses apply `arccosh`, `arcsinh`, and `arctanh` to `1 / x`. These operations follow ordinary floating-point intermediate overflow and underflow behavior; they do not promise exact symbolic cancellation.
 
 ### Sums and products
 
@@ -442,7 +500,7 @@ flowchart TD
 
 A word is read whole and left for the parser to resolve as a constant, a function, a sum or product, an index, or an undeclared name — which is why `taxes` is one unknown word rather than `tax` followed by `es`.
 
-A bracket opened right after a function, `sum`, `prod`, or a word beginning `sum_` or `prod_` holds arguments, so the reader looks ahead to its closing bracket, skipping comments and declared names. It sets aside one optional trailing comma, then marks the last remaining commas directly within the brackets as separators — one fewer than the head's arguments, so two for a sum or product, one for `mod`, and none for a one-argument function. The trailing comma is also emitted as a separator token; expression parsing accepts it before the closing bracket without adding an argument. A figure ends at a marked comma and keeps any grouping comma before one, which is why `log(1,000,)` still reads one argument of 1,000.
+A bracket opened right after a function, `sum`, `prod`, or a word beginning `sum_` or `prod_` holds arguments, so the reader looks ahead to its closing bracket, skipping comments and declared names. It sets aside one optional trailing comma, then marks the last remaining commas directly within the brackets as separators — one fewer than the head's arguments, so two for a sum or product, one for each two-argument function, and none for a one-argument function. Variadic `min` and `max` instead mark every comma at their own bracket level, so `min(1,000)` compares 1 and 0; write `min((1,000), 900)` or `min(1_000, 900)` to keep 1,000 whole. The trailing comma is also emitted as a separator token; expression parsing accepts it before the closing bracket without adding an argument. A figure ends at a marked comma and keeps any grouping comma before one, which is why `log(1,000,)` still reads one argument of 1,000.
 
 Figures follow their own small grammar:
 
@@ -587,7 +645,7 @@ flowchart TD
     UNARY --> POWER["power<br/>primary, then optionally ^ unary"]
     POWER --> PRIMARY["primary<br/>number · reference · index · constant ·<br/>call · iteration · group"]
     PRIMARY --> GROUP["group<br/>an expression between matching brackets"]
-    PRIMARY --> CALL["call<br/>one argument between matching brackets,<br/>or mod's two"]
+    PRIMARY --> CALL["call<br/>one, two, or variadic arguments<br/>between matching brackets"]
     PRIMARY --> ITERATION["iteration<br/>three arguments between matching brackets,<br/>the index bound in the first"]
     GROUP -- "starts over at the loosest level" --> SUM
     CALL -- "each argument starts over" --> SUM
@@ -644,10 +702,11 @@ Parsing stops at the first error. Every message names the one-based line it conc
 | Expression parsing | Unmatched '*bracket*' on line *n* | `1 + 2)` |
 | Expression parsing | '*bracket*' on line *n* is never closed | `(1 + 2` |
 | Expression parsing | '*bracket*' on line *n* is closed by '*bracket*' on line *m*; expected '*bracket*' | `(1 + 2]` |
-| Expression parsing | '*name*' is not declared by an earlier statement on line *n* | `x = x + 1;`, `sin(1)` |
+| Expression parsing | '*name*' is not declared by an earlier statement on line *n* | `x = x + 1;`, `median(1)` |
 | Expression parsing | '*name*' must be followed by a parenthesized argument on line *n* | `log 100` |
 | Expression parsing | 'mod' must be followed by its arguments in brackets, as 'mod(dividend, divisor)', on line *n* | `mod 8` |
 | Expression parsing | 'mod' on line *n* takes two arguments, as 'mod(dividend, divisor)' | `mod(8)` |
+| Expression parsing | 'min' on line *n* takes at least one argument, as 'min(x, ...)' | `min()` |
 | Expression parsing | '*head*' must be followed by its arguments in brackets, as '*head*(expression, start, end)', on line *n* | `sum_i` |
 | Expression parsing | '*head*' on line *n* takes three arguments, as '*head*(expression, start, end)' | `sum_i(i, 0)` |
 | Expression parsing | '*word*' needs an index that starts with a letter, as '*operator*_i(expression, start, end)', on line *n* | `sum(i, 0, 2)`, `sum_1(i, 0, 2)` |
@@ -660,7 +719,7 @@ Calculate reports one message of its own once parsing has succeeded, in the same
 
 Calculate evaluates the parsed program with a fresh scope and a fresh term budget: each declaration in order, then the result expression, if there is one. The parser has already guaranteed that every name and index is bound before it is read, so the only way evaluation stops short is a sum or product that would pass the term limit.
 
-- **Arithmetic is JavaScript's own**, on double-precision floating point, so results carry its rounding. `mod` is its remainder, whose sign follows the dividend; `^` is exponentiation; the constants and every function but `fact`, `inv`, and `mod` are the standard library's.
+- **Arithmetic is JavaScript's own**, on double-precision floating point, so results carry its rounding. `mod` is its remainder, whose sign follows the dividend; `^` is exponentiation; native mathematical functions supply the elementary operations, while composed functions supply real roots, arbitrary-base logarithms, reciprocal trigonometry, and degree conversion. Combinatorial counts use exact integer intermediates and convert to floating point on return, avoiding avoidable factorial overflow. Variadic extrema fold in source order without spreading an unbounded list into native function arguments.
 - **Undefined arithmetic is a value, not an error.** `1 / 0`, `inv(0)`, `ln(-1)`, `sqrt(-1)`, `fact(2.5)`, and `sum_i(i, 0.5, 2)` produce a value that is not finite, as does any declaration built from one, and each shows as *Undefined* rather than blocking the calculation.
 - **Sums and products fold their terms in order**, from the start upward, with JavaScript's own `+` and `*`, so a long sum carries the rounding a long chain of `+` would. The index is bound to each whole number in turn while the first argument is evaluated, and an outer index of the same spelling is restored afterward.
 - **The outcome is the result, if the input ends in an expression, and every declared name with its final value**, in the order declared.
@@ -744,7 +803,7 @@ Most of the language is data. Constants, functions, sums and products, operators
 | To | Change | Follows automatically | Also |
 | --- | --- | --- | --- |
 | Add a constant | An entry in `CONSTANTS` in [`language/syntax.ts`](language/syntax.ts) | Reserved, with the constant-specific message; parsed; evaluated | Tests; the tables in this document |
-| Add a function | An entry in `FUNCTIONS` in the same file, naming its parameters and what it applies — a standard-library function, or one of the calculator's own, as factorial is | Reserved; parsed as a call with that many arguments; its argument list divided; evaluated; highlighted as an operator | Tests; the tables in this document |
+| Add a function | An entry in `FUNCTIONS` in the same file, or the trigonometric catalog it includes, naming its parameters and what it applies — a standard-library function or calculator arithmetic. Mark a fold as `variadic` when it takes one or more arguments | Reserved; parsed as a call with that many arguments; its argument list divided using fixed-arity or variadic rules; evaluated; highlighted as an operator | Tests; the tables in this document |
 | Add an iterated operator | An entry in `ITERATED_OPERATORS` in [`language/iteration.ts`](language/iteration.ts), with its empty-range value and how a term folds in | Its heads reserved; its argument lists read; parsed; evaluated; highlighted | Tests; the tables in this document |
 | Add a magnitude | An entry in [`language/magnitudes.ts`](language/magnitudes.ts) | Read as an input suffix in either case; offered by Suffixed output | Tests; the figure rules above |
 | Add a binary operator | `OPERATOR_SYMBOLS`, a precedence level in the expression parser, and a case in the evaluator | Tokenized and highlighted | Tests; the grammar and precedence table |

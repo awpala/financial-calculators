@@ -236,7 +236,7 @@ function argumentSpans(source: string, claimed: readonly Span[]): Span[] {
       source,
       open + 1,
       source.length,
-      list.parameters.length - 1,
+      list.variadic ? 'all' : list.parameters.length - 1,
       skip,
     );
     for (const separator of layout.separators) {

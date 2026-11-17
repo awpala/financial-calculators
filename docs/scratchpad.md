@@ -67,7 +67,7 @@ Names are case-sensitive: `load`, `Load`, and `LOAD` are distinct. A name must b
 | Name category | Rule |
 | --- | --- |
 | Constants | `e`, `pi`, and `phi` are reserved. |
-| Functions | `log`, `lg`, `ln`, `sqrt`, `abs`, `floor`, `ceil`, `fact`, `inv`, and `mod` are reserved. |
+| Functions | `log`, `lg`, `ln`, `log_n`, `sqrt`, `n_root`, `abs`, `floor`, `ceil`, `round`, `min`, `max`, `fact`, `nCr`, `nPr`, `inv`, `mod`, and every spelling in the [trigonometric reference](#trigonometric-functions) are reserved. |
 | Sum and product heads | Any complete word matching `sum_` or `prod_` followed by a valid index is reserved, including `sum_total` and `prod_step2`. |
 | Numeric-looking names | A name made only of digits, whitespace, commas, underscores, decimal points, dollar signs, and percent signs is rejected; examples include `123`, `$12.50`, and `8%`. |
 | Other spellings | `PI`, `Sqrt`, `sum`, and `sum_2023` may be declared; none is a reserved spelling. |
@@ -163,18 +163,25 @@ These are values, not functions. For example, `pi(2)` is invalid; multiplication
 
 ### Function reference
 
-All functions except `mod` take exactly one expression; `mod` takes two. The parameter letters below are placeholders, not names that must be declared.
+Functions take exactly one expression except `mod`, `nCr`, `nPr`, `n_root`, `log_n`, `arctan2`, and `arctan2_d`, which take two, and `min` and `max`, which take one or more. The parameter letters below are placeholders, not names that must be declared. Function names are case-sensitive: `nCr` and `nPr` require those capital letters, and inverses use the `arc` prefix rather than aliases such as `asin`.
 
 | Call | Meaning | Domain and behavior |
 | --- | --- | --- |
 | `log(x)` | Base-10 logarithm | Requires `x > 0` for a finite result. |
 | `lg(x)` | Base-2 logarithm | Requires `x > 0` for a finite result. |
 | `ln(x)` | Natural logarithm | Requires `x > 0` for a finite result. |
+| `log_n(x, base)` | Logarithm of `x` in the chosen base | Requires `x > 0` and a finite positive base other than 1 for a finite result. |
 | `sqrt(x)` | Square root | Negative arguments give *Undefined*. |
+| `n_root(x, n)` | Real nth root | `n` must be finite and nonzero; negative `x` requires an odd integer degree. |
 | `abs(x)` | Absolute value | Returns the nonnegative magnitude of `x`. |
 | `floor(x)` | Greatest integer less than or equal to `x` | `floor(-2.4)` is -3. |
 | `ceil(x)` | Least integer greater than or equal to `x` | `ceil(-2.4)` is -2. |
+| `round(x)` | Nearest integer, with half ties toward positive infinity | `round(2.5)` is 3; `round(-2.5)` is -2. |
+| `min(x, ...)` | Least of one or more expressions | `min(4, -2, 8)` is -2; an empty argument list is invalid. |
+| `max(x, ...)` | Greatest of one or more expressions | `max(4, -2, 8)` is 8; an empty argument list is invalid. |
 | `fact(x)` | Factorial, the product of integers from 1 through `x` | `fact(0)` is 1; negative or fractional arguments give *Undefined*. |
+| `nCr(n, r)` | Combinations: choose `r` items from `n` without replacement, ignoring order | Both arguments must be nonnegative integers with `r <= n`. |
+| `nPr(n, r)` | Permutations: choose `r` items from `n` without replacement, counting order | Both arguments must be nonnegative integers with `r <= n`. |
 | `inv(x)` | Reciprocal, `1 / x` | Zero gives *Undefined*. |
 | `mod(a, b)` | Remainder after dividing `a` by `b` | The remainder has the dividend's sign; zero divisor gives *Undefined*. |
 
@@ -182,21 +189,63 @@ For example, `mod(-14, 4)` is -2, whereas `mod(14, -4)` is 2. `mod` also accepts
 
 Factorials through `fact(170)` produce finite results. Larger nonnegative integer arguments overflow and display as *Undefined*. Large factorials are subject to the same floating-point precision limits as other arithmetic. There is no postfix `!` operator.
 
-There are no other built-in functions or user-defined functions. Common operations can be expressed using the available ones: `ln(x) / ln(base)` changes a logarithm's base, and `x ^ inv(n)` expresses a root for positive `x`. There is no built-in `round`, `min`, `max`, or trigonometric function.
+`nCr(n, r)` is mathematically `fact(n) / (fact(r) * fact(n - r))`, and `nPr(n, r)` is `fact(n) / fact(n - r)`. Both return 1 for `r = 0`, including `n = 0`. `nCr(5, 2)` is 10, while `nPr(5, 2)` is 20. They compute counts directly rather than evaluating overflowing factorials: `nCr(200, 2)` is 19,900 and `nPr(200, 2)` is 39,800. Counts use exact integer intermediates and round to the calculator's floating-point number type at the end; arguments already carry that type's precision limits. Results beyond the finite numeric range display as *Undefined*, and huge selections stop promptly on overflow.
+
+`n_root(x, 2)` matches `sqrt(x)`. Positive `x` accepts any finite nonzero real degree: `n_root(16, 0.5)` is 256. A negative degree takes a reciprocal root, so `n_root(16, -2)` is 0.25 and `n_root(-8, -3)` is -0.5. Negative `x` accepts only odd integer degrees: `n_root(-8, 3)` is -2, while even or fractional degrees give *Undefined*. A zero degree is undefined, as is a negative-degree root of zero.
+
+`log_n(x, 10)`, `log_n(x, 2)`, and `log_n(x, e)` match `log(x)`, `lg(x)`, and `ln(x)`. Other bases use `ln(x) / ln(base)`: `log_n(81, 3)` is 4, and `log_n(8, 0.5)` is -3. Invalid bases, negative `x`, and nonfinite results display as *Undefined*.
+
+`round` takes one argument and rounds to a whole number; it has no optional precision parameter. To round to two decimal places, write `round(x * 100) / 100`. `min` and `max` accept one or more complete expressions and evaluate every argument in source order. Their values retain ordinary nonfinite arithmetic: `min(1 / 0, 3)` is 3, while `min(sqrt(-1), 3)` is *Undefined*. These functions are built in; user-defined functions are not supported.
+
+### Trigonometric functions
+
+Circular functions use radians by default. A `_d` suffix makes direct functions accept degrees and inverse functions return degrees: `sin(pi / 6)` and `sin_d(30)` are 0.5; `arcsin(0.5)` is approximately `pi / 6`, and `arcsin_d(0.5)` is approximately 30. Inverse names always start with `arc`. Their arguments are ratios, not angles. `arctan2(y, x)` takes the vertical coordinate first and chooses the correct quadrant for the point `(x, y)`.
+
+| Radian call | Degree call | Meaning and principal range |
+| --- | --- | --- |
+| `sin(x)` | `sin_d(x)` | Sine. |
+| `cos(x)` | `cos_d(x)` | Cosine. |
+| `tan(x)` | `tan_d(x)` | Tangent. |
+| `sec(x)` | `sec_d(x)` | Secant, `1 / cos(x)`. |
+| `csc(x)` | `csc_d(x)` | Cosecant, `1 / sin(x)`. |
+| `cot(x)` | `cot_d(x)` | Cotangent, `1 / tan(x)`. |
+| `arcsin(x)` | `arcsin_d(x)` | Inverse sine: `-pi/2` through `pi/2`, or -90° through 90°; requires `abs(x) <= 1`. |
+| `arccos(x)` | `arccos_d(x)` | Inverse cosine: 0 through `pi`, or 0° through 180°; requires `abs(x) <= 1`. |
+| `arctan(x)` | `arctan_d(x)` | Inverse tangent: between `-pi/2` and `pi/2`, or -90° and 90°. |
+| `arcsec(x)` | `arcsec_d(x)` | Inverse secant: 0 through `pi`, or 0° through 180°, excluding `pi/2` or 90°; requires `abs(x) >= 1`. |
+| `arccsc(x)` | `arccsc_d(x)` | Inverse cosecant: `-pi/2` through `pi/2`, or -90° through 90°, excluding 0; requires `abs(x) >= 1`. |
+| `arccot(x)` | `arccot_d(x)` | Inverse cotangent: between 0 and `pi`, or 0° and 180°; `arccot(-1)` is `3 * pi / 4`. |
+| `arctan2(y, x)` | `arctan2_d(y, x)` | Point angle: `-pi` through `pi`, or -180° through 180°; `arctan2_d(1, -1)` is 135. |
+
+Degree functions preserve exact sine and cosine values at multiples of 90°, so `sin_d(180)` and `cos_d(90)` are exactly 0. Poles such as `tan_d(90)`, `sec_d(90)`, `csc_d(0)`, and `cot_d(180)` display as *Undefined*. Radian functions use floating-point approximations of angles: `sin(pi)` may leave a small residual, and `tan(pi / 2)` may be a large finite number. Invalid real domains and nonfinite results display as *Undefined*.
+
+Hyperbolic functions and their inverses are unitless and have no `_d` variants. They also use `arc` for inverse names.
+
+| Function | Inverse | Real inverse domain and range |
+| --- | --- | --- |
+| `sinh(x)` | `arcsinh(x)` | Any real input and output. |
+| `cosh(x)` | `arccosh(x)` | Input at least 1; nonnegative output. |
+| `tanh(x)` | `arctanh(x)` | Input strictly between -1 and 1 for finite output. |
+| `sech(x)` | `arcsech(x)` | Input greater than 0 and at most 1 for finite, nonnegative output. |
+| `csch(x)` | `arccsch(x)` | Nonzero input and output. |
+| `coth(x)` | `arccoth(x)` | Input with absolute value greater than 1 for finite output. |
+
+The reciprocal hyperbolic functions are `1 / cosh(x)`, `1 / sinh(x)`, and `1 / tanh(x)`. Their inverses apply `arccosh`, `arcsinh`, and `arctanh` to `1 / x`. These operations follow ordinary floating-point intermediate overflow and underflow behavior; they do not promise exact symbolic cancellation.
 
 ### Commas in argument lists
 
-Function calls, sums, and products allow one optional trailing comma after the final argument: `sqrt(25,)`, `mod(14, 4,)`, and `sum_i(i, 1, 3,)` are valid. Whitespace and comments may follow that comma before the closing bracket. The comma does not supply a missing argument: `mod(14,)` is still invalid, as are repeated trailing commas and commas in ordinary expression groups such as `(25,)`.
+Function calls, sums, and products allow one optional trailing comma after the final argument: `sqrt(25,)`, `mod(14, 4,)`, `min(4, 2,)`, and `sum_i(i, 1, 3,)` are valid. Whitespace and comments may follow that comma before the closing bracket. The comma does not supply a missing argument: `mod(14,)` is still invalid, as are repeated trailing commas and commas in ordinary expression groups such as `(25,)`.
 
-Because commas can group digits as well as separate arguments, calls use a specific rule: **after setting aside an optional trailing comma, the last required commas directly inside a call's brackets separate its arguments**. Commas inside nested brackets, comments, or matched declared names do not count as separators for the surrounding call.
+Because commas can group digits as well as separate arguments, fixed-arity calls use a specific rule: **after setting aside an optional trailing comma, the last required commas directly inside a call's brackets separate its arguments**. Variadic `min` and `max` instead divide at every comma directly inside their brackets. Commas inside nested brackets, comments, or matched declared names do not count as separators for the surrounding call.
 
 | Call | Argument separators | Example |
 | --- | --- | --- |
 | A one-argument function | None; other than the optional trailing comma, commas only group digits | `log(10,000,)` is the logarithm of 10,000. |
-| `mod(a, b)` | The last comma at that bracket level before any trailing comma | `mod(10,000, 6,)` has dividend 10,000 and divisor 6. |
+| `min(x, ...)` or `max(x, ...)` | Every comma at that bracket level, with one optional trailing comma | `min(1,000)` has two arguments, 1 and 0; use `min((1,000), 900)` or `min(1_000, 900)` to compare 1,000 with 900. |
+| A two-argument function: `mod`, `nCr`, `nPr`, `n_root`, `log_n`, `arctan2`, or `arctan2_d` | The last comma at that bracket level before any trailing comma | `mod(10,000, 6,)` has dividend 10,000 and divisor 6; `nCr(1,000, 2)` chooses 2 from 1,000. |
 | `sum_i(body, start, end)` or `prod_i(body, start, end)` | The last two commas at that bracket level before any trailing comma | `sum_i(1,500 * i, 1, 3,)` has body `1,500 * i` and bounds 1 and 3. |
 
-Use ungrouped digits, underscores, magnitude suffixes, or declared names for the divisor of `mod` and the bounds of sums and products. For example, write `mod(12000, 1000)` or `mod(12000, 1_000)`, and write `sum_i(i, 1000, 2000)` or `sum_i(i, 1k, 2k)`. An extra pair of brackets can also protect grouped digits: `mod(12000, (1,000))` and `sum_i(i, (1,000), (2,000))` are valid.
+Use ungrouped digits, underscores, magnitude suffixes, or declared names for the second argument of any two-argument function and the bounds of sums and products. For example, write `mod(12000, 1000)` or `mod(12000, 1_000)`, and write `sum_i(i, 1000, 2000)` or `sum_i(i, 1k, 2k)`. An extra pair of brackets can also protect grouped digits: `mod(12000, (1,000))`, `nCr(2000, (1,000))`, and `sum_i(i, (1,000), (2,000))` are valid.
 
 Do not rely on spaces after commas to distinguish the two uses. `mod(12000, 1,000)` does not mean a divisor of 1,000, and `sum_i(i, 1,000, 2,000)` does not provide the intended two bounds.
 
@@ -256,7 +305,7 @@ Scientific notation can appear in output even though it is not accepted as input
 
 ### Undefined arithmetic
 
-Syntax can be valid even when a calculation has no finite numeric result. Nonfinite values display as **Undefined**, including division by zero, a logarithm of a nonpositive number, a square root of a negative number, an invalid factorial, invalid iteration bounds, and overflow. Complex numbers are not supported.
+Syntax can be valid even when a calculation has no finite numeric result. Nonfinite values display as **Undefined**, including division by zero, a logarithm of a nonpositive number or invalid base, a root outside its real domain, an invalid factorial or combinatorial selection, a trigonometric pole or invalid inverse domain, invalid iteration bounds, and overflow. Complex numbers are not supported.
 
 Undefined arithmetic does not disable Calculate or stop the rest of a program from being evaluated. A name may display as *Undefined* while an independent final expression remains finite. Internally, nonfinite floating-point values continue through subsequent arithmetic; *Undefined* is their common display label rather than a distinct error value. For example, `inv(1 / 0)` evaluates to 0. Avoid treating every undefined intermediate as interchangeable or assuming it will always propagate to the final result.
 
@@ -350,6 +399,58 @@ cartons needed * cost per carton
 
 The result is **20.35**, the cost of 11 cartons. The named values also show 10 full cartons, 17 loose parts, and 7 unused spaces in the purchased cartons. `floor` counts complete groups, `mod` finds the remainder, and `ceil` includes a partly filled carton.
 
+### Engineering: AC series RLC circuit analysis
+
+A 120-volt RMS, 60-hertz sinusoidal source drives a series circuit with a 40-ohm resistor, a 0.1-henry inductor, and a 100-microfarad capacitor. Calculate the steady-state RMS current, impedance phase angle, power factor, and average real power. Use volts, hertz, ohms, henries, and farads throughout; `0.0001` farad is 100 microfarads. Units belong in the explanation or declared names, since Scratchpad does not convert units.
+
+```text
+source RMS voltage = 120;
+frequency = 60;
+resistance = 40;
+inductance = 0.1;
+capacitance = 0.0001;
+angular frequency = 2 * pi * frequency;
+inductive reactance = angular frequency * inductance;
+capacitive reactance = 1 / (angular frequency * capacitance);
+net reactance = inductive reactance - capacitive reactance;
+impedance magnitude = sqrt(resistance ^ 2 + net reactance ^ 2);
+RMS current = source RMS voltage / impedance magnitude;
+phase angle (degrees) = arctan2_d(net reactance, resistance);
+power factor = cos_d(phase angle (degrees));
+real power = RMS current ^ 2 * resistance;
+real power
+```
+
+The result is approximately **333.94 watts**. Named values show an impedance magnitude of approximately 41.5312 ohms, an RMS current of 2.88939 amperes, an impedance phase angle of 15.6068 degrees, and a power factor of 0.963131. Positive net reactance makes the circuit inductive, so current lags the source voltage by that angle. `arctan2_d` takes the reactive component first and the resistive component second; `cos_d` uses its degree result directly. The real-power result also agrees with `source RMS voltage * RMS current * power factor`.
+
+This model assumes ideal components in sinusoidal steady state, with the resistor representing all real dissipation. The inductor and capacitor exchange energy without dissipating average power. It keeps the real and reactive impedance components as separate numeric values, so no complex-number syntax is required; it does not model switching transients, parasitic losses, or component tolerances.
+
+### Engineering: steady-state chemical reactor balance
+
+An ideal continuous stirred-tank reactor (CSTR) converts species A to B in an irreversible, first-order reaction with one mole of B formed per mole of A consumed. Its liquid volume is 100 liters, the feed and outlet flow rates are both 10 liters per minute, the feed contains 2 moles of A per liter and no B, and the rate constant is 0.08 per minute. Calculate the outlet concentrations and percentage conversion of A.
+
+At steady state, accumulation is zero: `feed flow * inlet A - feed flow * outlet A - rate constant * reactor volume * outlet A = 0`. Here that equation explains the balance; the runnable program below evaluates its rearranged formula rather than asking Scratchpad to solve an equation.
+
+```text
+reactor volume = 100; # liters
+feed flow = 10; # liters per minute; same at inlet and outlet
+inlet A = 2; # moles per liter
+rate constant = 0.08; # per minute
+residence time = reactor volume / feed flow;
+outlet A = inlet A / (1 + rate constant * residence time);
+outlet B = inlet A - outlet A;
+conversion = 1 - outlet A / inlet A;
+A fed per minute = feed flow * inlet A;
+A leaving per minute = feed flow * outlet A;
+A consumed per minute = rate constant * reactor volume * outlet A;
+balance residual = A fed per minute - A leaving per minute - A consumed per minute;
+100 * conversion
+```
+
+The result is approximately **44.4444**, meaning 44.4444% conversion. Named values show a residence time of 10 minutes, an outlet A concentration of approximately 1.11111 moles per liter, and an outlet B concentration of 0.888889 moles per liter. The A balance reconciles 20 moles per minute entering with 11.1111 leaving and 8.88889 consumed; `balance residual` is zero for these inputs, subject to floating-point rounding after edits.
+
+The model assumes perfect mixing, constant liquid density and volume, constant temperature, and a positive flow rate. The reactor concentration therefore equals the outlet concentration, and the reaction rate is evaluated at `outlet A`. The rate constant is fixed at the operating temperature; the calculation does not solve an energy balance, predict temperature changes, or model startup accumulation or additional reactions.
+
 ### Geometry and measurement error
 
 A circular plate has a measured diameter of 48.6 centimeters and a nominal diameter of 50 centimeters. Calculate its area and the magnitude of the area deviation from the nominal plate.
@@ -422,7 +523,7 @@ sample size = 8;
 defect probability = 10%;
 allowed defects = 1;
 pass probability = sum_d(
-  fact(sample size) / [fact(d) * fact(sample size - d)]
+  nCr(sample size, d)
     * defect probability ^ d
     * (1 - defect probability) ^ (sample size - d),
   0, allowed defects
@@ -430,7 +531,7 @@ pass probability = sum_d(
 100 * pass probability
 ```
 
-The result is **81.310473**, a pass probability of 81.310473%. The factorial ratio counts which items are defective; the two powers give the probability of each such arrangement. The index `d` belongs to the sum's body, and `fact(0) = 1` makes the zero-defect term valid. The calculation assumes independent items with the same defect probability.
+The result is **81.310473**, a pass probability of 81.310473%. `nCr` counts which items are defective; the two powers give the probability of each such arrangement. The index `d` belongs to the sum's body, and `nCr(sample size, 0) = 1` makes the zero-defect term valid. The calculation assumes independent items with the same defect probability.
 
 ### Reliability across stages
 

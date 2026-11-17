@@ -12,6 +12,8 @@
  * `1,000` would be divided at its comma. Commas inside a nested bracket, a
  * comment, or a declared name are not directly within the brackets and never
  * divide them.
+ * Variadic functions instead separate at every comma directly within their
+ * brackets; digit grouping then needs underscores or a nested ordinary group.
  */
 
 import { ARGUMENT_SEPARATOR } from '#lib/calculator/language/iteration.js';
@@ -23,7 +25,7 @@ import {
 
 /** How one argument list divides, and where it ends. */
 export type ArgumentLayout = {
-  /** Indices of the last `count` argument separators (or fewer when missing), followed by the optional trailing comma, in source order. */
+  /** Indices of the last `count` argument separators, or all for a variadic list, followed by the optional trailing comma, in source order. */
   separators: number[];
   /** Index of the bracket closing the list, or of wherever reading stopped short of one. */
   end: number;
@@ -33,7 +35,7 @@ export type ArgumentLayout = {
  * Lay out the argument list whose text begins at `start`, just past its opening
  * bracket, reading no further than `end` or the `;` that ends its statement.
  * The list takes `count` separators, one fewer than the arguments its head
- * names, plus an optional comma before its closing bracket. Whitespace, dollar
+ * names, or 'all' for a variadic list, plus an optional comma before its closing bracket. Whitespace, dollar
  * signs, and comments after that comma do not change its role. Wherever a
  * comment or a declared name begins, `skip` returns the index just past it, so
  * that nothing within one is read as a bracket or a comma.
@@ -42,7 +44,7 @@ export function layOutArguments(
   source: string,
   start: number,
   end: number,
-  count: number,
+  count: number | 'all',
   skip: (index: number) => number | undefined,
 ): ArgumentLayout {
   const commas: number[] = [];
@@ -74,7 +76,8 @@ export function layOutArguments(
     isClosingBracket(source[index]) && commas.at(-1) === lastContent
       ? commas.pop()
       : undefined;
-  const separators = count === 0 ? [] : commas.slice(-count);
+  const separators =
+    count === 'all' ? commas : count === 0 ? [] : commas.slice(-count);
   if (trailing !== undefined) separators.push(trailing);
   return { separators, end: Math.min(index, end) };
 }

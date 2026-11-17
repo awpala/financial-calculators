@@ -81,11 +81,30 @@ Presents highlighted Scratchpad syntax and runnable examples, including nested i
         </p>
         <p>
           <HighlightedExpression
-            source="log lg ln sqrt abs floor ceil fact inv"
+            source="log lg ln sqrt abs floor ceil round fact inv"
           />
         </p>
         <p>
           <HighlightedExpression source="mod(8, 3)" /> is the remainder, 2.
+        </p>
+        <p>
+          <HighlightedExpression source="round(-2.5)" /> is -2: half ties round toward
+          positive infinity. <HighlightedExpression source="min(4, 2, 8)" />
+          is 2; <HighlightedExpression source="max(4, 2, 8)" /> is 8. Both accept
+          one or more arguments. Every comma separates them; write grouped figures
+          as <HighlightedExpression source="1_000" /> or
+          <HighlightedExpression source="(1,000)" />.
+        </p>
+        <p>
+          <HighlightedExpression source="n_root(27, 3)" /> is 3;
+          <HighlightedExpression source="log_n(81, 3)" /> is 4. Root degrees may be
+          any nonzero real number; negative inputs need odd integer degrees. Logarithm
+          bases must be positive and cannot be 1.
+        </p>
+        <p>
+          <HighlightedExpression source="nCr(5, 2)" /> counts 10 combinations;
+          <HighlightedExpression source="nPr(5, 2)" /> counts 20 permutations. Both
+          require whole numbers with 0 ≤ r ≤ n. Spellings are case-sensitive.
         </p>
         <p>
           Constants: <HighlightedExpression source="e pi phi" />.
@@ -122,6 +141,42 @@ Presents highlighted Scratchpad syntax and runnable examples, including nested i
           floating-point arithmetic.
         </p>
       </div>
+    </div>
+    <div
+      class="mt-6 space-y-2 border-t border-slate-200 pt-5 text-sm leading-relaxed text-slate-600 dark:border-slate-800 dark:text-slate-400"
+    >
+      <h3 class="font-semibold text-slate-900 dark:text-slate-100">
+        Trigonometry
+      </h3>
+      <p>
+        <HighlightedExpression source="sin cos tan sec csc cot" /> use radians. Append
+        <code>_d</code>
+        for degree arguments:
+        <HighlightedExpression source="sin_d(30)" /> is 0.5.
+      </p>
+      <p>
+        Inverses: <HighlightedExpression
+          source="arcsin arccos arctan arcsec arccsc arccot"
+        />. Append <code>_d</code> for degree results:
+        <HighlightedExpression source="arcsin_d(0.5)" /> is 30.
+        <HighlightedExpression source="arctan2(y, x)" /> gives a point's angle;
+        <HighlightedExpression source="arctan2_d(1, -1)" /> is 135.
+      </p>
+      <p>
+        Hyperbolic functions: <HighlightedExpression
+          source="sinh cosh tanh sech csch coth"
+        />, with inverses
+        <HighlightedExpression
+          source="arcsinh arccosh arctanh arcsech arccsch arccoth"
+        />. These are unitless and have no <code>_d</code> variants. Arguments
+        outside a function's real domain display as <em>Undefined</em>.
+      </p>
+      <HighlightedExpression
+        source="sin_d(30) + cos_d(60)"
+        block
+        {onRun}
+        exampleName="Trigonometry"
+      />
     </div>
     <div
       class="mt-6 grid gap-4 border-t border-slate-200 pt-5 md:grid-cols-2 dark:border-slate-800"

@@ -25,9 +25,16 @@
  * unary sign, then `^` (right-associative, so `-2^2` is `-4` and `2^3^2` is
  * `512`). Parentheses, brackets, and braces group interchangeably but must close
  * with their own kind. `log` (base 10), `lg` (base 2), `ln`, `sqrt`, `abs`,
- * `floor`, `ceil`, `fact` (factorial), and `inv` (`1 / x`) take one grouped
- * argument, and `mod` (`mod(8, 3)` is 2) takes two; `e` is Euler's number,
- * `pi` is π, and `phi` is the golden ratio. These thirteen names are reserved:
+ * `floor`, `ceil`, `round`, `fact` (factorial), and `inv` (`1 / x`) take one grouped
+ * argument. `mod`, `nCr`, `nPr`, `n_root`, and `log_n` take two, as does
+ * `arctan2(y, x)`. Circular trigonometric functions use radians; their `_d`
+ * variants accept degrees or return degrees for inverses. Inverses use the
+ * `arc` prefix, including hyperbolic inverses such as `arcsinh`.
+ * `min` and `max` take one or more expressions, with every comma at their own
+ * bracket level separating arguments; grouped digits need nested brackets or
+ * underscores. Fixed-arity calls keep their last-comma separator rules.
+ * `e` is Euler's number, `pi` is π, and `phi` is the golden ratio.
+ * All built-in names are reserved in exactly their registered spellings:
  * a declaration of one is refused, and one of a constant says so. Names are
  * case-sensitive and there is no implicit multiplication: `2(3)` and `2pi` are
  * missing an operator, not products.
@@ -94,7 +101,7 @@ export type Expression =
       kind: 'call';
       /** The function to evaluate. */
       name: CalculatorFunction;
-      /** The grouped arguments passed to the function, one per parameter, in the order written. */
+      /** Grouped arguments in source order; one per parameter, or one or more for a variadic function. */
       arguments: Expression[];
     }
   | {

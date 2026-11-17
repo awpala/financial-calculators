@@ -1,5 +1,12 @@
 import { factorial } from '#lib/calculator/language/factorial.js';
 import {
+  combinations,
+  permutations,
+} from '#lib/calculator/language/combinatorics.js';
+import { nthRoot } from '#lib/calculator/language/nth-root.js';
+import { logarithm } from '#lib/calculator/language/logarithm.js';
+import { TRIGONOMETRIC_FUNCTIONS } from '#lib/calculator/language/trigonometry.js';
+import {
   ARGUMENT_SEPARATOR,
   ITERATION_PARAMETERS,
   iteratedOperatorOf,
@@ -10,7 +17,9 @@ import {
 export type BuiltInFunction = {
   /** The parameters in order, one per argument, as the messages name them. */
   parameters: readonly string[];
-  /** Apply the function to its arguments' values, in the order written. */
+  /** Whether one or more arguments are folded pairwise with apply; defaults to false. */
+  variadic?: boolean;
+  /** Apply ordered argument values, or combine two values at a time for variadic functions. */
   apply: (...values: number[]) => number;
 };
 
@@ -22,16 +31,30 @@ export const FUNCTIONS = {
   lg: { parameters: ['x'], apply: Math.log2 },
   /** Natural logarithm. */
   ln: { parameters: ['x'], apply: Math.log },
+  /** Logarithm in a finite positive base other than 1. */
+  log_n: { parameters: ['x', 'base'], apply: logarithm },
   /** Square root. */
   sqrt: { parameters: ['x'], apply: Math.sqrt },
+  /** Real nth root; a negative degree takes a reciprocal root. */
+  n_root: { parameters: ['x', 'n'], apply: nthRoot },
   /** Absolute value. */
   abs: { parameters: ['x'], apply: Math.abs },
   /** The greatest integer not above the argument. */
   floor: { parameters: ['x'], apply: Math.floor },
   /** The least integer not below the argument. */
   ceil: { parameters: ['x'], apply: Math.ceil },
+  /** Nearest integer, with half ties toward positive infinity. */
+  round: { parameters: ['x'], apply: Math.round },
+  /** The least of one or more values, retaining nonfinite arithmetic. */
+  min: { parameters: ['x'], variadic: true, apply: Math.min },
+  /** The greatest of one or more values, retaining nonfinite arithmetic. */
+  max: { parameters: ['x'], variadic: true, apply: Math.max },
   /** Factorial of a non-negative integer; anything else has none. */
   fact: { parameters: ['x'], apply: factorial },
+  /** Unordered selections of r items from n without replacement. */
+  nCr: { parameters: ['n', 'r'], apply: combinations },
+  /** Ordered selections of r items from n without replacement. */
+  nPr: { parameters: ['n', 'r'], apply: permutations },
   /** Reciprocal, shorthand for `1 / x`. */
   inv: { parameters: ['x'], apply: (value: number) => 1 / value },
   /** The remainder after dividing, whose sign follows the dividend. */
@@ -39,6 +62,7 @@ export const FUNCTIONS = {
     parameters: ['dividend', 'divisor'],
     apply: (dividend: number, divisor: number) => dividend % divisor,
   },
+  ...TRIGONOMETRIC_FUNCTIONS,
 } as const satisfies Readonly<Record<string, BuiltInFunction>>;
 
 /** A named function the calculator supports. */
@@ -85,6 +109,8 @@ export type ArgumentList = {
   head: string;
   /** The parameters in order, one per argument. */
   parameters: readonly string[];
+  /** Whether every comma at this bracket level separates arguments; defaults to false. */
+  variadic?: boolean;
 };
 
 /**
@@ -93,19 +119,24 @@ export type ArgumentList = {
  * `sum_2023` divide their brackets like `sum_i`, so that the parser can report
  * the missing index rather than a stray comma. A function of one argument has
  * no separating commas, but can still end with an optional trailing comma.
+ * Variadic functions divide at every comma at their own bracket level.
  */
 export function readArgumentList(word: string): ArgumentList | undefined {
   if (isCalculatorFunction(word)) {
-    const { parameters } = FUNCTIONS[word];
-    return { head: word, parameters };
+    const { parameters, variadic }: BuiltInFunction = FUNCTIONS[word];
+    return { head: word, parameters, variadic };
   }
   if (iteratedOperatorOf(word) === undefined) return undefined;
   return { head: word, parameters: ITERATION_PARAMETERS };
 }
 
 /** How a head's arguments read back, as `mod(dividend, divisor)`. */
-export function describeArguments({ head, parameters }: ArgumentList): string {
-  return `${head}(${parameters.join(`${ARGUMENT_SEPARATOR} `)})`;
+export function describeArguments({
+  head,
+  parameters,
+  variadic,
+}: ArgumentList): string {
+  return `${head}(${[...parameters, ...(variadic ? ['...'] : [])].join(`${ARGUMENT_SEPARATOR} `)})`;
 }
 
 const COUNT_WORDS = ['no', 'one', 'two', 'three'];

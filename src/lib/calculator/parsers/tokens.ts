@@ -27,6 +27,7 @@
  * `sum_i(i ^ 2,0,2)` is three figures while `3,000` in
  * `prod_i(3,000 * i, 0, 1)` is one. A trailing comma before a call's closing
  * bracket is marked separately from digit grouping, including one-argument calls.
+ * Variadic min/max calls separate at every comma at their own bracket level.
  */
 
 import {
@@ -164,7 +165,7 @@ export function tokenize(
 ): TokenizeResult {
   const tokens: Token[] = [];
   // One entry per open group, holding its argument separators and optional
-  // trailing comma; other commas within a call must group digits.
+  // trailing comma; other commas within a fixed-arity call must group digits.
   const groups: (ArgumentGroup | undefined)[] = [];
   const skip = (at: number): number | undefined => {
     if (source[at] === COMMENT_MARKER) return commentEnd(source, at, end);
@@ -223,7 +224,7 @@ export function tokenize(
             source,
             index + 1,
             end,
-            list.parameters.length - 1,
+            list.variadic ? 'all' : list.parameters.length - 1,
             skip,
           ).separators,
         },

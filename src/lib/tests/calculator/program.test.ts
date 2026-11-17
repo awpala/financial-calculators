@@ -374,7 +374,7 @@ describe('calculator program parsing', () => {
     ['x_2', "'x_2' is not declared by an earlier statement on line 1"],
     ['_x', "'_' must sit between digits or within a name on line 1"],
     ['1_ + 2', "'_' must sit between digits on line 1"],
-    ['sin(1)', "'sin' is not declared by an earlier statement on line 1"],
+    ['median(1)', "'median' is not declared by an earlier statement on line 1"],
     ['log 10', "'log' must be followed by a parenthesized argument on line 1"],
     ['1 +\nln', "'ln' must be followed by a parenthesized argument on line 2"],
     ['1 = 1', "'1' reads as a number and cannot be declared on line 1"],

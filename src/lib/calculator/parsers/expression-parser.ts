@@ -8,6 +8,7 @@ import {
   isReservedName,
   MATCHING_BRACKET,
   type CalculatorFunction,
+  type BuiltInFunction,
   type OperatorSymbol,
 } from '#lib/calculator/language/syntax.js';
 import {
@@ -182,20 +183,26 @@ export class ExpressionParser {
    * a count its function does not take. One trailing comma is allowed before
    * the closing bracket. A function of one argument keeps the message naming
    * a single parenthesized argument, since its brackets divide
-   * at no comma to explain.
+   * at no comma to explain. Variadic functions require at least one argument.
    */
   #call(name: CalculatorFunction, line: number): Expression {
-    const { parameters } = FUNCTIONS[name];
-    const list = { head: name, parameters };
+    const { parameters, variadic }: BuiltInFunction = FUNCTIONS[name];
+    const list = { head: name, parameters, variadic };
     const open = this.#peek();
     if (open?.kind !== 'open') {
       throw new ParseError(
-        parameters.length > 1
+        parameters.length > 1 || variadic
           ? `'${name}' must be followed by its arguments in brackets, as '${describeArguments(list)}', on line ${line}`
           : `'${name}' must be followed by a parenthesized argument on line ${line}`,
       );
     }
     this.#index += 1;
+
+    if (variadic && this.#peek()?.kind === 'close') {
+      throw new ParseError(
+        `'${name}' on line ${line} takes at least one argument, as '${describeArguments(list)}'`,
+      );
+    }
 
     const argumentsRead = [this.#sum()];
     while (this.#peek()?.kind === 'separator') {
@@ -205,7 +212,7 @@ export class ExpressionParser {
     }
     this.#close(open);
 
-    if (argumentsRead.length !== parameters.length) {
+    if (!variadic && argumentsRead.length !== parameters.length) {
       throw new ParseError(
         `'${name}' on line ${line} takes ${countWord(parameters.length)} arguments, as '${describeArguments(list)}'`,
       );

@@ -98,7 +98,17 @@ class ProgramEvaluator {
       case 'negate':
         return -this.#evaluate(expression.operand);
       case 'call': {
-        const { apply }: BuiltInFunction = FUNCTIONS[expression.name];
+        const { apply, variadic }: BuiltInFunction = FUNCTIONS[expression.name];
+        if (variadic) {
+          // Fold without spreading a user-sized list into native function
+          // arguments, which would otherwise exceed the engine's call limit.
+          let value = Number.NaN;
+          for (const [index, argument] of expression.arguments.entries()) {
+            const next = this.#evaluate(argument);
+            value = index === 0 ? next : apply(value, next);
+          }
+          return value;
+        }
         return apply(
           ...expression.arguments.map((argument) => this.#evaluate(argument)),
         );

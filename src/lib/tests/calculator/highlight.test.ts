@@ -75,16 +75,34 @@ describe('calculator input highlighting', () => {
   );
 
   it.each(Object.entries(FUNCTIONS))(
-    'tones a trailing comma in %s without recoloring digit grouping',
-    (name, { parameters }) => {
+    'tones a trailing comma in %s using its argument separator rules',
+    (name, definition) => {
+      const { parameters } = definition;
+      const variadic = 'variadic' in definition && definition.variadic;
       const call = `${name}(${parameters.map((_, at) => (at === 0 ? '1,000' : '3')).join(', ')},)`;
       expect(toned(call)).toEqual([
         ['operator', name],
-        ...parameters.map((): [string, string] => ['operator', ',']),
+        ...Array.from(
+          { length: parameters.length + (variadic ? 1 : 0) },
+          (): [string, string] => ['operator', ','],
+        ),
       ]);
       assertLossless(call);
     },
   );
+
+  it('separates variadic arguments while preserving nested digit grouping', () => {
+    const source = 'min((1,000), max(4, 2), 900,)';
+    expect(toned(source)).toEqual([
+      ['operator', 'min'],
+      ['operator', ','],
+      ['operator', 'max'],
+      ['operator', ','],
+      ['operator', ','],
+      ['operator', ','],
+    ]);
+    assertLossless(source);
+  });
 
   it('leaves a percent plain with the figure it ends, toning no remainder of its own', () => {
     expect(toned('rate = 4.5%;\nmod($2k * rate, 10)')).toEqual([
