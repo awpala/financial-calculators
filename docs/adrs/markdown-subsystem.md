@@ -182,7 +182,7 @@ A syntax change starts with the AST contract and an authored example. Implement 
 
 Use the UI check, lint, formatting, test, and build gates. For runtime rendering changes, also exercise representative content in the configured browser environment: code in light and dark themes, nested diagrams, broken diagrams, math, table overflow and frozen columns, popup navigation, clipboard feedback, and teardown after route changes. Inspect client output when moving heavy dependencies to ensure the runtime import boundary holds.
 
-Run Node 24 application checks and distinguish mocked lifecycle tests from actual Chromium rendering. Historical reference benchmark numbers and browser results are not validation of this application.
+Run Node 26 application checks and distinguish mocked lifecycle tests from actual Chromium rendering. Historical reference benchmark numbers and browser results are not validation of this application.
 
 ## Consequences
 

@@ -13,7 +13,7 @@ The application has no external data service and prepares repository-owned conte
 
 Use the SvelteKit static adapter with strict validation, SSR enabled, complete prerendering, directory indexes, and no SPA fallback. The single output directory is `build/`. The root layout exports `prerender = true` and `trailingSlash = 'always'`; all current calculator and settings pages have static routes. The retained document catalog can supply complete entries for a future document consumer, but is not currently published.
 
-Deploy one Dockerfile application on Coolify at `https://fincalcs.portfolio-projects.dev`. Node 24 and Chromium prepare content in the builder stage; unprivileged Nginx serves only HTML, route data, and browser assets on internal port `8080`. Coolify owns TLS and proxy routing. Application runtime environment variables, persistent volumes, accounts, and sessions are unnecessary.
+Deploy one Dockerfile application on Coolify at `https://fincalcs.portfolio-projects.dev`. Node 26 and Chromium prepare content in the builder stage; unprivileged Nginx serves only HTML, route data, and browser assets on internal port `8080`. Coolify owns TLS and proxy routing. Application runtime environment variables, persistent volumes, accounts, and sessions are unnecessary.
 
 | Boundary | Owner | Contract |
 | --- | --- | --- |

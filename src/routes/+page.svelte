@@ -3,7 +3,6 @@
 Introduces the available calculators without owning calculator state.
 -->
 <script lang="ts">
-  import { resolve } from '$app/paths';
   import PageContainer from '#lib/components/layout/PageContainer.svelte';
   import PageHeader from '#lib/components/layout/PageHeader.svelte';
   import AmortizationIcon from '#lib/icons/content/AmortizationIcon.svelte';
@@ -28,20 +27,20 @@ Introduces the available calculators without owning calculator state.
   />
   <div class="grid gap-4 sm:grid-cols-3">
     <RoutingCard
-      href={resolve('/scratchpad')}
+      href="/scratchpad"
       title="Scratchpad"
       description="Write expressions, name your figures, and keep the working beside the result."
       icon={ScratchpadIcon}
     />
     <RoutingCard
-      href={resolve('/amortization')}
+      href="/amortization"
       title="Amortization"
       description="Estimate a loan payment and see how principal and interest change over time."
       icon={AmortizationIcon}
       accent="emerald"
     />
     <RoutingCard
-      href={resolve('/cashflow')}
+      href="/cashflow"
       title="Cashflow"
       description="Estimate monthly take-home pay and see how income, taxes, and deductions add up."
       icon={CashflowIcon}

@@ -3,16 +3,17 @@
 Presents an application destination as an icon, heading, and description inside one card link. The caller resolves the route and owns the surrounding grid; this component owns no state or resources.
 -->
 <script lang="ts">
+  import { resolve } from '$app/paths';
   import type { Component } from 'svelte';
-  import type { ResolvedPathname } from '$app/types';
+  import type { RouteId } from '$app/types';
 
   /** Available color accents for the card's icon, hover, and focus treatments. */
   type Accent = 'sky' | 'emerald' | 'violet';
 
   /** Public destination and presentation inputs for this card. */
   type Props = {
-    /** Application destination produced by the caller's typed resolve() call. */
-    href: ResolvedPathname;
+    /** Internal route ID resolved by this card before navigation. */
+    href: RouteId;
     /** Destination name, displayed as a level-two heading. */
     title: string;
     /** Brief description of the destination's purpose. */
@@ -54,7 +55,7 @@ Presents an application destination as an icon, heading, and description inside 
 </script>
 
 <a
-  {href}
+  href={resolve(href)}
   class={[
     'group rounded-xl border border-slate-200 p-6 transition-colors focus-visible:outline-2 dark:border-slate-800',
     accents[accent].link,

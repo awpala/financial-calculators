@@ -255,7 +255,7 @@ Coolify's [rollback procedure](https://coolify.io/docs/applications/deployments/
 
 ## Deployment behavior behind this recipe
 
-The [Dockerfile](../../Dockerfile) installs Node 24, Chromium, fonts, and locked npm dependencies in its builder stage. It prerenders the application, running document transforms only if a route consumes them, and copies only `build/` into an unprivileged Nginx image. Node and Chromium are absent from the serving stage. The Docker context excludes local environment files, references, logs, generated output, editor state, and agent configuration.
+The [Dockerfile](../../Dockerfile) installs Node 26, Chromium, fonts, and locked npm dependencies in its builder stage. It prerenders the application, running document transforms only if a route consumes them, and copies only `build/` into an unprivileged Nginx image. Node and Chromium are absent from the serving stage. The Docker context excludes local environment files, references, logs, generated output, editor state, and agent configuration.
 
 All deployed pages, route data, and browser assets are public. The private GitHub repository controls source access; visitors need no account or password. The application has no runtime data API, database, or session store. Browser preferences stay local. Published content changes require a rebuild. Nginx serves directory indexes rather than an SPA fallback; HTML and route data require revalidation, while content-hashed assets use a year-long immutable cache policy.
 

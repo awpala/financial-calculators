@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # Public static site. The build owns Chromium; the serving image only has Nginx.
-FROM node:24-bookworm-slim AS builder
+FROM node:26-trixie-slim AS builder
 WORKDIR /app
 ENV PUPPETEER_SKIP_DOWNLOAD=true PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 RUN apt-get update \

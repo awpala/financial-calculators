@@ -3,6 +3,8 @@
 Renders the application's standard action control with primary, secondary, or destructive emphasis, as a link when given href and a button otherwise.
 -->
 <script lang="ts">
+  import { resolve } from '$app/paths';
+  import type { RouteId } from '$app/types';
   import type { HTMLAttributes } from 'svelte/elements';
   import type { Snippet } from 'svelte';
 
@@ -24,8 +26,8 @@ Renders the application's standard action control with primary, secondary, or de
     variant?: ButtonVariant;
     /** Control density; defaults to md. */
     size?: ButtonSize;
-    /** Destination that turns this control into a link. */
-    href?: string;
+    /** Internal route ID that turns this control into a link. */
+    href?: RouteId;
     /** Submit behavior for the button form; ignored when href is set. Defaults to `'button'`. */
     type?: 'button' | 'submit';
     /** Whether the button is inoperable; ignored when href is set. Defaults to `false`. */
@@ -76,7 +78,9 @@ Renders the application's standard action control with primary, secondary, or de
 </script>
 
 {#if href}
-  <a {href} class={classes} {...attributes}>{@render children()}</a>
+  <a href={resolve(href)} class={classes} {...attributes}
+    >{@render children()}</a
+  >
 {:else}
   <button {type} {disabled} class={classes} {...attributes}>
     {@render children()}

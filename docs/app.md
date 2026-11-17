@@ -1,6 +1,6 @@
 # Standalone SvelteKit application
 
-The app uses Svelte 5, SvelteKit 3, TypeScript 6, Tailwind CSS 4, and Node 24. Deployment uses the static adapter on its Kit-compatible prerelease line. Exact versions live in the root manifest and lockfile.
+The app uses Svelte 5, SvelteKit 3, TypeScript 6, Tailwind CSS 4, and Node 26. Deployment uses the static adapter on its stable Kit-compatible line. Exact versions live in the root manifest and lockfile.
 
 ## The shell
 

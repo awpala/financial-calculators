@@ -29,7 +29,7 @@ The app lives at the repository root. Composition lives in routes; reusable libr
 
 ## Stack
 
-Svelte 5 runes, SvelteKit 3 prerelease, TypeScript 6 strict, Tailwind CSS 4, Node 24, and npm. The static adapter uses its Kit 3-compatible prerelease. Exact versions belong in [package.json](package.json) and [package-lock.json](package-lock.json).
+Svelte 5 runes, SvelteKit 3, TypeScript 6 strict, Tailwind CSS 4, Node 26, and npm. The static adapter is on its stable Kit 3-compatible release. Exact versions belong in [package.json](package.json) and [package-lock.json](package-lock.json).
 
 Kit configuration lives in [vite.config.ts](vite.config.ts), inside `sveltekit()`. There is no separate Svelte config. `#lib` imports use explicit module extensions. The app's [environment declarations](src/env.ts) use Kit 3's `$app/env` modules. Vitest's browser resolution condition remains test-only so development SSR uses the correct Svelte runtime.
 
@@ -37,7 +37,7 @@ Kit configuration lives in [vite.config.ts](vite.config.ts), inside `sveltekit()
 
 The project name is `Financial Calculators`, its package/repository slug is `financial-calculators`, the repository owner is `awpala`, and the local dev/preview port is `2252`. These are project configuration values. The production image listens on internal port `8080`.
 
-For a fresh checkout, copy [sample.env](sample.env) to `.env` before opening the development container; the container loads that file at startup. Inside the configured container, use the commands below. Alternatively, use Node 24 locally and run `npm ci`. Direct host builds need no environment file unless overriding the browser executable. Local environment files and references are excluded from the Docker context.
+For a fresh checkout, copy [sample.env](sample.env) to `.env` before opening the development container; the container loads that file at startup. Inside the configured container, use the commands below. Alternatively, use Node 26 locally and run `npm ci`. Direct host builds need no environment file unless overriding the browser executable. Local environment files and references are excluded from the Docker context.
 
 ### Development container and commands
 

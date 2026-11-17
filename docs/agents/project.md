@@ -13,7 +13,7 @@ Financial Calculators is an independent application for ad hoc financial calcula
 | Production internal port | `8080` |
 | Public origin | `https://fincalcs.portfolio-projects.dev` |
 
-One root npm package uses SvelteKit 3 prerelease, Svelte 5 runes, TypeScript 6 strict, Tailwind CSS 4, Node 24, and Vitest. Development uses a single running devcontainer. Its setup script owns provisioning, idempotent profile entries, and live helper commands. `run-app` starts the app on the configured local port.
+One root npm package uses SvelteKit 3, Svelte 5 runes, TypeScript 6 strict, Tailwind CSS 4, Node 26, and Vitest. Development uses a single running devcontainer. Its setup script owns provisioning, idempotent profile entries, and live helper commands. `run-app` starts the app on the configured local port.
 
 ## Current application scope
 

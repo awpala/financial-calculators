@@ -3,10 +3,13 @@
 Renders a prose link in the shared link styling, opening outbound destinations in a new tab.
 -->
 <script lang="ts">
+  import { resolve } from '$app/paths';
+  import type { PathnameWithSearchOrHash } from '$app/types';
   import type { Snippet } from 'svelte';
 
   import {
     LINK_CLASS,
+    isExternalUrl,
     linkTargetAttributes,
     safeLinkHref,
   } from '#lib/navigation/links.js';
@@ -23,15 +26,26 @@ Renders a prose link in the shared link styling, opening outbound destinations i
 
   let { href, children, class: extraClass = '' }: Props = $props();
   const safeHref = $derived(safeLinkHref(href));
+  const external = $derived(isExternalUrl(safeHref));
   const attributes = $derived(linkTargetAttributes(safeHref));
 </script>
 
-<a
-  href={safeHref}
-  target={attributes.target}
-  rel={attributes.rel}
-  data-sveltekit-preload-data="false"
-  class={`${LINK_CLASS} ${extraClass}`.trim()}
->
-  {@render children()}
-</a>
+{#if external}
+  <a
+    href={safeHref}
+    target={attributes.target}
+    rel="external noopener noreferrer"
+    data-sveltekit-preload-data="false"
+    class={`${LINK_CLASS} ${extraClass}`.trim()}
+  >
+    {@render children()}
+  </a>
+{:else}
+  <a
+    href={resolve(safeHref as PathnameWithSearchOrHash)}
+    data-sveltekit-preload-data="false"
+    class={`${LINK_CLASS} ${extraClass}`.trim()}
+  >
+    {@render children()}
+  </a>
+{/if}

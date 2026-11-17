@@ -7,6 +7,7 @@ Displays primary navigation, the contextual rail toggle, the Settings entry, and
   import { page } from '$app/state';
   import type { Component, ComponentProps } from 'svelte';
   import { APP_NAME } from '#lib';
+  import type { MainView } from '#lib/navigation/settings.js';
   import NavButton from '#lib/components/views/shell/NavButton.svelte';
   import HoverText from '#lib/components/behaviors/HoverText.svelte';
   import ThemeToggle from '#lib/components/views/shell/ThemeToggle.svelte';
@@ -48,11 +49,11 @@ Displays primary navigation, the contextual rail toggle, the Settings entry, and
      */
     compactNavigation?: boolean;
     /**
-     * Destination for the Settings entry: `/settings` from a main view, or the
+     * Route for the Settings entry: `/settings` from a main view, or the
      * saved return view when already on a Settings tab, mirroring the Shift+S
      * shortcut's toggle behavior.
      */
-    settingsHref: string;
+    settingsRoute: MainView | '/settings';
   };
 
   let {
@@ -61,7 +62,7 @@ Displays primary navigation, the contextual rail toggle, the Settings entry, and
     onContextMenuToggle,
     smallViewport,
     compactNavigation = false,
-    settingsHref,
+    settingsRoute,
   }: Props = $props();
 
   const entries: NavEntry[] = [
@@ -136,7 +137,7 @@ Displays primary navigation, the contextual rail toggle, the Settings entry, and
         >
       {/snippet}
       <a
-        href={settingsHref}
+        href={resolve(settingsRoute)}
         aria-label="Settings"
         aria-keyshortcuts="Shift+S"
         aria-current={page.route.id?.startsWith('/settings')

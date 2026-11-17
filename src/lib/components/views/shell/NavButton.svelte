@@ -41,7 +41,6 @@ Links to a static application route and highlights that route and its descendant
     onNavigate,
   }: Props = $props();
 
-  const target = $derived(resolve(href));
   // `resolve()` returns a page-relative path, so the active check compares
   // route ids instead -- those stay absolute and survive a base path.
   const active = $derived(
@@ -51,7 +50,7 @@ Links to a static application route and highlights that route and its descendant
 
 {#snippet link()}
   <a
-    href={target}
+    href={resolve(href)}
     aria-label={label}
     aria-current={active ? 'page' : undefined}
     onclick={onNavigate}
