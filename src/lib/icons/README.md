@@ -55,6 +55,6 @@ Keyboard-symbol icons follow the same rule. A keycap component can draw Shift or
 
 Keep the asset a leaf: no route imports, theme-store dependency, event registrations, or business state. Use `currentColor` and the common props rather than embedding an application's accent color. Preserve the source's view box, meaningful fill rule, line caps, and joins so standardizing the wrapper does not distort the shape.
 
-Each component has an `@component` description and a documented named props type. Record its source when known and document every additional variant prop. There is no checked-in icon-generation command to regenerate this directory; changes must leave the actual Svelte file self-contained and reviewable.
+Each component has an `@component` description and a documented named props type. Document every additional variant prop. There is no checked-in icon-generation command to regenerate this directory; changes must leave the actual Svelte file self-contained and reviewable.
 
 Use the [UI gate](../../../README.md#run-and-validate) for code changes and inspect the rendered shape in both themes, at small sizes, and in each state variant. Type checking catches a missing prop declaration, but not a filled path that disappears against the selected surface.

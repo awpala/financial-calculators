@@ -15,4 +15,4 @@ For a user-facing reference, see the [Scratchpad language specification](scratch
 
 Start with the [development setup](../README.md#development-setup) and [application guide](app.md). Operational procedures live in the [Coolify runbook](runbooks/prod-deployment.md). The [agent directory](../AGENTS.md) carries coding conventions, while each library README explains its own contract independently.
 
-Keep decision records current when the application changes a boundary. `check-adr-index.sh` verifies that this index matches the files on disk; `check-diagrams.sh` separately renders authored diagrams with Chromium. Historical reference audit results are not validation evidence for this repository.
+Keep decision records current when the application changes a boundary. `check-adr-index.sh` verifies that this index matches the files on disk; `check-diagrams.sh` separately renders authored diagrams with Chromium.

@@ -26,7 +26,7 @@ Home links to three full-page routes in navigation order: Scratchpad, Amortizati
 
 Scratchpad owns a [calculator controller](../src/lib/calculator/README.md) that parses on input, evaluates on request, clears stale results on edits, and restores browser-local source and its paired calculation. The editor sits beside result and bindings panels on desktop and above them on mobile. The route owns keyboard registration and releases it on navigation. No dropdown, pin, account context, or server state is needed.
 
-Cashflow adapts the reference annual/hourly income calculator. A [pure model](../src/lib/cashflow/README.md) annualizes hourly work, applies the supplied effective tax rate to gross income, subtracts annual contributions and deductions, and floors net income at zero. The route presents take-home pay beneath its inputs, beside a signed balance sheet and a pie of each figure's share of gross income, with browser-local inputs and Clear/Reset controls. Its contextual rail owns the remembered Annual/Monthly choice that every figure on the page follows, and the assumptions behind them.
+Cashflow estimates take-home pay from annual or hourly income. A [pure model](../src/lib/cashflow/README.md) annualizes hourly work, applies the supplied effective tax rate to gross income, subtracts annual contributions and deductions, and floors net income at zero. The route presents take-home pay beneath its inputs, beside a signed balance sheet and a pie of each figure's share of gross income, with browser-local inputs and Clear/Reset controls. Its contextual rail owns the remembered Annual/Monthly choice that every figure on the page follows, and the assumptions behind them.
 
 `/examples/` and `/docs/` are no longer routes. The reusable document pipeline remains available: the local catalog provides summaries and exact source lookups, and consumers can prepare a fresh AST, render Mermaid, highlight code, and extract headings. A document route would enumerate every catalog slug for prerendering and register headings as a contextual rail with teardown.
 
@@ -38,7 +38,7 @@ flowchart LR
   HEADINGS --> RAIL[Contextual table of contents]
 ```
 
-This is the retained library pipeline, not a current calculator route. Its transforms run only when invoked during a build or development render; the public Nginx image serves static output. Browser-local working copies and presets live in context-owned persisted cells; routes adopt working values on mount, and route-specific display preferences are restored there. These values never enter prerendered output.
+This is the document library pipeline, not a current calculator route. Its transforms run only when invoked during a build or development render; the public Nginx image serves static output. Browser-local working copies and presets live in context-owned persisted cells; routes adopt working values on mount, and route-specific display preferences are restored there. These values never enter prerendered output.
 
 ## Shared modules and their contracts
 

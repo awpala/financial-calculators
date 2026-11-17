@@ -1,6 +1,6 @@
 <!--
 @component
-Displays a pointer-anchored chart value using the reference calculator's floating bubble presentation. Svelte owns the size and viewport subscriptions; the caller owns visibility and content.
+Displays a pointer-anchored chart value in a floating bubble. Svelte owns the size and viewport subscriptions; the caller owns visibility and content.
 -->
 <script lang="ts">
   import type { Snippet } from 'svelte';

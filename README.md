@@ -1,8 +1,16 @@
 # Financial Calculators
 
-Financial Calculators is a public application for ad hoc financial calculations and visualizations. A minimal Home links to Scratchpad for named expressions and freeform working, Amortization for fixed-rate loan schedules, and Cashflow for take-home income estimates. The calculators use the reusable UI and chart libraries established by the development baseline.
+Financial Calculators is a public application for ad hoc financial calculations and visualizations. **Scratchpad is a core calculation workspace:** its small numeric language lets users write, explain, and revise calculations with named inputs and reusable intermediate values. It complements Amortization's fixed-rate loan schedules and Cashflow's take-home income estimates. A minimal Home links to all three, which share the application's reusable UI and chart libraries.
 
-The application builds complete static pages and runs browser interactions after hydration. Its private GitHub repository deploys through Coolify to `https://fincalcs.portfolio-projects.dev`, using Nginx with no application login or password gate. Production configuration and deployment checks are described in the [runbook](docs/runbooks/prod-deployment.md).
+The application builds complete static pages and runs browser interactions after hydration. Its public GitHub repository deploys through Coolify to `https://fincalcs.portfolio-projects.dev`, using Nginx with no application login or password gate. Production configuration and deployment checks are described in the [runbook](docs/runbooks/prod-deployment.md).
+
+## Scratchpad
+
+Scratchpad, at route `/scratchpad`, provides more room to express and review a calculation than a single-entry handheld calculator while keeping a smaller scope than a spreadsheet system such as Excel. Write assumptions once, refer to them by descriptive names, keep explanations beside the arithmetic, and inspect intermediate values alongside the final result. Editing an input and calculating again reevaluates the working as a whole.
+
+The language supports comments, freeform names, dollar notation, magnitude and percent suffixes, arithmetic, mathematical constants and functions, and finite sums and products, including nested ranges. The workspace provides a full-page editor with syntax highlighting, line numbers, diagnostics, keyboard shortcuts, and result and named-value summaries. Inputs and calculated values are saved locally in the browser without an account or runtime API.
+
+The [Scratchpad language specification](docs/scratchpad.md) explains the motivation, syntax, numeric behavior, limits, and complete examples spanning finance, accounting, and other domains. The [calculator library guide](src/lib/calculator/README.md) documents parsing, evaluation, presentation, persistence, and ownership contracts.
 
 ## Architecture
 
@@ -37,7 +45,7 @@ Kit configuration lives in [vite.config.ts](vite.config.ts), inside `sveltekit()
 
 The project name is `Financial Calculators`, its package/repository slug is `financial-calculators`, the repository owner is `awpala`, and the local dev/preview port is `2252`. These are project configuration values. The production image listens on internal port `8080`.
 
-For a fresh checkout, copy [sample.env](sample.env) to `.env` before opening the development container; the container loads that file at startup. Inside the configured container, use the commands below. Alternatively, use Node 26 locally and run `npm ci`. Direct host builds need no environment file unless overriding the browser executable. Local environment files and references are excluded from the Docker context.
+For a fresh checkout, copy [sample.env](sample.env) to `.env` before opening the development container; the container loads that file at startup. Inside the configured container, use the commands below. Alternatively, use Node 26 locally and run `npm ci`. Direct host builds need no environment file unless overriding the browser executable. Local environment files and development artifacts are excluded from the Docker context.
 
 ### Development container and commands
 
@@ -58,17 +66,15 @@ The dependency and npm-cache volumes persist between rebuilds, as do the CLI sta
 
 The launcher owns a process group so stopping npm also stops Vite. These aliases are conveniences; the npm scripts remain authoritative and work outside the container. `cleanup.sh` runs on the host to remove this development container. `cleanup.sh --volumes` additionally deletes this project's dependency caches and CLI credentials/state; it never removes the bind-mounted checkout.
 
-## Calculator views and retained libraries
+## Calculator views and libraries
 
-Home remains a small entry point. `/amortization/` estimates fixed-rate monthly payments from purchase price, down payment in dollars or percent, term, and annual rate. It retains the reference principal/interest stacked chart and year, quarter, or month grouping, with a matching payment table and remaining balances. The summary card's headline payment and heading follow the selected grouping; the loan totals beside it stay lifetime figures. Assumptions persist in this browser. The [model contract](src/lib/amortization/README.md) documents limits, zero-interest behavior, and rounding.
+Home links to [Scratchpad](#scratchpad), Amortization, and Cashflow. `/amortization/` estimates fixed-rate monthly payments from purchase price, down payment in dollars or percent, term, and annual rate. It provides a principal/interest stacked chart and year, quarter, or month grouping, with a matching payment table and remaining balances. The summary card's headline payment and heading follow the selected grouping; the loan totals beside it stay lifetime figures. Assumptions persist in this browser. The [model contract](src/lib/amortization/README.md) documents limits, zero-interest behavior, and rounding.
 
-`/scratchpad/` lifts the calculator subsystem from quiz-bank-app into a full-page editor, with result and named-binding summaries alongside it. It retains comments, freeform binding names, currency notation, magnitude suffixes, arithmetic, constants/functions, sums/products, diagnostics, syntax highlighting, line numbers, shortcuts, and saved calculations. The [calculator guide](src/lib/calculator/README.md) preserves the complete language reference and ownership contracts. Work is stored locally in the browser without an account or runtime API.
-
-`/cashflow/` adapts the personal-finance-dashboard take-home-pay calculator, with annual/hourly income conversion, work-hour assumptions, an effective tax rate, retirement contributions, other deductions, monthly net income, and an Annual/Monthly balance sheet. Its [model contract](src/lib/cashflow/README.md) documents the reference calculation policies and local persistence.
+`/cashflow/` estimates take-home pay, with annual/hourly income conversion, work-hour assumptions, an effective tax rate, retirement contributions, other deductions, monthly net income, and an Annual/Monthly balance sheet. Its [model contract](src/lib/cashflow/README.md) documents the calculation policies and local persistence.
 
 The gear beside the theme switch opens [Settings](src/lib/settings/README.md), with Amortization and Cashflow tabs for saved Reset presets. Shift S opens Settings or returns to the most recent main view, and the gear resolves to that same destination, so both toggle rather than only entering Settings; the return destination survives a reload. Global reset asks for confirmation before restoring both working calculators to those presets; Scratchpad is preserved. Home carries the shared browser-persistence note, and `InfoNote` keeps supplemental guidance visually consistent; Cashflow’s long page-level note has its own centered width limit.
 
-The starter Examples and Docs routes are removed. Their reusable UI, chart, markdown, and server libraries remain available. The retained local markdown catalog under [src/content/docs/](src/content/docs/) is a library fixture; it is not a published route. A future document consumer can prepare a fresh AST, render Mermaid, highlight code, extract headings, and supply prerender entries for its catalog. The standalone library guides preserve that pipeline's usage and lifecycle details.
+The reusable UI, chart, markdown, and server libraries support application features. The local markdown catalog under [src/content/docs/](src/content/docs/) is a library fixture; it is not a published route. A future document consumer can prepare a fresh AST, render Mermaid, highlight code, extract headings, and supply prerender entries for its catalog. The standalone library guides preserve that pipeline's usage and lifecycle details.
 
 Static HTML contains the shell and default route content. An accessible spinner hides the view until browser-local inputs are restored and chart dimensions settle; the hidden view stays mounted and measurable. Saved calculations are restored only after mounting; none enter prerendered output. Theme, rail, popup, and chart lifetimes remain scoped to their owners. MathJax remains a lazy external browser enhancement for markdown consumers. No offline corpus cache or service worker is included.
 
@@ -92,7 +98,7 @@ The output is `build/`. `npm run preview` previews it through Vite on port `2252
 
 ## Deployment
 
-The [Coolify runbook](docs/runbooks/prod-deployment.md) configures one Dockerfile resource for `https://fincalcs.portfolio-projects.dev`, with repository-root build context, private Git-source access, and internal port `8080`. Node and Chromium stay in the build stage; the serving image has Nginx and public output only.
+The [Coolify runbook](docs/runbooks/prod-deployment.md) configures one Dockerfile resource for `https://fincalcs.portfolio-projects.dev`, with repository-root build context, a dedicated GitHub App integration, and internal port `8080`. Node and Chromium stay in the build stage; the serving image has Nginx and public output only.
 
 [Verify](.github/workflows/verify.yml) checks pushes and pull requests. Coolify Auto Deploy uses a GitHub App dedicated to this repository and watches `main`; GitHub Actions needs no deployment secrets. Apply the [Watch Paths](docs/runbooks/prod-deployment.md#selective-automatic-deployment) to deploy application and relevant infrastructure/CI changes while skipping repository documentation. The retained markdown catalog is available to future document consumers. Auto Deploy runs independently of Verify, so the developer checks the deployed revision, CI result, health, and HTTPS after each release. Preview deployments stay disabled.
 

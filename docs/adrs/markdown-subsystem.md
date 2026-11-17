@@ -6,13 +6,9 @@
 
 ## Context
 
-The reference document renderer developed an authored-document dialect beyond basic paragraphs and links: nested blocks, definitions and footnotes, callouts, figures, mathematical notation, rich tables, reusable templates, and Mermaid diagrams. Those mechanisms are reusable independently of the reader application's document catalog, source repository, navigation, reading progress, or offline-download policy.
+The document renderer supports an authored-document dialect beyond basic paragraphs and links: nested blocks, definitions and footnotes, callouts, figures, mathematical notation, rich tables, reusable templates, and Mermaid diagrams. Those mechanisms are independent of content sourcing, navigation, and application state.
 
-The application preserves that library and the lessons that shaped it. Reducing the documentation to “parse markdown, render a component” would discard the syntax contracts, traversal rules, lifecycle boundaries, and performance decisions a new application would otherwise have to discover again.
-
-The central boundary is between content acquisition, parsing, enrichment, and presentation. The retained catalog supplies local markdown to a consumer, but the parser does not know about the catalog, routes, or hosting platform. A different source should supply text to the same pipeline without importing the example application's domain into the library.
-
-Earlier performance work also established a methodological lesson: measure the pipeline before adding another service. In the reference application, parsing already ran on the server, while source fetching, client highlighter downloads, and diagram rendering cost much more. Its measured timings belong to that workload and are not application benchmarks. The architectural response—keep parsing local, move heavy enrichment off the client, and bound expensive work—travels without those numbers.
+The central boundary is between content acquisition, parsing, enrichment, and presentation. The catalog supplies local markdown to a consumer, but the parser does not know about the catalog, routes, or hosting platform.
 
 ## Decision
 
@@ -56,7 +52,7 @@ The AST is a public contract between the parser, server transforms, heading extr
 
 Returning one opaque HTML string would make the simplest paragraphs easy to insert, but it would move footnotes, definitions, accessible controls, theme behavior, and nested rendering into an imperative DOM layer. The existing component graph already owns those interactions and their cleanup. Replacing it for a speculative wire-size saving would sacrifice the clearer boundary before measuring a benefit.
 
-Repeated AST keys compress well in the reference workload, but the application claims no fixed source-to-AST size ratio. A new application should compare compressed payloads and rendering behavior on its own representative content before changing the wire format.
+Compare compressed payloads and rendering behavior on representative content before changing the wire format. The application claims no fixed source-to-AST size ratio.
 
 ### Parsing is document-local and grammar order matters
 
@@ -103,7 +99,7 @@ Diagram rendering has both a scheduling boundary and a browser boundary. Documen
 
 The single-diagram function hashes the definition and render configuration into a 64-entry LRU of promises. Identical in-flight requests can share work; successful SVGs can be reused; rejected entries are removed so a transient failure does not poison future requests. The bound counts entries rather than bytes, so large SVGs can still retain substantial memory.
 
-Each uncached attempt launches its own browser and closes it in `finally`. This deliberately differs from the reference implementation's shared browser: a shared external process requires process-shutdown ownership that the application's adapter composition does not supply. Per-attempt ownership trades some cold-render startup cost for a close path contained in the operation that acquired the resource.
+Each uncached attempt launches its own browser and closes it in `finally`. A shared external process would require process-shutdown ownership that the application's adapter composition does not supply. Per-attempt ownership trades some cold-render startup cost for a close path contained in the operation that acquired the resource.
 
 | Resource or operation       | Current bound / contract                                              |
 | --------------------------- | --------------------------------------------------------------------- |
@@ -151,9 +147,9 @@ The table sanitizer permits structural table elements, supported inline formatti
 
 External images and links still create navigation or network behavior. An application must decide whether its content is trusted authored material, user-submitted text, or imported third-party documents, and establish URL, image, SVG, MathJax, CSP, and workload policy accordingly. The current sanitizer and focused tests are concrete safeguards, not a claim that every possible document input has been security-audited.
 
-## Performance lessons retained without reader-specific infrastructure
+## Performance and extension options
 
-The reference work measured source fetch, parse, diagram rendering, enrichment, payload size, and browser work separately. Keep that discipline. A faster parser does little when network retrieval or cold Chromium startup dominates the request, and a service boundary adds serialization, deployment, and failure costs even when its implementation language is faster in isolation.
+Measure source fetch, parse, diagram rendering, enrichment, payload size, and browser work separately. A faster parser does little when network retrieval or cold Chromium startup dominates the request, and a service boundary adds serialization, deployment, and failure costs even when its implementation language is faster in isolation.
 
 Several useful patterns remain extension options rather than existing application features:
 
@@ -171,7 +167,7 @@ If a whole-document cache is added later, do not put caller identity, mutable po
 ## Alternatives considered
 
 - **Replace the dialect with a generic markdown package.** This may be a valid future decision, but requires an explicit compatibility plan for templates, table controls, custom blocks, definitions, and existing authored documents. A smaller dependency surface is not evidence that those contracts can be discarded.
-- **Move parsing to a separate Go service.** The reference measurements did not justify a new network and deployment boundary. Revisit only with workload evidence and a clear contract for the interactive renderer.
+- **Move parsing to a separate service.** This adds a network and deployment boundary. Require workload evidence and a clear contract for the interactive renderer before introducing it.
 - **Ship highlighting and Mermaid rendering to the browser.** That adds heavy runtime downloads and main-thread work and repeats enrichment for each visitor. The server pipeline already owns the required computation.
 - **Return a complete opaque HTML document.** It weakens the component ownership model and requires rebuilding existing interactions around DOM mutation. Measure payload benefits before paying that cost.
 - **Use an unbounded global cache or shared browser without teardown.** It can improve a local warm path while leaking memory or external processes over a deployment lifetime. Bound the retained resource and name its owner.
@@ -182,11 +178,11 @@ A syntax change starts with the AST contract and an authored example. Implement 
 
 Use the UI check, lint, formatting, test, and build gates. For runtime rendering changes, also exercise representative content in the configured browser environment: code in light and dark themes, nested diagrams, broken diagrams, math, table overflow and frozen columns, popup navigation, clipboard feedback, and teardown after route changes. Inspect client output when moving heavy dependencies to ensure the runtime import boundary holds.
 
-Run Node 26 application checks and distinguish mocked lifecycle tests from actual Chromium rendering. Historical reference benchmark numbers and browser results are not validation of this application.
+Run Node 26 application checks and distinguish mocked lifecycle tests from actual Chromium rendering. Report only the benchmarks and browser checks actually performed.
 
 ## Consequences
 
-The application retains a substantial, documented library that can be lifted into another application without importing its original reader domain. Parsing, enrichment, and interaction have distinct owners, and the original syntax and performance lessons remain available when the next domain needs them.
+Parsing, enrichment, and interaction have distinct owners. Syntax contracts, traversal rules, resource limits, and validation procedures make changes reviewable across those boundaries.
 
 The cost is coordinated evolution: an AST change can touch several consumers, Chromium remains an operational dependency for uncached diagrams, and authored HTML requires an explicit trust model. Those costs are visible contracts rather than surprises left for every new project to rediscover.
 

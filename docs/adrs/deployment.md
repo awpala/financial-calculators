@@ -5,7 +5,7 @@
 
 ## Context
 
-Financial Calculators is an application for ad hoc calculations and visualizations. Its initial main-branch baseline includes the application libraries and deployment configuration on which calculator features are developed. The repository is private, but the deployed content is intended for public access and contains no material requiring a site access gate. GitHub Pages is unavailable under this repository's current hosting constraints.
+Financial Calculators is an application for ad hoc calculations and visualizations. Its initial main-branch baseline includes the application libraries and deployment configuration on which calculator features are developed. The GitHub repository and deployed content are public, and the site contains no material requiring an access gate. The repository was private when this deployment approach was selected; its subsequent visibility change does not change the chosen Coolify hosting architecture.
 
 The application has no external data service and prepares repository-owned content ahead of time. Its interactive presentation runs in the browser. A strict static build supplies complete initial HTML while keeping the production runtime small. The application shows its shell and loading indicator until browser-local calculator state is ready.
 
@@ -17,7 +17,7 @@ Deploy one Dockerfile application on Coolify at `https://fincalcs.portfolio-proj
 
 | Boundary | Owner | Contract |
 | --- | --- | --- |
-| Private source access | Coolify Git integration | Dedicated GitHub App scoped to this repository only |
+| Source checkout and repository events | Coolify Git integration | Dedicated GitHub App scoped to this public repository only |
 | Document preparation | Build process | Fresh AST per load, bounded rendering, owned browser teardown |
 | Public content | Nginx | Directory indexes, true 404s, relative redirects behind TLS termination |
 | Browser interaction | Svelte component tree | Route-owned state and explicit cleanup |
@@ -45,11 +45,11 @@ flowchart TD
   SITE --> REVIEW
 ```
 
-Auto Deploy and Verify run independently. Coolify can start deployment before CI finishes, and a failed check does not automatically prevent or roll back a release. This single-developer application accepts that tradeoff and uses manual checks after merges to `main`: inspect the actual deployed SHA, its Verify result, health, and TLS, keeping release activity sequential. GitHub Actions performs no deployment request and requires no deployment secrets. Private source credentials remain in Coolify's Git integration and never enter the application image.
+Auto Deploy and Verify run independently. Coolify can start deployment before CI finishes, and a failed check does not automatically prevent or roll back a release. This single-developer application accepts that tradeoff and uses manual checks after merges to `main`: inspect the actual deployed SHA, its Verify result, health, and TLS, keeping release activity sequential. GitHub Actions performs no deployment request and requires no deployment secrets. GitHub App credentials remain in Coolify's Git integration and never enter the application image; public source visibility does not make these integration credentials public.
 
 ## Alternatives and tradeoffs
 
-GitHub Pages would fit static output technically but does not fit this private repository's available hosting. A request-time Node application adds a running process and document-rendering dependencies without a requirement for dynamic server behavior. An account system or password gate adds session and operational complexity without an access restriction to enforce. A client-side password prompt cannot protect public static files.
+GitHub Pages fits static output technically, but the repository's private visibility and available hosting constrained that option when this decision was made. The repository is now public; that original visibility constraint is no longer a reason to exclude it. Coolify remains the selected deployment system, with the documented Dockerfile, Nginx behavior, GitHub App integration, and release-verification procedure. A request-time Node application adds a running process and document-rendering dependencies without a requirement for dynamic server behavior. An account system or password gate adds session and operational complexity without an access restriction to enforce. A client-side password prompt cannot protect public static files.
 
 An authenticated deployment webhook after successful CI could gate release requests, but adds pipeline credentials and a separate release workflow. Direct GitHub App Auto Deploy fits the chosen manual review process. Watch Paths reduce unnecessary builds, but must be configured and checked in Coolify; manual deployments bypass the filter.
 
@@ -57,4 +57,4 @@ An SPA fallback would conceal missing prerender entries and weaken readable init
 
 ## Operations and verification
 
-Use the [Coolify runbook](../runbooks/prod-deployment.md). Validate root and nested URLs, public route data, hashed assets, the static shell/loading indicator without JavaScript and initialized views after hydration, relative directory redirects, and true 404s. Published content changes require a rebuild. Local gates and image tests do not establish DNS, TLS, private Git-source access, remote Auto Deploy settings, or the deployed revision. Pause Auto Deploy during recovery, roll back through Coolify's retained deployment history, and repeat those checks.
+Use the [Coolify runbook](../runbooks/prod-deployment.md). Validate root and nested URLs, public route data, hashed assets, the static shell/loading indicator without JavaScript and initialized views after hydration, relative directory redirects, and true 404s. Published content changes require a rebuild. Local gates and image tests do not establish DNS, TLS, Coolify's GitHub App connection, remote Auto Deploy settings, or the deployed revision. Pause Auto Deploy during recovery, roll back through Coolify's retained deployment history, and repeat those checks.

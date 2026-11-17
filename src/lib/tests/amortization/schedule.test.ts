@@ -21,7 +21,7 @@ function calculate(overrides: Partial<LoanInputs> = {}) {
 }
 
 describe('fixed-rate amortization', () => {
-  it('matches the reference mortgage and reconciles principal, interest, and balance', () => {
+  it('calculates the default mortgage and reconciles principal, interest, and balance', () => {
     const loan = calculate();
     expect(loan.principal).toBe(360000);
     expect(loan.monthlyPayment).toBeCloseTo(2275.4448845747, 8);

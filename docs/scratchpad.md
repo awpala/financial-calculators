@@ -4,6 +4,16 @@ Scratchpad is a small numeric language for calculations that benefit from named 
 
 This specification describes the language implemented in the Financial Calculators Scratchpad. All values are numbers; dollar signs and descriptive names help present a calculation but do not introduce currencies, units, or other data types. The final section contains complete programs covering several application domains. Implementation and integration details are documented separately in the [calculator library guide](../src/lib/calculator/README.md).
 
+## Purpose and scope
+
+Scratchpad occupies the space between a single-entry handheld calculator and a dedicated calculation or spreadsheet system such as Excel. Its purpose is to make ad hoc calculations easier to write, inspect, and revise while keeping the entire calculation in a short, readable piece of text.
+
+A handheld calculator works well for an isolated expression. As a calculation grows, reusing intermediate results, remembering what each number represents, and retracing the steps can require memory registers, repeated entry, or separate notes. Scratchpad keeps those steps together: inputs have descriptive names, later expressions reuse them, and comments explain assumptions and units. The result remains beside the working that produced it, and named intermediate values can be inspected individually.
+
+The notation is designed to reduce the effort of entering and reading that working. Names such as `annual demand` can read like labels on paper; figures such as `$12.5k` and `6%` retain familiar notation; and sums and products express repeated arithmetic without manually expanding every term. To try another assumption, edit its declaration and calculate again. The program is evaluated from the beginning using the revised input, so dependent values are recalculated together.
+
+The scope is deliberately smaller than a spreadsheet system. A Scratchpad program is an ordered sequence of numeric expressions, with a small set of functions and explicit ranges for sums and products. It does not organize workbooks, manage tabular datasets or cell references, solve equations symbolically, or provide a comprehensive library of financial and accounting models. A calculation's assumptions and formulas belong in the text the user writes. This makes Scratchpad useful for checking a formula, estimating a cost, comparing a few assumptions, or working through a calculation whose reasoning should remain visible without setting up a larger model.
+
 ## Program structure
 
 ### Declarations and the result

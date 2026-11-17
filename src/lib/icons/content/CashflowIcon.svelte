@@ -1,6 +1,6 @@
 <!--
 @component
-Decorative balance-sheet icon adapted from personal-finance-dashboard. Hidden from assistive technology; its owning control provides the name.
+Decorative balance-sheet icon for Cashflow navigation. Hidden from assistive technology; its owning control provides the name.
 -->
 <script lang="ts">
   /** Public inputs for this decorative icon. */

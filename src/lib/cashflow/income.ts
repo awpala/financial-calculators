@@ -24,7 +24,7 @@ export type CashflowInputs = {
   annualDeductions: string;
 };
 
-/** Initial illustration from the personal-finance-dashboard Cashflow calculator. */
+/** Default assumptions for the Cashflow calculator before a custom preset is saved. */
 export const DEFAULT_CASHFLOW_INPUTS: Readonly<CashflowInputs> = {
   useHourlyIncome: false,
   income: '120,000',
@@ -45,7 +45,7 @@ export type Cashflow = {
   annualRetirementContribution: number;
   /** Other annual deductions entered by the user. */
   annualDeductions: number;
-  /** Remaining annual income, with a floor of zero as in the reference. */
+  /** Remaining annual income, with a floor of zero. */
   annualNetIncome: number;
   /** Annual net income divided evenly over twelve months. */
   monthlyNetIncome: number;
@@ -131,14 +131,14 @@ export function invalidCashflowFields(
   );
 }
 
-/** Read Scratchpad-style numbers with the reference's nonnegative/invalid-to-zero policy. */
+/** Read Scratchpad-style numbers with the nonnegative/invalid-to-zero policy. */
 function parseAmount(raw: string): number {
   const value = parseNumberInput(raw);
   return Number.isFinite(value) && value >= 0 ? value : 0;
 }
 
 /**
- * Estimate take-home pay using the reference's gross-income tax basis and
+ * Estimate take-home pay using the gross-income tax basis and
  * zero floor. Empty, invalid, and negative amounts read as zero, as does a tax
  * rate outside 0–100% or written with letters, such as a k/m/b/t suffix.
  * Contributions and deductions do not reduce that tax basis. No resources,
@@ -186,7 +186,7 @@ export function calculateCashflow(inputs: CashflowInputs): CashflowResult {
 
 /**
  * Convert the entered income when switching annual/hourly modes. Preserve
- * empty input and numerical precision; use the reference's zero-rate fallback
+ * empty input and numerical precision; use a zero hourly rate
  * when annual income has no positive working hours. Return null on overflow
  * so the route can retain the user's current inputs and explain the problem.
  */

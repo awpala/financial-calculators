@@ -1,8 +1,10 @@
 # Coolify deployment runbook
 
-Deploy the private `awpala/financial-calculators` repository as a public site at `https://fincalcs.portfolio-projects.dev`. Follow the steps in order. Each step names the system being used: **Coolify dashboard**, **GitHub website**, **Porkbun website**, or **devcontainer terminal**. Complete steps 1–4 for preparation; step 5 starts deployment.
+Deploy the public `awpala/financial-calculators` repository as a public site at `https://fincalcs.portfolio-projects.dev`. Follow the steps in order. Each step names the system being used: **Coolify dashboard**, **GitHub website**, **Porkbun website**, or **devcontainer terminal**. Complete steps 1–4 for preparation; step 5 starts deployment.
 
 This recipe starts with the existing Coolify project `financial-calculators`, its dedicated GitHub App, and the DNS A record pointing to `62.238.31.118`. Keep that GitHub App restricted to this repository. No GitHub Actions deployment secrets or application passwords are required.
+
+The repository's public visibility allows public source access. The existing GitHub App remains the integration for Coolify's repository selection and automatic deployment events; keep using that connection for this recipe.
 
 The UI directions below come from Coolify's official documentation and upstream application views, not an inspection of this server's installed UI. Known layout differences are stated beside the affected instruction. All application configuration paths below belong to **Coolify**, not GitHub.
 
@@ -14,6 +16,8 @@ The UI directions below come from Coolify's official documentation and upstream 
 4. Open the application's **Configuration** page. Keep this application open for steps 2 and 3.
 
 **If the project has no Application resource yet:** inside its environment, select **+ New → Private Repository (with GitHub App)**. Select the deployment server whose public address is `62.238.31.118`, select the existing dedicated GitHub App, choose `awpala/financial-calculators`, and select **Load Repository**. Set Branch to `main`, Build Pack to **Dockerfile**, Base Directory to `/`, and internal port to `8080`, then select **Continue**. Configure the resulting application below before selecting Deploy. The [official GitHub App procedure](https://coolify.io/docs/applications/sources/github/app#5-create-an-application) documents this resource-creation flow.
+
+**Private Repository (with GitHub App)** is Coolify's documented resource-option label for this integration; the `awpala/financial-calculators` repository itself is public.
 
 **Expected result:** you are viewing one Git-backed Coolify Application for this repository. A project or GitHub App source by itself is not the application resource.
 
@@ -149,7 +153,7 @@ dig +short CAA fincalcs.portfolio-projects.dev
 dig +short CAA portfolio-projects.dev
 ```
 
-Expect the A answer to be `62.238.31.118`. No AAAA answer is expected for this IPv4-only configuration. Empty CAA answers at these names mean no restriction is set at those names; if a CAA answer exists, check it against the certificate issuer configured on the server. If the A record is wrong, correct the `fincalcs` A record in **Porkbun's DNS records for `portfolio-projects.dev`**, then repeat the lookup. Use this application's address, not a copied reference-project resource identity.
+Expect the A answer to be `62.238.31.118`. No AAAA answer is expected for this IPv4-only configuration. Empty CAA answers at these names mean no restriction is set at those names; if a CAA answer exists, check it against the certificate issuer configured on the server. If the A record is wrong, correct the `fincalcs` A record in **Porkbun's DNS records for `portfolio-projects.dev`**, then repeat the lookup. Verify that the record matches this application's configured deployment server.
 
 Before the first deployment, an HTTP proxy 404 or Traefik default certificate can mean the application route and certificate do not exist yet. Those responses are not a passing site check. Step 6 must succeed after deployment, because `.dev` requires working HTTPS in browsers.
 
@@ -233,7 +237,7 @@ Do not use the Coolify **Deploy** button to test this filter: manual deployments
 
 | Symptom | Where to act and what to check |
 | --- | --- |
-| Private source checkout fails | **Coolify application → Configuration → Git Source:** confirm repository, `main`, and the dedicated App. **Coolify sidebar → Sources → that GitHub App → Update Repositories:** confirm on the resulting GitHub page that this repository remains selected. Application variables or Actions secrets cannot repair source access. |
+| Source checkout through the GitHub App fails | **Coolify application → Configuration → Git Source:** confirm repository, `main`, and the dedicated App. **Coolify sidebar → Sources → that GitHub App → Update Repositories:** confirm on the resulting GitHub page that this repository remains selected. Application variables or Actions secrets cannot repair the configured source connection. |
 | Source checkout succeeds but no automatic deployment appears | **Coolify application → Configuration → Advanced:** check Auto Deploy. **Git Source:** check `main`. **General:** check saved Watch Paths. **Coolify sidebar → Sources → the dedicated GitHub App:** inspect its webhook connection; repository access alone does not prove GitHub can reach Coolify's event endpoint. |
 | Documentation-only or another-branch change deploys | **Coolify application → deployment log:** identify whether the trigger was manual, a matching push, or a preview. Recheck the saved ordered Watch Paths and disabled preview setting. Check whether a second Application uses this repository. |
 | Build fails | **Coolify application → Deployments / Deployment Logs:** preserve the first error and failing SHA. In the **devcontainer terminal**, reproduce with `npm ci` and the local checks. Use Coolify's **Force deploy (without cache)** only if investigating stale build layers. |
@@ -255,9 +259,9 @@ Coolify's [rollback procedure](https://coolify.io/docs/applications/deployments/
 
 ## Deployment behavior behind this recipe
 
-The [Dockerfile](../../Dockerfile) installs Node 26, Chromium, fonts, and locked npm dependencies in its builder stage. It prerenders the application, running document transforms only if a route consumes them, and copies only `build/` into an unprivileged Nginx image. Node and Chromium are absent from the serving stage. The Docker context excludes local environment files, references, logs, generated output, editor state, and agent configuration.
+The [Dockerfile](../../Dockerfile) installs Node 26, Chromium, fonts, and locked npm dependencies in its builder stage. It prerenders the application, running document transforms only if a route consumes them, and copies only `build/` into an unprivileged Nginx image. Node and Chromium are absent from the serving stage. The Docker context excludes local environment files, development artifacts, logs, generated output, editor state, and agent configuration.
 
-All deployed pages, route data, and browser assets are public. The private GitHub repository controls source access; visitors need no account or password. The application has no runtime data API, database, or session store. Browser preferences stay local. Published content changes require a rebuild. Nginx serves directory indexes rather than an SPA fallback; HTML and route data require revalidation, while content-hashed assets use a year-long immutable cache policy.
+The GitHub source repository and all deployed pages, route data, and browser assets are public; visitors need no account or password. The application's dedicated GitHub App credentials stay in Coolify's Git integration. The application has no runtime data API, database, or session store. Browser preferences stay local. Published content changes require a rebuild. Nginx serves directory indexes rather than an SPA fallback; HTML and route data require revalidation, while content-hashed assets use a year-long immutable cache policy.
 
 [Verify](../../.github/workflows/verify.yml) runs on pushes and pull requests, including documentation-only changes. It checks types, lint, formatting, unit tests, production-image HTTP behavior, shell syntax, and the ADR index. The Dockerfile installs Chromium and performs the strict static build once; CI does not repeat that build on the host. Deployment smoke checks cover packaging and serving, independently of application feature tests. The image-test script owns and removes its disposable container and image. Local checks, CI, and successful source checkout each establish different facts; none alone proves the public site's TLS, routing, health, or deployed revision.
 

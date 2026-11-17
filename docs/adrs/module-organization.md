@@ -8,9 +8,9 @@
 
 A maintainable application needs more than a directory tree. Without the reasoning behind the tree, a new project gradually accumulates a flat set of unrelated modules, a large `utils` folder, or tiny files created merely to satisfy a line-count target. Each arrangement can look organized while making the actual dependency and lifetime boundaries harder to find.
 
-The reference projects reached these conventions through refactoring. One subsystem mixed several parser classes, evaluation, language definitions, and persistence conversion in the same module. Another already had separate controllers with cohesive state machines and teardown. Splitting the first improved ownership visibility; splitting the second just because it was long would have distributed a single lifecycle across more files.
+The calculator illustrates why responsibility matters more than size. Parsing, evaluation, language definitions, and persistence conversion have distinct contracts and belong in separate modules. A controller with one cohesive state machine and teardown path can remain together even when it is long. Separating independent responsibilities makes ownership visible; splitting a single lifecycle merely to shorten a file distributes that ownership across more places.
 
-The component library exposed the same distinction. Generic controls, interaction wrappers, page layout, and domain views had different dependency directions even when all were Svelte components. Moving files into folders only helped when the folder explained why a caller imported that implementation.
+The component library has the same distinction. Generic controls, interaction wrappers, page layout, and domain views have different dependency directions even when all are Svelte components. Folders help when they explain why a caller imports an implementation.
 
 The decision is therefore about responsibility, authorization, and ownership. File size is evidence to inspect, not the rule that decides the boundary. Apply these principles to the application's actual responsibilities as calculator features are added.
 

@@ -21,7 +21,7 @@ if [ ! -x "$RENDERER" ]; then
 fi
 
 # Default scope includes new, untracked documentation under the workspace but
-# excludes reference repositories, run logs, build output, and dependencies.
+# excludes local scratch directories, run logs, build output, and dependencies.
 if [ $# -gt 0 ]; then
   mapfile -t candidates < <(printf '%s\n' "$@")
 else

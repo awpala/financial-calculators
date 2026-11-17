@@ -37,7 +37,7 @@ describe('cashflow income', () => {
     expect(calculate(hourly).annualGrossIncome).toBeCloseTo(125000, 8);
     expect(calculate(hourly).annualNetIncome).toBeCloseTo(77000, 8);
   });
-  it('matches the reference take-home estimate and reconciles its annual balance sheet', () => {
+  it('calculates the default take-home estimate and reconciles its annual balance sheet', () => {
     const result = calculate();
     expect(result).toEqual({
       annualGrossIncome: 120000,
@@ -69,7 +69,7 @@ describe('cashflow income', () => {
     expect(result.monthlyNetIncome).toBe(4659.375);
   });
 
-  it('keeps the reference gross-income tax basis when contributions change', () => {
+  it('keeps the gross-income tax basis when contributions change', () => {
     expect(
       calculate({
         retirementContribution: '24,000',
@@ -99,7 +99,7 @@ describe('cashflow income', () => {
   });
 
   it.each(['', 'invalid', '-500', 'Infinity', '1e309'])(
-    'retains the reference zero interpretation of income %j',
+    'treats invalid or negative income %j as zero',
     (income) => expect(calculate({ income }).annualGrossIncome).toBe(0),
   );
 

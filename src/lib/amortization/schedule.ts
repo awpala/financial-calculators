@@ -39,7 +39,7 @@ export type LoanInputs = {
   resolution: Resolution;
 };
 
-/** Default illustration matching the reference amortization calculator. */
+/** Default loan assumptions before a custom amortization preset is saved. */
 export const DEFAULT_LOAN_INPUTS: Readonly<LoanInputs> = {
   purchasePrice: '450,000',
   downPayment: '20',

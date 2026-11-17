@@ -8,17 +8,15 @@
 
 The UI is SvelteKit 3 and Svelte 5 styled with Tailwind CSS v4, wired through the `@tailwindcss/vite` plugin. There is no `tailwind.config.js` and no PostCSS configuration; v4 is configured from CSS, and [`src/app.css`](../../src/app.css) is deliberately thin. It imports Tailwind, declares the class-based dark variant once, and defines global interaction affordances and scrollbar treatments. The `@layer base` block uses zero-specificity `:where()` selectors for cursor, focus-visible outline, hover, and active brightness. Scrollbar rules cover `main`, the page's scroll container, and `.inner-scroll-region` for nested regions. The integrated markdown subsystem also needs global selectors for injected Shiki markup and code-copy controls. Those output-boundary rules stay global; the component system owns repeated application controls and surfaces.
 
-That arrangement has no seam. A Tailwind utility list on an element has no shared referent, no name, and no import — nothing an author could reuse and nothing a reviewer could compare against. So each new feature did the only thing available to it: copy the class string from a nearby element that looked right and edit it. The copies then diverged, one attribute at a time, with no error at any point.
+A Tailwind utility list on an element has no shared name or import. Copying a nearby class string makes it easy for controls with the same role to diverge without a type, lint, or formatting error. Shared components prevent several kinds of drift:
 
-An audit of a reference application measured how far that arrangement had drifted. These are the lessons inherited by this application, not measurements of the smaller example UI:
+- **Action feedback:** a primary button with `hover:bg-slate-700` behaves differently from one with no hover treatment. Disabled states such as `disabled:opacity-50` and `disabled:cursor-wait disabled:opacity-60` communicate different things; transitions and `hover:shadow-md` should follow the control's role.
+- **Outlined actions:** secondary and danger buttons need consistent hover colors, including the choice between `dark:hover:bg-slate-900` and `dark:hover:bg-slate-800` for the same surface.
+- **Card geometry:** `rounded-lg` versus `rounded-xl`, padding such as `p-4`, `p-5`, `p-4 sm:p-6`, or `p-6`, and `dark:bg-slate-900` versus `dark:bg-slate-950` should express defined variants.
+- **Error text:** `text-red-700 dark:text-red-400`, `text-red-800 dark:text-red-400`, and `text-red-800 dark:text-red-300` should not be interchangeable answers to the same semantic role.
+- **Page structure:** a centered header, spinner gate, dashed-border empty state, and `max-w-384` container need shared geometry and feedback conventions.
 
-- **The primary action button appeared nine times with nine different class strings.** Four sites had `hover:bg-slate-700` and others had no hover state at all. Disabled treatment split three ways between `disabled:opacity-50`, `disabled:cursor-wait disabled:opacity-60`, and nothing. Only two controls carried transitions, and they alone added `hover:shadow-md`. A user who pressed a disabled button on one page and the same button on another got different feedback, or none.
-- **The secondary (outlined) and danger (outlined red) buttons had the same problem**, including a `dark:hover:bg-slate-900` versus `dark:hover:bg-slate-800` split between two controls filling the same visual role.
-- **The card and panel surface existed in six variants**, differing in radius (`rounded-lg` against `rounded-xl`), padding (`p-4`, `p-5`, `p-4 sm:p-6`, `p-6`), and dark ground (`dark:bg-slate-900` against `dark:bg-slate-950`).
-- **Semantic error text had drifted** across `text-red-700 dark:text-red-400`, `text-red-800 dark:text-red-400`, and `text-red-800 dark:text-red-300` — three answers to the question "what color is an error."
-- Four route pages independently repeated a byte-identical page scaffold: a centered page header, a centered spinner gate, a dashed-border empty state, and a `max-w-384` page container. Even no-content branches duplicated the same markup and copy.
-
-The root cause is worth stating plainly, because the fix follows from it and nothing else does: **nothing held the strings together.** This is not a discipline failure that more review catches. The UI check, lint, formatting, and test gates can all pass across those variants. Type checking has no opinion about a string attribute's contents. Formatting can make divergent markup tidier without making its behavior or visual roles agree. Vitest asserts behavior and rendered text, not whether two buttons in different routes agree about their hover state. A gate can check an explicit contract; the original markup had no shared contract to inspect.
+Type checking has no opinion about a class string's visual consistency. Formatting can make divergent markup tidier without making its behavior agree. Ordinary behavioral tests do not establish whether controls across routes share their hover and disabled treatments. An explicit component contract gives reviewers and tests a common definition to inspect.
 
 ## Decision
 
@@ -47,14 +45,14 @@ Read the diagram right-to-left to see why the alternatives lose. Tailwind 4 disc
 
 | Responsibility             | Shared contract                                                                                                                               | Drift it prevents                                                                       |
 | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| Page layout                | A centered `max-w-384` column, page title, and supporting copy                                                                                | The scaffold repeated verbatim across four reference routes                             |
+| Page layout                | A centered `max-w-384` column, page title, and supporting copy                                                                                | Repeated page scaffolds with divergent geometry                             |
 | Loading and empty feedback | Centered loading indication, dashed empty panels with optional action content, and muted explanatory notices                                  | Duplicated no-content branches and inconsistent feedback                                |
-| Surfaces                   | Canonical border, fill, radius, and spacing, with appropriate native element semantics                                                        | Six independent radius/padding/dark-ground variants                                     |
-| Actions                    | Consistent primary, secondary, and destructive roles; small/medium sizing; text and square icon controls; native link versus button semantics | Nine primary-action class strings, divergent outlines, and per-site icon-control copies |
-| Labeled fields             | Shared label/control geometry and density; text entry and typed option selection retain their own input contracts                             | Hand-built label/input pairs and four independently assembled select pairs              |
-| Choice grouping            | Consistent bordered grouping within the contextual rail                                                                                       | Three hand-written choice containers                                                    |
+| Surfaces                   | Canonical border, fill, radius, and spacing, with appropriate native element semantics                                                        | Independent radius, padding, and dark-ground choices                                     |
+| Actions                    | Consistent primary, secondary, and destructive roles; small/medium sizing; text and square icon controls; native link versus button semantics | Divergent action feedback, outlines, and copied icon controls |
+| Labeled fields             | Shared label/control geometry and density; text entry and typed option selection retain their own input contracts                             | Hand-built label/input pairs and inconsistent select controls              |
+| Choice grouping            | Consistent bordered grouping within the contextual rail                                                                                       | Inconsistent hand-written choice containers                                                    |
 
-`Button` combines `variant` (`primary`, `secondary`, `danger`, or `danger-outline`) with `size` (`sm` or `md`), and renders an anchor for an `href` and a native button otherwise. Those are behavioral and semantic contracts, not just names for class strings. It carries two danger roles rather than one because the audit found two: `danger` is the solid red that _confirms_ a destructive action inside a dialog, and `danger-outline` is the bordered red that _offers_ one from a page. Collapsing them would have made a confirmation button and its trigger indistinguishable.
+`Button` combines `variant` (`primary`, `secondary`, `danger`, or `danger-outline`) with `size` (`sm` or `md`), and renders an anchor for an `href` and a native button otherwise. Those are behavioral and semantic contracts, not just names for class strings. Its two danger roles distinguish intent: `danger` is the solid red that _confirms_ a destructive action inside a dialog, and `danger-outline` is the bordered red that _offers_ one from a page. Collapsing them would make a confirmation button and its trigger indistinguishable.
 
 Two small modules export class-string constants rather than components, in the narrow case where two components must agree on a vocabulary but cannot share an element:
 
@@ -63,9 +61,9 @@ Two small modules export class-string constants rather than components, in the n
 
 The rule that keeps these from becoming the rejected constants-only alternative below: **a constant is consumed by a component, never by a call site.** A route that imports `SURFACE_FILL_CLASS` is writing a card by hand, which is the thing this ADR exists to stop.
 
-`SelectField` preserves the value union of its `options` array rather than reducing every selected value to an untyped string. That contract is independent of shared field geometry. The labeled form controls expose a `density` of `form` or `rail`. This is not a second vocabulary smuggled in: the audit found the two already in use and consistent — page forms label at `text-sm font-medium` with a `mt-2` gap, while the compact contextual rail labels at `text-xs font-medium text-slate-600` with `mt-1.5`, because there a field is secondary chrome beside the content it filters. Naming the axis stops a third density appearing the next time someone needs a field in a narrow column. This is not a universal prop on every input wrapper: `SearchField` accepts a value and callback, while `TextField` exposes a bindable value. Read the component contract instead of inferring props from a neighboring control.
+`SelectField` preserves the value union of its `options` array rather than reducing every selected value to an untyped string. That contract is independent of shared field geometry. The labeled form controls expose a `density` of `form` or `rail`. The two densities have distinct roles: page forms label at `text-sm font-medium` with a `mt-2` gap, while the compact contextual rail labels at `text-xs font-medium text-slate-600` with `mt-1.5`, because there a field is secondary chrome beside the content it filters. Naming the axis stops a third density appearing the next time someone needs a field in a narrow column. This is not a universal prop on every input wrapper: `SearchField` accepts a value and callback, while `TextField` exposes a bindable value. Read the component contract instead of inferring props from a neighboring control.
 
-`Card` renders through `<svelte:element>` and `Button` chooses its own tag because the element is part of what drifted. Using a link for a non-navigation action or a button for navigation can lose native semantics and expected keyboard behavior. Shared visual treatment should preserve the element appropriate to the action. Making the component decide removes the choice from the call site.
+`Card` renders through `<svelte:element>` and `Button` chooses its own tag to preserve element semantics. Using a link for a non-navigation action or a button for navigation can lose native semantics and expected keyboard behavior. Shared visual treatment should preserve the element appropriate to the action. Making the component decide removes the choice from the call site.
 
 These components retain the reuse rule: a shared component earns its place by serving more than one route or by providing a reusable primitive that feature components compose. The [application guide](../app.md) describes their current organization into elements, behaviors, layout, and feature views under the component module.
 
@@ -73,15 +71,15 @@ These components retain the reuse rule: a shared component earns its place by se
 
 **A CSS token layer with `@apply`.** Tailwind v4 supports it, and it would centralize the strings. It would not centralize the element, the disabled semantics, the `<a>`-versus-`<button>` decision, or the snippet slots — so a call site that wanted a button would still write markup by hand and still be free to add one more utility. It also moves styling out of the place a Svelte developer looks for it and into a stylesheet that this project deliberately keeps to the global rules components cannot own. The [UI conventions](../agents/app.md#tailwind-css) already forbid reaching for `@apply` unless the abstraction is genuinely stylistic; a button's disabled behavior is not.
 
-**A `tailwind.config.js` theme extension.** There is no such file, by design, and v4 does not want one. Recreating configuration-file theming to solve a duplication problem adds a build-level indirection that could not have fixed the specific drift measured above: every variant in the audit was assembled from stock Tailwind scale values, correctly. The failure was that nine sites each chose their own combination, not that the scale was wrong.
+**A `tailwind.config.js` theme extension.** There is no such file, by design, and v4 does not want one. Recreating configuration-file theming adds build-level indirection without preventing call sites from combining stock Tailwind values inconsistently.
 
-**A module of exported class-string constants.** The cheapest option, and the most tempting, because it looks like a component without the file. It fails for the reason the whole audit fails: a constant is opt-in at the use site. The next feature still writes markup, still needs a button, and still has the option of copying a nearby string instead of importing the constant — and nothing about the resulting diff signals which happened. A component is the only version of this idea where using the system is easier than not using it.
+**A module of exported class-string constants.** The cheapest option, and the most tempting, because it looks like a component without the file. It leaves the same reuse problem: a constant is opt-in at the use site. The next feature still writes markup, still needs a button, and still has the option of copying a nearby string instead of importing the constant — and nothing about the resulting diff signals which happened. A component is the only version of this idea where using the system is easier than not using it.
 
 ### Button sizing is padding-based, not fixed-height
 
 `Button` sizes itself with padding — `px-4 py-2 text-sm` at `md` — rather than with a fixed `h-9` or `h-10`.
 
-This is not a preference. Tailwind's preflight sets `box-sizing: border-box`, so a fixed height is the _total_ height, border included, while padding-based sizing adds padding outside the text box and lets the 1px border of the outlined variants extend beyond it. Adopting a fixed-height system would therefore have changed the rendered height of every bordered button by two pixels, in a refactor whose entire premise was that it was correcting accidental drift rather than redesigning anything. Padding-based sizing preserved the existing rendering at the majority of sites, which is the outcome that let the change be reviewed as a normalization instead of as a visual redesign nobody had asked for.
+Tailwind's preflight sets `box-sizing: border-box`, so a fixed height is the _total_ height, border included, while padding-based sizing adds padding outside the text box and lets the 1px border of outlined variants extend beyond it. Replacing padding-based sizing with a fixed height can therefore change an outlined button's total height by two pixels. Treat a sizing-policy change as a visual change and verify it accordingly.
 
 ### `class` is an escape hatch for position, not for palette
 
@@ -89,9 +87,9 @@ Components with caller-configurable geometry expose a `class` prop and compose i
 
 One thing that syntax does _not_ do is decide conflicts. Two utilities targeting the same CSS property resolve by their order in the generated stylesheet, not by their order in the class attribute, so "merged last" buys ordering in the markup and nothing in the cascade. That is why the hatch is scoped to properties the base does not already set.
 
-A concrete example from the reference work is a password-reset submit button beside a labeled password field. `shrink-0 self-start sm:mt-7` positions that button on the input row rather than the label row. Those classes describe the row the button is in; they do not change what a primary button is. Without a layout escape hatch, that arrangement would either break alignment or force the control outside the component system.
+For a Calculate button beside a labeled input, `shrink-0 self-start sm:mt-7` positions that button on the input row rather than the label row. Those classes describe the row the button is in; they do not change what a primary button is. Without a layout escape hatch, that arrangement would either break alignment or force the control outside the component system.
 
-The same arrangement originally forced the button and input to the same height with per-site `h-10` overrides. Shared padding made that reconciliation unnecessary. **An override that exists to reconcile two components disagreeing about the vocabulary is a defect in the vocabulary, not a legitimate use of the hatch.** Fix the shared definition so the correction reaches every instance.
+Per-site `h-10` overrides should not compensate for incompatible button and input sizing. Shared padding keeps that relationship in the component definitions. **An override that exists to reconcile two components disagreeing about the vocabulary is a defect in the vocabulary, not a legitimate use of the hatch.** Fix the shared definition so the correction reaches every instance.
 
 The boundary is what makes the hatch safe:
 
@@ -102,19 +100,19 @@ A reviewer can apply that rule mechanically: an override that would look the sam
 
 ### Competing utilities are resolved by the component, never at the call site
 
-The same hazard surfaced three times, and the answer was the same each time: when a component needs to vary a property it already sets, that variation becomes a prop or is lifted out of the shared string — never layered on as an extra class.
+When a component needs to vary a property it already sets, that variation becomes a prop or is removed from the shared string rather than layered on as a competing class.
 
 - `Card` takes `radius` and `surface` as props. A caller passing `rounded-xl` to a base that already says `rounded-lg` would be relying on which of the two Tailwind emits later.
 - `SelectField` takes `fullWidth` rather than accepting a `w-auto` override, for the same reason.
 - `FIELD_CONTROL_CLASS` carries no padding at all. `SearchField` reserves room for its Clear button, so it needs asymmetric padding, and a shorthand such as `px-3` beside a longhand such as `pr-10` is precisely the ordering-dependent case. Components that want the ordinary box compose `FIELD_CONTROL_PADDING`; controls with inset buttons spell their padding out.
 
-In the reference audit, `.pr-10` was emitted after `.px-3`, so the previous markup happened to render correctly. It was correct by accident, and a Tailwind upgrade that reordered its output would have silently moved a button on top of the text it sits beside. Making the padding explicit costs nothing and removes the dependency.
+Combining `.pr-10` with `.px-3` makes the effective right padding depend on stylesheet order. If that order changes, a button can overlap the text beside it. Explicit padding removes that dependency.
 
 ### Hierarchy is expressed with the surface variants, not a bespoke ground
 
 A group of cards needs an enclosing surface to read as a group. That does not automatically require another background color. An outer `Card` with `surface="outline"` can hold filled `Card` children, allowing the page ground to participate in the hierarchy.
 
-The page ground is `dark:bg-slate-950` and a filled card is `dark:bg-slate-900`: the outline container reads against the page, and its children against the container. Giving both the outer and inner surfaces the same fill would leave a small border difference carrying all the hierarchy. This failure was found in the reference work and is worth preventing before a new domain develops its own dashboards.
+The page ground is `dark:bg-slate-950` and a filled card is `dark:bg-slate-900`: the outline container reads against the page, and its children against the container. Giving both the outer and inner surfaces the same fill would leave a small border difference carrying all the hierarchy.
 
 **Hierarchy between surfaces is expressed by choosing `surface` and letting the page ground participate, not by introducing a new fill.** A nesting that cannot be expressed that way is an argument for a new shared variant, rather than a one-off exemption.
 
@@ -123,31 +121,31 @@ The page ground is `dark:bg-slate-950` and a filled card is `dark:bg-slate-900`:
 Positive:
 
 - One visual decision per role, in one file, with a name. The next author changing the primary button's hover state changes it once and it takes effect at every site, rather than finding independently styled copies.
-- The reference normalization also corrected behavioral inconsistencies: every primary action now has a hover affordance and a consistent disabled treatment, and error text is one color pair rather than three.
-- New route work composes `PageContainer`, `PageHeader`, `LoadingGate`, and `EmptyState` instead of copying a scaffold from a neighboring route, so the fifth route that needs an empty state does not produce a fifth wording of it.
+- Shared definitions give primary actions consistent hover and disabled treatment and give error text one color pair.
+- New route work composes `PageContainer`, `PageHeader`, `LoadingGate`, and `EmptyState` instead of copying a scaffold from a neighboring route, so a new route reuses the same feedback conventions.
 - The system is legible from the outside: a reviewer who sees a bespoke class string for an existing role in a diff knows immediately that it is the thing this ADR prohibits, which is a check no linter provided before.
 - `Button` and `Card` choosing their own element removes a recurring accessibility hazard from the call sites.
 
 Tradeoffs:
 
-- **Normalization can change rendered appearance.** Aligning hover states, disabled treatment, heights, and surface fills is a visible change even when it removes accidental drift. Distinguish an implementation-preserving move from a deliberate appearance change and review each claim with appropriate evidence. Copying the component system into this application preserves that decision; it does not make future visual changes automatically harmless.
+- **Normalization can change rendered appearance.** Aligning hover states, disabled treatment, heights, and surface fills is a visible change even when it removes accidental drift. Distinguish an implementation-preserving move from a deliberate appearance change and review each claim with appropriate evidence. Component reuse does not make visual changes automatically harmless.
 
 - Indirection has a cost. Reading a page now requires opening `Button.svelte` to learn what `variant="danger"` looks like, where before the answer was on screen. The trade is deliberate: the previous arrangement made every string locally readable and globally incoherent.
 - The escape hatch is a real hole. `class` can express anything, and the distinction between positioning and re-styling is a review judgment rather than something the type system enforces.
 
 ### What the gates do not check, and how to verify anyway
 
-Type checking, linting, formatting, and ordinary unit tests do not establish visual equivalence. A useful technique from the reference work is to compare the emitted CSS under `.svelte-kit/output/client/_app/immutable/assets/` before and after a styling refactor, using the same lockfile, build configuration, and environment.
+Type checking, linting, formatting, and ordinary unit tests do not establish visual equivalence. Compare the emitted CSS under `.svelte-kit/output/client/_app/immutable/assets/` before and after a styling refactor, using the same lockfile, build configuration, and environment.
 
 A byte-identical asset establishes that the emitted rule set did not change. A nonempty diff gives a concrete review surface: added or removed utilities and global rules can be examined rather than discovered after deployment. Asset names can change with hashing, so compare contents, not only filenames.
 
-**Identical CSS is not proof of identical rendering.** Existing utilities can be reassigned to different elements without changing the emitted stylesheet. Moving markup, changing native elements, or altering a conditional class can also change behavior while preserving the same rules. In the reference work, controls gained already-emitted focus utilities while the CSS artifact stayed identical; the rendered class attributes revealed the change.
+**Identical CSS is not proof of identical rendering.** Existing utilities can be reassigned to different elements without changing the emitted stylesheet. Moving markup, changing native elements, or altering a conditional class can also change behavior while preserving the same rules. For example, a control can gain an already-emitted focus utility without changing the CSS artifact; inspecting its rendered class attribute reveals the change.
 
 Use the CSS comparison alongside source or rendered-markup comparison and focused browser checks of the affected interactions, including disabled, focus, dark-theme, narrow-layout, and dialog states. For an organizational move, source equivalence after explicit import-path substitutions is strong additional evidence. These checks describe how a project validates a visual change; they are not a claim of browser validation performed on this host.
 
 ### The standing rule for new work
 
-New visual work reaches for these components first. A new bespoke class string for a role that already has a component is the drift this ADR exists to prevent, and it will look, in a diff, exactly like the nine strings that made it necessary.
+New visual work reaches for these components first. A new bespoke class string for a role that already has a component is the drift this ADR exists to prevent, and reviewers should resolve it through the shared component contract.
 
 ## References
 
