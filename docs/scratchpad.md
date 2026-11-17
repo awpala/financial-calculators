@@ -346,30 +346,31 @@ A project requires a $60,000 outlay today and is expected to generate $16,000 in
 With initial outlay $I_0$, annual net cash inflow $C$, resale proceeds $S$, annual discount rate $r$, and project duration $N$ years, the model is:
 
 $$
-\operatorname{NPV} = -I_0 + \sum_{t=1}^{N}\frac{C}{(1+r)^t} + \frac{S}{(1+r)^N}.
+\mathrm{NPV} = -I_0 + \sum_{t=1}^{N}\frac{C}{(1+r)^t} + \frac{S}{(1+r)^N}.
 $$
 
 Here $t$ counts year-end cash flows, and $r=0.08$ is the rate as a fraction.
 
 ```text
-initial outlay = $60k;
-annual net cash inflow = $16k;
-project years = 5;
-resale proceeds = $8k;
-discount rate = 8%;
-present value of operating cash flows = sum_year(
-  annual net cash inflow / (1 + discount rate) ^ year,
-  1, project years
-);
-present value of resale = resale proceeds / (1 + discount rate) ^ project years;
-net present value = present value of operating cash flows
-  + present value of resale - initial outlay;
-net present value
+# Project inputs: dollars, years, and annual discount rate
+I_0 = $60k;
+C = $16k;
+S = $8k;
+N = 5;
+r = 8%;
+
+# Discount the operating cash flows and year-end resale
+PV_cash = sum_t(C / (1 + r) ^ t, 1, N);
+PV_resale = S / (1 + r) ^ N;
+
+# Net value after the initial outlay
+NPV = PV_cash + PV_resale - I_0;
+NPV
 ```
 
 The result is approximately **9,328.03**, in dollars. The operating cash flows have a present value of approximately $63,883.36, and the resale proceeds add approximately $5,444.67. The initial outlay occurs today and is not discounted. The final operating inflow and resale proceeds both occur at the end of year five, so both use the fifth-year discount factor. The positive result means the modeled discounted inflows exceed the outlay by that amount under these assumptions.
 
-The sum's `year` index supplies each discount exponent, and its inclusive range includes all five operating inflows. This example treats the stated cash flows as complete; any additional cash flows would need to be included explicitly. It uses the supplied discount rate rather than calculating a rate of return.
+The sum's `t` index supplies each discount exponent, and its inclusive range includes all five operating inflows. This example treats the stated cash flows as complete; any additional cash flows would need to be included explicitly. It uses the supplied discount rate rather than calculating a rate of return.
 
 ### Accounting: periodic weighted-average inventory cost
 
@@ -380,28 +381,43 @@ Let $q_b$ and $q_p$ be beginning and purchased quantities, $c_b$ and $c_p$ their
 $$
 \begin{aligned}
 \bar c &= \frac{q_b c_b + q_p c_p}{q_b+q_p}, \\
-\operatorname{COGS} &= q_s\bar c, \\
+\mathrm{COGS} &= q_s\bar c, \\
 V_{\text{ending}} &= (q_b+q_p-q_s)\bar c, \\
-\operatorname{Gross\ profit} &= q_s p-\operatorname{COGS}.
+\text{Gross profit} &= q_s p-\mathrm{COGS}.
 \end{aligned}
 $$
 
+| Symbol | Scratchpad name | Meaning |
+| --- | --- | --- |
+| $q_b,\ q_p,\ q_s$ | `q_b`, `q_p`, `q_s` | Beginning, purchased, and sold quantities |
+| $c_b,\ c_p$ | `c_b`, `c_p` | Beginning and purchase unit costs |
+| $\bar c$ | `c_bar` | Weighted-average unit cost |
+| $V_{\text{ending}}$ | `V_ending` | Ending inventory cost |
+
 ```text
-beginning units = 120;
-beginning unit cost = $18;
-purchased units = 80;
-purchase unit cost = $21;
-units sold = 150;
-selling price per unit = $32;
-units available = beginning units + purchased units;
-cost of goods available = beginning units * beginning unit cost
-  + purchased units * purchase unit cost;
-weighted average unit cost = cost of goods available / units available;
-cost of goods sold = units sold * weighted average unit cost;
-ending units = units available - units sold;
-ending inventory cost = ending units * weighted average unit cost;
-sales revenue = units sold * selling price per unit;
-gross profit = sales revenue - cost of goods sold;
+# Beginning inventory and purchases: units and dollars per unit
+q_b = 120;
+c_b = $18;
+q_p = 80;
+c_p = $21;
+
+# Sales for the period
+q_s = 150;
+p = $32; # selling price per unit
+
+# Pool the available inventory and calculate its average unit cost
+q_available = q_b + q_p;
+cost_available = q_b * c_b + q_p * c_p;
+c_bar = cost_available / q_available;
+
+# Allocate inventory cost between sales and remaining stock
+COGS = q_s * c_bar;
+q_ending = q_available - q_s;
+V_ending = q_ending * c_bar;
+
+# Sales revenue and gross profit, in dollars
+revenue = q_s * p;
+gross profit = revenue - COGS;
 gross profit
 ```
 
@@ -442,30 +458,42 @@ $$
 
 Subscripts $i$ and $f$ mean initial and final. The force magnitude $\bar F_{\text{drag}}$ is averaged over the downward travel distance; $E_{\text{drag}}$ is energy transferred out of mechanical motion, not energy destroyed.
 
+| Symbol | Scratchpad name | Meaning |
+| --- | --- | --- |
+| $\bar F_{\text{drag}}$ | `F_drag_bar` | Drag magnitude averaged over distance |
+| $U_i,\ U_f$ | `U_i`, `U_f` | Initial and final gravitational potential energy |
+| $K_i,\ K_f$ | `K_i`, `K_f` | Initial and final kinetic energy |
+| $E_i,\ E_f$ | `E_i`, `E_f` | Initial and final total mechanical energy |
+
 ```text
-mass = 2; # kilograms
-gravity = 9.81; # meters per second squared
-initial height = 5; # meters above the ground
-final height = 0; # meters above the ground
-initial speed = 0; # meters per second
-average drag force = 4; # newtons; distance-averaged over this fall
-distance fallen = initial height - final height;
-energy lost to drag = average drag force * distance fallen; # joules
-initial potential energy = mass * gravity * initial height;
-initial kinetic energy = 0.5 * mass * initial speed ^ 2;
-initial mechanical energy = initial potential energy + initial kinetic energy;
-final potential energy = mass * gravity * final height;
-final kinetic energy = initial mechanical energy - final potential energy
-  - energy lost to drag;
-final mechanical energy = final potential energy + final kinetic energy;
-accounted energy = final mechanical energy + energy lost to drag;
-final speed = sqrt(2 * final kinetic energy / mass);
-final speed
+# Initial conditions and final height
+m = 2; # kilograms
+g = 9.81; # meters per second squared
+h_i = 5; # meters above the ground
+h_f = 0;
+v_i = 0; # meters per second
+F_drag_bar = 4; # newtons; distance-averaged drag magnitude
+
+# Initial energy and work against drag, in joules
+U_i = m * g * h_i;
+K_i = 0.5 * m * v_i ^ 2;
+E_i = U_i + K_i;
+E_drag = F_drag_bar * (h_i - h_f);
+
+# Remaining mechanical energy and energy accounting
+U_f = m * g * h_f;
+K_f = E_i - U_f - E_drag;
+E_f = U_f + K_f;
+E_accounted = E_f + E_drag;
+
+# Convert final kinetic energy to speed, in meters per second
+v_f = sqrt(2 * K_f / m);
+v_f
 ```
 
-The result is approximately **8.83742 meters per second**. Named values show 98.1 joules of initial potential energy and zero initial kinetic energy. Drag transfers 20 joules to the surroundings over the 5-meter fall, leaving 78.1 joules of kinetic energy just before impact, when potential energy is zero. The `accounted energy` remains 98.1 joules: final mechanical energy plus the energy transferred by drag equals initial mechanical energy. The calculation rearranges `kinetic energy = 0.5 * mass * speed ^ 2` to obtain speed; Scratchpad evaluates that formula rather than solving an equation symbolically.
+The result is approximately **8.83742 meters per second**. Named values show 98.1 joules of initial potential energy and zero initial kinetic energy. Drag transfers 20 joules to the surroundings over the 5-meter fall, leaving 78.1 joules of kinetic energy just before impact, when potential energy is zero. The `E_accounted` remains 98.1 joules: final mechanical energy plus the energy transferred by drag equals initial mechanical energy. The calculation rearranges $K=\tfrac12 mv^2$ to obtain speed; Scratchpad evaluates that formula rather than solving an equation symbolically.
 
-Mechanical energy decreases, while total energy is conserved when the surroundings are included; energy lost to drag is transferred into air motion and ultimately thermal energy. The assumed drag force is an average over distance, not time, so multiplying it by distance gives the work against drag. This example does not predict that average from speed, air density, or object shape, and changing the fall conditions may require a different average. Setting `average drag force` to zero recovers the drag-free speed of approximately 9.90454 meters per second. The model stops before impact and assumes a straight downward fall, positive mass, and nonnegative drag loss. Inputs that give negative final kinetic energy are inconsistent with reaching the stated height and make the square root undefined. Units are recorded in comments and prose, since Scratchpad does not check them.
+Mechanical energy decreases, while total energy is conserved when the surroundings are included; energy lost to drag is transferred into air motion and ultimately thermal energy. The assumed drag force is an average over distance, not time, so multiplying it by distance gives the work against drag. This example does not predict that average from speed, air density, or object shape, and changing the fall conditions may require a different average. Setting `F_drag_bar` to zero recovers the drag-free speed of approximately 9.90454 meters per second. The model stops before impact and assumes a straight downward fall, positive mass, and nonnegative drag loss. Inputs that give negative final kinetic energy are inconsistent with reaching the stated height and make the square root undefined. Units are recorded in comments and prose, since Scratchpad does not check them.
 
 ### Engineering: AC series RLC circuit analysis
 
@@ -477,32 +505,46 @@ $$
 \begin{aligned}
 \omega &= 2\pi f, & X &= \omega L-\frac{1}{\omega C}, \\
 |Z| &= \sqrt{R^2+X^2}, & I_{\mathrm{rms}} &= \frac{V_{\mathrm{rms}}}{|Z|}, \\
-\theta &= \operatorname{atan2}(X,R), & \operatorname{PF} &= \cos\theta, \\
-P &= I_{\mathrm{rms}}^2R &= V_{\mathrm{rms}}I_{\mathrm{rms}}\operatorname{PF}.
+\theta &= \mathrm{atan2}(X,R), & \mathrm{PF} &= \cos\theta, \\
+P &= I_{\mathrm{rms}}^2R &= V_{\mathrm{rms}}I_{\mathrm{rms}}\mathrm{PF}.
 \end{aligned}
 $$
 
-Here $\operatorname{PF}$ is the power factor. The program expresses $\theta$ in degrees and pairs `arctan2_d` with `cos_d` to keep the angle convention consistent.
+Here $\mathrm{PF}$ is the power factor. The program expresses $\theta$ in degrees and pairs `arctan2_d` with `cos_d` to keep the angle convention consistent.
+
+| Symbol | Scratchpad name | Meaning |
+| --- | --- | --- |
+| $\omega$ | `omega` | Angular frequency, in radians per second |
+| $\lvert Z\rvert$ | `Z_mag` | Impedance magnitude |
+| $\theta$ | `theta_deg` | Impedance phase angle, in degrees |
+| $X_L,\ X_C$ | `X_L`, `X_C` | Inductive and capacitive reactance magnitudes |
 
 ```text
-source RMS voltage = 120;
-frequency = 60;
-resistance = 40;
-inductance = 0.1;
-capacitance = 0.0001;
-angular frequency = 2 * pi * frequency;
-inductive reactance = angular frequency * inductance;
-capacitive reactance = 1 / (angular frequency * capacitance);
-net reactance = inductive reactance - capacitive reactance;
-impedance magnitude = sqrt(resistance ^ 2 + net reactance ^ 2);
-RMS current = source RMS voltage / impedance magnitude;
-phase angle (degrees) = arctan2_d(net reactance, resistance);
-power factor = cos_d(phase angle (degrees));
-real power = RMS current ^ 2 * resistance;
-real power
+# Source and component values in SI units
+V_rms = 120; # volts
+f = 60; # hertz
+R = 40; # ohms
+L = 0.1; # henries
+C = 0.0001; # farads
+
+# Frequency-dependent reactance and impedance, in ohms
+omega = 2 * pi * f; # radians per second
+X_L = omega * L;
+X_C = 1 / (omega * C);
+X = X_L - X_C;
+Z_mag = sqrt(R ^ 2 + X ^ 2);
+
+# Current, phase, and power factor
+I_rms = V_rms / Z_mag; # amperes
+theta_deg = arctan2_d(X, R); # degrees
+PF = cos_d(theta_deg);
+
+# Average real power, in watts
+P = I_rms ^ 2 * R;
+P
 ```
 
-The result is approximately **333.94 watts**. Named values show an impedance magnitude of approximately 41.5312 ohms, an RMS current of 2.88939 amperes, an impedance phase angle of 15.6068 degrees, and a power factor of 0.963131. Positive net reactance makes the circuit inductive, so current lags the source voltage by that angle. `arctan2_d` takes the reactive component first and the resistive component second; `cos_d` uses its degree result directly. The real-power result also agrees with `source RMS voltage * RMS current * power factor`.
+The result is approximately **333.94 watts**. Named values show an impedance magnitude of approximately 41.5312 ohms, an RMS current of 2.88939 amperes, an impedance phase angle of 15.6068 degrees, and a power factor of 0.963131. Positive net reactance makes the circuit inductive, so current lags the source voltage by that angle. `arctan2_d` takes the reactive component first and the resistive component second; `cos_d` uses its degree result directly. The real-power result also agrees with `V_rms * I_rms * PF`.
 
 This model assumes ideal components in sinusoidal steady state, with the resistor representing all real dissipation. The inductor and capacitor exchange energy without dissipating average power. It keeps the real and reactive impedance components as separate numeric values, so no complex-number syntax is required; it does not model switching transients, parasitic losses, or component tolerances.
 
@@ -522,25 +564,39 @@ $$
 
 Here $\tau$ is residence time, $C_B$ is outlet B concentration for the stated one-to-one reaction with no B in the feed, and $X_A$ is the fractional conversion. The program evaluates the rearranged formula and reports $100X_A$ as a percentage; it does not solve the balance symbolically.
 
+| Symbol | Scratchpad name | Meaning |
+| --- | --- | --- |
+| $\tau$ | `tau` | Residence time |
+| $C_{A,\mathrm{in}}$ | `C_A_in` | Inlet concentration of A |
+| $C_A,\ C_B$ | `C_A`, `C_B` | Outlet concentrations of A and B |
+| $X_A$ | `X_A` | Fractional conversion of A |
+
 ```text
-reactor volume = 100; # liters
-feed flow = 10; # liters per minute; same at inlet and outlet
-inlet A = 2; # moles per liter
-rate constant = 0.08; # per minute
-residence time = reactor volume / feed flow;
-outlet A = inlet A / (1 + rate constant * residence time);
-outlet B = inlet A - outlet A;
-conversion = 1 - outlet A / inlet A;
-A fed per minute = feed flow * inlet A;
-A leaving per minute = feed flow * outlet A;
-A consumed per minute = rate constant * reactor volume * outlet A;
-balance residual = A fed per minute - A leaving per minute - A consumed per minute;
-100 * conversion
+# Reactor, feed, and reaction inputs
+V = 100; # liters
+Q = 10; # liters per minute; same at inlet and outlet
+C_A_in = 2; # moles per liter
+k = 0.08; # per minute
+
+# Residence time and steady-state outlet concentrations
+tau = V / Q; # minutes
+C_A = C_A_in / (1 + k * tau); # moles per liter
+C_B = C_A_in - C_A;
+X_A = 1 - C_A / C_A_in;
+
+# Reconcile the A balance, in moles per minute
+A_in = Q * C_A_in;
+A_out = Q * C_A;
+A_reacted = k * V * C_A;
+balance residual = A_in - A_out - A_reacted;
+
+# Report fractional conversion as a percentage
+100 * X_A
 ```
 
 The result is approximately **44.4444**, meaning 44.4444% conversion. Named values show a residence time of 10 minutes, an outlet A concentration of approximately 1.11111 moles per liter, and an outlet B concentration of 0.888889 moles per liter. The A balance reconciles 20 moles per minute entering with 11.1111 leaving and 8.88889 consumed; `balance residual` is zero for these inputs, subject to floating-point rounding after edits.
 
-The model assumes perfect mixing, constant liquid density and volume, constant temperature, and a positive flow rate. The reactor concentration therefore equals the outlet concentration, and the reaction rate is evaluated at `outlet A`. The rate constant is fixed at the operating temperature; the calculation does not solve an energy balance, predict temperature changes, or model startup accumulation or additional reactions.
+The model assumes perfect mixing, constant liquid density and volume, constant temperature, and a positive flow rate. The reactor concentration therefore equals the outlet concentration, and the reaction rate is evaluated at `C_A`. The rate constant is fixed at the operating temperature; the calculation does not solve an energy balance, predict temperature changes, or model startup accumulation or additional reactions.
 
 ### Control theory: a discrete-time PID control update
 
@@ -559,28 +615,47 @@ $$
 
 The proportional term responds to the current error, the integral term includes accumulated error, and the derivative term responds to its rate of change. Each gain converts its term into newtons, so the three contributions can be added.
 
+| Symbol | Scratchpad name | Meaning |
+| --- | --- | --- |
+| $\Delta t$ | `dt` | Sampling interval |
+| $e_{k-1}$ | `e_prev` | Error at the previous sample |
+| $J_{k-1}$ | `J_prev` | Error integral before this update |
+| $\dot e_k$ | `e_dot` | Backward-difference estimate of the error derivative |
+| $K_p e_k$ | `u_P` | Proportional force contribution |
+| $K_i J_k$ | `u_I` | Integral force contribution |
+| $K_d(e_k-e_{k-1})/\Delta t$ | `u_D` | Derivative force contribution |
+
 ```text
-position setpoint = 1; # meters
-measured position = 0.8; # meters
-previous error = 0.15; # meters
-previous error integral = 0.4; # meter-seconds
-sample interval = 0.1; # seconds
-proportional gain = 20; # newtons per meter
-integral gain = 5; # newtons per meter-second
-derivative gain = 2; # newton-seconds per meter
-current error = position setpoint - measured position;
-updated error integral = previous error integral + current error * sample interval;
-error rate = (current error - previous error) / sample interval;
-proportional force = proportional gain * current error;
-integral force = integral gain * updated error integral;
-derivative force = derivative gain * error rate;
-commanded force = proportional force + integral force + derivative force;
-commanded force
+# Current sample and state carried from the previous sample
+r_k = 1; # position setpoint, meters
+y_k = 0.8; # measured position, meters
+e_prev = 0.15; # previous error, meters
+J_prev = 0.4; # previous error integral, meter-seconds
+
+# Sampling interval and controller gains
+dt = 0.1; # seconds
+K_p = 20; # newtons per meter
+K_i = 5; # newtons per meter-second
+K_d = 2; # newton-seconds per meter
+
+# Update the error, its integral, and its rate of change
+e_k = r_k - y_k;
+J_k = J_prev + e_k * dt;
+e_dot = (e_k - e_prev) / dt;
+
+# Inspect each force contribution, in newtons
+u_P = K_p * e_k;
+u_I = K_i * J_k;
+u_D = K_d * e_dot;
+
+# Commanded force for this sample
+u_k = u_P + u_I + u_D;
+u_k
 ```
 
 The result is **7.1 newtons**. Named values show a current error of 0.2 meter, an updated error integral of 0.42 meter-seconds, and an error rate of 0.5 meter per second. The proportional, integral, and derivative forces are 4, 2.1, and 1 newtons, respectively. Positive force is assumed to act in the direction of increasing position.
 
-This is one controller update, not a simulation of the object's motion or a demonstration of closed-loop stability. For the next sample, supply the new measured position and carry the current error and updated integral into the two previous-value inputs; Scratchpad does not advance controller state automatically. The example assumes an actuator that can supply the requested force, no output bias, and unfiltered differentiation of error. It does not include force limits, integral anti-windup, or derivative filtering; measurement noise or a sudden setpoint change can produce a large derivative contribution. The illustrative gains are not a tuning recommendation for a physical system.
+This is one controller update, not a simulation of the object's motion or a demonstration of closed-loop stability. For the next sample, supply the new measured position and carry `e_k` into `e_prev` and `J_k` into `J_prev`; Scratchpad does not advance controller state automatically. The example assumes an actuator that can supply the requested force, no output bias, and unfiltered differentiation of error. It does not include force limits, integral anti-windup, or derivative filtering; measurement noise or a sudden setpoint change can produce a large derivative contribution. The illustrative gains are not a tuning recommendation for a physical system.
 
 ### Engineering mechanics: stress and strain in a LEHI material
 
@@ -600,22 +675,40 @@ $$
 
 Stress $\sigma_x$ is positive in tension. Strains $\varepsilon_x,\varepsilon_y,\varepsilon_z$ are dimensionless ratios of dimensional change to original dimension. Use newtons and millimeters consistently: one newton per square millimeter equals one megapascal, so stress and modulus have matching units without an extra conversion.
 
+| Symbol | Scratchpad name | Meaning |
+| --- | --- | --- |
+| $\nu$ | `nu` | Poisson's ratio |
+| $\sigma_x$ | `sigma_x` | Axial engineering stress |
+| $\varepsilon_x$ | `epsilon_x` | Axial strain |
+| $\varepsilon_y=\varepsilon_z$ | `epsilon_y` | Shared lateral strain |
+| $\Delta L$ | `dL` | Axial elongation |
+| $\Delta b$ | `db` | Width change |
+
 ```text
-tensile force = 20k; # newtons
-original length = 1k; # millimeters
-original width = 20; # millimeters
-original thickness = 10; # millimeters
-Young modulus = 200k; # megapascals = newtons per square millimeter
-Poisson ratio = 0.30;
-original area = original width * original thickness; # square millimeters
-axial stress = tensile force / original area; # megapascals
-axial strain = axial stress / Young modulus;
-lateral strain = -Poisson ratio * axial strain;
-elongation = axial strain * original length; # millimeters
-width change = lateral strain * original width; # millimeters
-loaded length = original length + elongation;
-loaded width = original width + width change;
-elongation
+# Applied load and original geometry
+F = 20k; # newtons
+L_0 = 1k; # millimeters
+b_0 = 20; # millimeters
+t_0 = 10; # millimeters
+
+# Material properties
+E = 200k; # megapascals = newtons per square millimeter
+nu = 0.30; # Poisson ratio
+
+# Engineering stress and dimensionless strains
+A_0 = b_0 * t_0; # square millimeters
+sigma_x = F / A_0; # megapascals
+epsilon_x = sigma_x / E;
+epsilon_y = -nu * epsilon_x; # also epsilon_z
+
+# Dimensional changes and loaded dimensions, in millimeters
+dL = epsilon_x * L_0;
+db = epsilon_y * b_0;
+L_loaded = L_0 + dL;
+b_loaded = b_0 + db;
+
+# Report axial elongation
+dL
 ```
 
 The result is **0.5 millimeter** of elongation. Named values show an original area of 200 square millimeters, an axial stress of 100 megapascals, an axial strain of 0.0005 (0.05%), and a lateral strain of -0.00015 (-0.015%). The width change is -0.003 millimeter, indicating contraction. The loaded length and width are 1,000.5 and 19.997 millimeters, respectively.
