@@ -856,6 +856,19 @@ The result is **9.654976**, the percentage chance of at least one failure under 
 
 A job has four groups. Group `r` contains `r` tasks, and task `c` in group `r` takes `r + c` minutes. The total requires an inner sum whose endpoint changes with the outer index.
 
+For $N$ groups, let $r$ index the group and $c$ index a task within that group. The total time $T$, in minutes, is:
+
+$$
+T = \sum_{r=1}^{N}\sum_{c=1}^{r}(r+c).
+$$
+
+Here $N=4$. The inner sum collects the task times within group $r$, and the outer sum combines the group totals.
+
+| Symbol | Scratchpad name | Meaning |
+| --- | --- | --- |
+| $N$ | `groups` | Number of groups |
+| $T$ | `total minutes` | Total time across all groups |
+
 ```text
 groups = 4;
 total minutes = sum_r(
