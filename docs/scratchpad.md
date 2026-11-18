@@ -747,6 +747,55 @@ storage bytes / 1m
 
 The result is **76.8** decimal megabytes. The named values show that 16 bits provide 65,536 identifiers, leaving 15,536 unused. Here `1m` means 1,000,000; to express the storage in binary mebibytes, change the final divisor to `2 ^ 20`, yielding **73.2421875**.
 
+### Cryptography: a small RSA round trip
+
+Use the small primes 3 and 11 to illustrate how RSA encrypts and recovers an integer message. Choose public exponent 3, private exponent 7, and message 4. These deliberately tiny values expose the arithmetic; they are not secure keys.
+
+For distinct primes $p,q$, form the modulus $n=pq$. Euler's totient $\varphi(n)$ counts the integers from 1 through $n-1$ that are coprime to $n$. Choose a public exponent $e$ coprime to $\varphi(n)$ and a private exponent $d$ satisfying the modular inverse relation below. For an integer message $0\leq m<n$, ciphertext $c$ and recovered message $m_{\text{recovered}}$ follow:
+
+$$
+\begin{aligned}
+n &= pq, & \varphi(n) &= (p-1)(q-1), \\
+ed &\equiv 1 \pmod{\varphi(n)}, \\
+c &= m^e \bmod n, & m_{\text{recovered}} &= c^d \bmod n.
+\end{aligned}
+$$
+
+The encryption and decryption steps are the integer primitives described in [RFC 8017, Section 5.1](https://www.rfc-editor.org/rfc/rfc8017.html#section-5.1). Here Euler's totient is calculated explicitly: Scratchpad's built-in `phi` is the golden ratio, not a totient function. Likewise, the built-in `e` is Euler's number, so the public exponent needs a different name. The private exponent is supplied rather than solved for; `inv` computes an ordinary reciprocal, not a modular inverse.
+
+| Symbol | Scratchpad name | Meaning |
+| --- | --- | --- |
+| $p,\ q$ | `p`, `q` | Distinct prime factors |
+| $n$ | `n` | RSA modulus |
+| $\varphi(n)$ | `phi_n` | Euler's totient of the modulus |
+| $e,\ d$ | `e_pub`, `d_priv` | Public and private exponents |
+| $m,\ c$ | `m`, `c` | Original message and ciphertext integers |
+| $m_{\text{recovered}}$ | `m_recovered` | Recovered message integer |
+
+```text
+# Small illustrative key inputs and integer message
+p = 3;
+q = 11;
+e_pub = 3;
+d_priv = 7;
+m = 4;
+
+# Build the modulus and check the supplied exponent pair
+n = p * q;
+phi_n = (p - 1) * (q - 1);
+inverse check = mod(e_pub * d_priv, phi_n); # must be 1
+
+# Encrypt, decrypt, and inspect the round-trip difference
+c = mod(m ^ e_pub, n);
+m_recovered = mod(c ^ d_priv, n);
+round trip difference = m_recovered - m; # should be 0
+m_recovered
+```
+
+The result is **4**, recovering the original message. Named values show `n` = 33, `phi_n` = 20, and `inverse check` = 1 because 3 × 7 leaves remainder 1 on division by 20. Encryption gives `c` = 31, and decryption returns 4 with a `round trip difference` of zero. The check confirms the supplied exponent relation; it does not test whether the inputs are prime or validate the message range.
+
+This example shows textbook RSA arithmetic without message encoding or padding. Scratchpad evaluates each power before taking its remainder; the largest power here is $31^7=27{,}512{,}614{,}111$, an exactly representable integer within its floating-point precision. Larger inputs can lose integer precision or overflow before `mod` runs. Real RSA requires large-integer modular arithmetic and a complete encryption scheme such as RSA-OAEP; this small calculation is for understanding the mathematical round trip.
+
 ### Comparing acoustic intensity levels
 
 For an intensity ratio, the decibel difference is ten times its base-10 logarithm. This example uses explicit powers of ten for small quantities because scientific input notation is unsupported.
