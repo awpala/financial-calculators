@@ -917,7 +917,7 @@ The median is the average of the fourth and fifth observations after numeric sor
 
 ```text
 # Eight observed processing times, all in seconds
-processing times (s) = [12, 15, 14.5, 15, 18, 16, 15, 14.5];
+processing times (s) = [12, 15, 14.5, 15, 18, 16, 15, 14.5,];
 
 # Typical processing time, summarized three ways
 average time (s) = mean(*processing times (s));
