@@ -23,16 +23,21 @@
  *
  * Within an expression, precedence, loosest first: `+ -`, then `* /`, then
  * unary sign, then `^` (right-associative, so `-2^2` is `-4` and `2^3^2` is
- * `512`). Parentheses, brackets, and braces group interchangeably but must close
- * with their own kind. `log` (base 10), `lg` (base 2), `ln`, `sqrt`, `abs`,
+ * `512`). Parentheses and braces group expressions; bare square brackets create
+ * numeric arrays. All brackets must close with their own kind. `log` (base 10),
+ * `lg` (base 2), `ln`, `sqrt`, `abs`,
  * `floor`, `ceil`, `round`, `fact` (factorial), and `inv` (`1 / x`) take one grouped
  * argument. `mod`, `nCr`, `nPr`, `n_root`, and `log_n` take two, as does
  * `arctan2(y, x)`. Circular trigonometric functions use radians; their `_d`
  * variants accept degrees or return degrees for inverses. Inverses use the
  * `arc` prefix, including hyperbolic inverses such as `arcsinh`.
- * `min` and `max` take one or more expressions, with every comma at their own
- * bracket level separating arguments; grouped digits need nested brackets or
- * underscores. Fixed-arity calls keep their last-comma separator rules.
+ * Extrema and statistics take one or more scalar arguments, with every comma
+ * at their own bracket level separating arguments; grouped digits need nested
+ * parentheses or braces, or
+ * underscores. An argument-leading `*` unpacks an array literal or binding;
+ * binary `*` still multiplies numeric operands. Expanded counts are checked
+ * before evaluation. Fixed-arity calls without unpacking keep their last-comma
+ * separator rules; calls with unpacking separate at every own-level comma.
  * `e` is Euler's number, `pi` is π, and `phi` is the golden ratio.
  * All built-in names are reserved in exactly their registered spellings:
  * a declaration of one is refused, and one of a constant says so. Names are
@@ -60,8 +65,27 @@ import type {
   OperatorSymbol,
 } from '#lib/calculator/language/syntax.js';
 
-/** A parsed arithmetic expression tree. */
+/** A scalar number or a flat numeric array; arrays expose no mutation or iterable protocol in the language. */
+export type CalculatorValue = number | readonly number[];
+
+/** A function argument: a scalar expression or an explicitly unpacked array expression. */
+export type CallArgument =
+  | Expression
+  | {
+      /** Unary unpacking, valid only at the start of a function argument. */
+      kind: 'unpack';
+      /** Array literal or reference whose elements supply arguments in order. */
+      operand: Expression;
+    };
+
+/** A parsed numeric expression or flat array expression tree. */
 export type Expression =
+  | {
+      /** A flat array whose elements are validated as scalar numeric expressions. */
+      kind: 'array';
+      /** Elements in source order; an empty array is allowed. */
+      elements: Expression[];
+    }
   | {
       /** A number literal, including any magnitude suffix. */
       kind: 'number';
@@ -101,8 +125,8 @@ export type Expression =
       kind: 'call';
       /** The function to evaluate. */
       name: CalculatorFunction;
-      /** Grouped arguments in source order; one per parameter, or one or more for a variadic function. */
-      arguments: Expression[];
+      /** Scalar arguments and unpacked arrays in source order; the parser validates the expanded count. */
+      arguments: CallArgument[];
     }
   | {
       /** A sum or product of its body over a whole-number range of its index. */

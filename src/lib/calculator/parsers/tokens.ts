@@ -216,7 +216,11 @@ export function tokenize(
       tokens.push({ kind: 'operator', symbol: char as OperatorSymbol, line });
       index += 1;
     } else if (isOpeningBracket(char)) {
-      const list = opensArguments(tokens.at(-1));
+      const list =
+        opensArguments(tokens.at(-1)) ??
+        (char === '['
+          ? { head: 'array', parameters: ['element'], variadic: true }
+          : undefined);
       groups.push(
         list && {
           list,

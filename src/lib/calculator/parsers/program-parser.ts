@@ -31,6 +31,7 @@ class ProgramParser {
   #source: string;
   #lineAt: (index: number) => number;
   #names = new DeclaredNames();
+  #arrays = new Map<string, number>();
 
   /** Start a parser for one complete calculator input. */
   constructor(source: string) {
@@ -64,7 +65,7 @@ class ProgramParser {
       }
       const tokens = this.#tokens(statement.start, statement.end);
       if (tokens.length === 0) continue;
-      result = new ExpressionParser(tokens).parse();
+      result = new ExpressionParser(tokens, this.#arrays).parse();
       resultLine = this.#lineAt(statement.contentStart);
     }
 
@@ -89,7 +90,10 @@ class ProgramParser {
     if (tokens.length === 0) {
       throw new ParseError(`Expected a value after '=' on line ${line}`);
     }
-    const expression = new ExpressionParser(tokens).parse();
+    const parser = new ExpressionParser(tokens, this.#arrays);
+    const expression = parser.parse();
+    const length = parser.arrayLength(expression);
+    if (length !== undefined) this.#arrays.set(name, length);
     this.#names.declare(name, line);
     return { name, line, expression };
   }

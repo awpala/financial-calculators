@@ -6,7 +6,10 @@ Lists evaluated named bindings with their declaration lines and full numeric val
   import Card from '#lib/components/elements/Card.svelte';
   import TriangleIcon from '#lib/icons/navigation/TriangleIcon.svelte';
   import type { CalculatorStore } from '#lib/calculator/calculator.svelte.js';
-  import { formatCalculatedValue } from '#lib/calculator/presentation/format.js';
+  import {
+    formatCalculatorValue,
+    isDefinedValue,
+  } from '#lib/calculator/presentation/format.js';
   import type { CalculatorBindingsSort } from '#lib/calculator/persistence/preferences.js';
   /** Source, evaluated bindings, and sort preference owned by the route. */
   type Props = {
@@ -60,11 +63,18 @@ Lists evaluated named bindings with their declaration lines and full numeric val
           comparison = left.name.localeCompare(right.name, 'en-US');
           break;
         case 'value': {
-          const leftFinite = Number.isFinite(left.value);
-          const rightFinite = Number.isFinite(right.value);
-          // Undefined values stay together after numeric values in either direction.
-          if (leftFinite !== rightFinite) return leftFinite ? -1 : 1;
-          comparison = leftFinite ? left.value - right.value : 0;
+          const rank = (value: typeof left.value) =>
+            typeof value !== 'number' ? 1 : Number.isFinite(value) ? 0 : 2;
+          const category = rank(left.value) - rank(right.value);
+          // Arrays retain declaration order after finite scalars; undefined scalars stay last.
+          if (category !== 0) return category;
+          comparison =
+            typeof left.value === 'number' &&
+            typeof right.value === 'number' &&
+            Number.isFinite(left.value) &&
+            Number.isFinite(right.value)
+              ? left.value - right.value
+              : 0;
           break;
         }
       }
@@ -148,12 +158,9 @@ Lists evaluated named bindings with their declaration lines and full numeric val
               <td
                 class={[
                   'px-5 py-3 text-right font-medium break-all select-all',
-                  !Number.isFinite(binding.value) &&
+                  !isDefinedValue(binding.value) &&
                     'text-amber-700 dark:text-amber-400',
-                ]}
-                >{Number.isFinite(binding.value)
-                  ? formatCalculatedValue(binding.value)
-                  : 'Undefined'}</td
+                ]}>{formatCalculatorValue(binding.value)}</td
               >
             </tr>
           {/each}

@@ -1,3 +1,9 @@
+import {
+  mean,
+  median,
+  mode,
+  standardDeviation,
+} from '#lib/calculator/language/statistics.js';
 import { factorial } from '#lib/calculator/language/factorial.js';
 import {
   combinations,
@@ -17,11 +23,22 @@ import {
 export type BuiltInFunction = {
   /** The parameters in order, one per argument, as the messages name them. */
   parameters: readonly string[];
-  /** Whether one or more arguments are folded pairwise with apply; defaults to false. */
+  /** Whether one or more scalar arguments are accepted; defaults to false. */
   variadic?: boolean;
-  /** Apply ordered argument values, or combine two values at a time for variadic functions. */
-  apply: (...values: number[]) => number;
-};
+} & (
+  | {
+      /** Apply ordered values, or fold pairs for a variadic function. */
+      apply: (...values: number[]) => number;
+      /** Pairwise functions do not consume a complete collection. */
+      aggregate?: never;
+    }
+  | {
+      /** Consume the complete argument collection without native argument spreading. */
+      aggregate: (values: readonly number[]) => number;
+      /** Collection functions do not fold pairs. */
+      apply?: never;
+    }
+);
 
 /** The functions supported by parsing, evaluation, and highlighting, each with the parameters it takes. */
 export const FUNCTIONS = {
@@ -49,6 +66,24 @@ export const FUNCTIONS = {
   min: { parameters: ['x'], variadic: true, apply: Math.min },
   /** The greatest of one or more values, retaining nonfinite arithmetic. */
   max: { parameters: ['x'], variadic: true, apply: Math.max },
+  /** Arithmetic mean of one or more finite values. */
+  mean: { parameters: ['x'], variadic: true, aggregate: mean },
+  /** Middle sorted value, averaging the middle pair for even counts. */
+  median: { parameters: ['x'], variadic: true, aggregate: median },
+  /** Most frequent value, resolving ties by first appearance. */
+  mode: { parameters: ['x'], variadic: true, aggregate: mode },
+  /** Population standard deviation, dividing squared deviations by n. */
+  sd_p: {
+    parameters: ['x'],
+    variadic: true,
+    aggregate: (values: readonly number[]) => standardDeviation(values, false),
+  },
+  /** Sample standard deviation, dividing by n - 1; a singleton is undefined. */
+  sd_s: {
+    parameters: ['x'],
+    variadic: true,
+    aggregate: (values: readonly number[]) => standardDeviation(values, true),
+  },
   /** Factorial of a non-negative integer; anything else has none. */
   fact: { parameters: ['x'], apply: factorial },
   /** Unordered selections of r items from n without replacement. */

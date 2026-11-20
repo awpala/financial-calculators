@@ -1,4 +1,8 @@
-import type { Expression, Program } from '#lib/calculator/program.js';
+import type {
+  CalculatorValue,
+  Expression,
+  Program,
+} from '#lib/calculator/program.js';
 import {
   CONSTANTS,
   FUNCTIONS,
@@ -14,14 +18,14 @@ import {
 export type Binding = {
   /** The bound name. */
   name: string;
-  /** Its final value; not finite when its arithmetic is undefined. */
-  value: number;
+  /** Its scalar or immutable numeric-array value; nonfinite numbers represent undefined arithmetic. */
+  value: CalculatorValue;
 };
 
 /** The value of a program's result and every name it bound. */
 export type Evaluation = {
-  /** The result expression's value, if the program has one; not finite when its arithmetic is undefined. */
-  value?: number;
+  /** The optional result's scalar or immutable array value; nonfinite entries represent undefined arithmetic. */
+  value?: CalculatorValue;
   /** Each bound name with its final value, in the order first bound. */
   bindings: Binding[];
 };
@@ -49,7 +53,8 @@ class TermLimitError extends Error {}
 /**
  * Evaluate a program's assignments in order, then its result, with JavaScript's
  * own arithmetic and `Math`. The program must come from the program parser,
- * which guarantees every name and index is bound before it is read.
+ * which guarantees every name and index is bound, array elements and arithmetic
+ * are numeric, and expanded argument counts match their functions.
  *
  * Undefined arithmetic is a value rather than a failure. Evaluation stops short
  * only when its sums and products together would pass `TERM_LIMIT` terms, and
@@ -69,7 +74,7 @@ export function evaluateProgram(program: Program): EvaluationResult {
 
 /** Evaluate one program with a fresh scope and term budget; use a new evaluator for each. */
 class ProgramEvaluator {
-  #scope = new Map<string, number>();
+  #scope = new Map<string, CalculatorValue>();
   #indices = new Map<string, number>();
   #termsLeft = TERM_LIMIT;
 
@@ -85,8 +90,12 @@ class ProgramEvaluator {
     };
   }
 
-  #evaluate(expression: Expression): number {
+  #evaluate(expression: Expression): CalculatorValue {
     switch (expression.kind) {
+      case 'array':
+        return Object.freeze(
+          expression.elements.map((element) => this.#number(element)),
+        );
       case 'number':
         return expression.value;
       case 'constant':
@@ -96,28 +105,36 @@ class ProgramEvaluator {
       case 'index':
         return this.#read(this.#indices, expression.name);
       case 'negate':
-        return -this.#evaluate(expression.operand);
+        return -this.#number(expression.operand);
       case 'call': {
-        const { apply, variadic }: BuiltInFunction = FUNCTIONS[expression.name];
-        if (variadic) {
-          // Fold without spreading a user-sized list into native function
-          // arguments, which would otherwise exceed the engine's call limit.
-          let value = Number.NaN;
-          for (const [index, argument] of expression.arguments.entries()) {
-            const next = this.#evaluate(argument);
-            value = index === 0 ? next : apply(value, next);
+        const { apply, aggregate, variadic }: BuiltInFunction =
+          FUNCTIONS[expression.name];
+        const values: number[] = [];
+        for (const argument of expression.arguments) {
+          if (argument.kind === 'unpack') {
+            const array = this.#evaluate(argument.operand);
+            if (typeof array === 'number')
+              throw new Error('Expected a numeric array');
+            for (const value of array) values.push(value);
+          } else {
+            values.push(this.#number(argument));
           }
+        }
+        if (aggregate) return aggregate(values);
+        if (variadic) {
+          // Never spread a user-sized collection into native function arguments.
+          let value = values[0] ?? Number.NaN;
+          for (let index = 1; index < values.length; index += 1)
+            value = apply(value, values[index]!);
           return value;
         }
-        return apply(
-          ...expression.arguments.map((argument) => this.#evaluate(argument)),
-        );
+        return apply(...values);
       }
       case 'iteration':
         return this.#iterate(expression);
       case 'binary': {
-        const left = this.#evaluate(expression.left);
-        const right = this.#evaluate(expression.right);
+        const left = this.#number(expression.left);
+        const right = this.#number(expression.right);
         switch (expression.operator) {
           case '+':
             return left + right;
@@ -134,7 +151,16 @@ class ProgramEvaluator {
     }
   }
 
-  #read(scope: ReadonlyMap<string, number>, name: string): number {
+  #number(expression: Expression): number {
+    const value = this.#evaluate(expression);
+    if (typeof value !== 'number') throw new Error('Expected a numeric scalar');
+    return value;
+  }
+
+  #read<T extends CalculatorValue>(
+    scope: ReadonlyMap<string, T>,
+    name: string,
+  ): T {
     const value = scope.get(name);
     if (value === undefined) {
       throw new Error(`'${name}' was read before it was bound`);
@@ -149,8 +175,8 @@ class ProgramEvaluator {
    * restored afterward.
    */
   #iterate({ operator, index, body, start, end, line }: Iteration): number {
-    const first = this.#evaluate(start);
-    const last = this.#evaluate(end);
+    const first = this.#number(start);
+    const last = this.#number(end);
     const terms = termCount(first, last);
     if (terms === undefined) return Number.NaN;
     if (terms > this.#termsLeft) {
@@ -165,7 +191,7 @@ class ProgramEvaluator {
     let total: number = empty;
     for (let value = first; value <= last; value += 1) {
       this.#indices.set(index, value);
-      total = combine(total, this.#evaluate(body));
+      total = combine(total, this.#number(body));
     }
     if (outer === undefined) this.#indices.delete(index);
     else this.#indices.set(index, outer);

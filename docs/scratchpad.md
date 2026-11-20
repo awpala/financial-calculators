@@ -1,8 +1,8 @@
 # Scratchpad language specification
 
-Scratchpad is a small numeric language for calculations that benefit from named inputs, intermediate values, and written explanations. A program can be a single expression or a sequence of named calculations followed by a result. Alongside ordinary arithmetic, the language provides percentages, magnitude suffixes, mathematical constants, functions, and finite sums and products.
+Scratchpad is a small numeric language for calculations that benefit from named inputs, intermediate values, and written explanations. A program can be a single expression or a sequence of named calculations followed by a result. Alongside ordinary arithmetic, the language provides percentages, magnitude suffixes, mathematical constants, numeric arrays, statistical functions, and finite sums and products.
 
-This specification describes the language implemented in the Financial Calculators Scratchpad. All values are numbers; dollar signs and descriptive names help present a calculation but do not introduce currencies, units, or other data types. The final section contains complete programs covering several application domains. Implementation and integration details are documented separately in the [calculator library guide](../src/lib/calculator/README.md).
+This specification describes the language implemented in the Financial Calculators Scratchpad. Values are scalar numbers or flat arrays of numbers; dollar signs and descriptive names help present a calculation but do not introduce currencies or units. Arrays are a narrow numeric datatype, not JavaScript arrays exposed to the language. The final section contains complete programs covering several application domains. Implementation and integration details are documented separately in the [calculator library guide](../src/lib/calculator/README.md).
 
 ## Purpose and scope
 
@@ -67,7 +67,7 @@ Names are case-sensitive: `load`, `Load`, and `LOAD` are distinct. A name must b
 | Name category | Rule |
 | --- | --- |
 | Constants | `e`, `pi`, and `phi` are reserved. |
-| Functions | `log`, `lg`, `ln`, `log_n`, `sqrt`, `n_root`, `abs`, `floor`, `ceil`, `round`, `min`, `max`, `fact`, `nCr`, `nPr`, `inv`, `mod`, and every spelling in the [trigonometric reference](#trigonometric-functions) are reserved. |
+| Functions | `log`, `lg`, `ln`, `log_n`, `sqrt`, `n_root`, `abs`, `floor`, `ceil`, `round`, `min`, `max`, `mean`, `median`, `mode`, `sd_p`, `sd_s`, `fact`, `nCr`, `nPr`, `inv`, `mod`, and every spelling in the [trigonometric reference](#trigonometric-functions) are reserved. |
 | Sum and product heads | Any complete word matching `sum_` or `prod_` followed by a valid index is reserved, including `sum_total` and `prod_step2`. |
 | Numeric-looking names | A name made only of digits, whitespace, commas, underscores, decimal points, dollar signs, and percent signs is rejected; examples include `123`, `$12.50`, and `8%`. |
 | Other spellings | `PI`, `Sqrt`, `sum`, and `sum_2023` may be declared; none is a reserved spelling. |
@@ -90,7 +90,7 @@ Declarations are available through the remainder of the program. The only additi
 
 Numbers use decimal digits and `.` as the decimal point. A leading zero is optional for a fraction: `.75` and `0.75` have the same value. A decimal point must be followed by a digit, so `7.` is invalid. A leading `+` or `-` is an arithmetic sign rather than part of the literal.
 
-Commas and underscores may separate adjacent digits, including digits in the fractional part. They do not affect the value, and groups need not contain three digits. For example, `12_000`, `12,000`, and `12000` are equivalent, as are `0.123_456` and `0.123456`. A separator cannot touch another separator or whitespace: `1,,000`, `1__000`, and `1, 000` are invalid as single numbers. Commas also separate function arguments, subject to the [argument-separator rules](#commas-in-argument-lists).
+Commas and underscores may separate adjacent digits, including digits in the fractional part. They do not affect the value, and groups need not contain three digits. For example, `12_000`, `12,000`, and `12000` are equivalent, as are `0.123_456` and `0.123456`. A separator cannot touch another separator or whitespace: `1,,000`, `1__000`, and `1, 000` are invalid as single numbers. Commas also separate array elements and function arguments, subject to the [array rules](#numeric-arrays-and-unpacking) and [argument-separator rules](#commas-in-argument-lists).
 
 `$` is ignored in expressions except when it belongs to a matched declared name. `$48.25` therefore has the value 48.25. It does not create a currency type, perform conversion, or cause the result to be formatted as money. Other currency symbols and unit suffixes have no built-in numeric meaning; put units in names or comments instead.
 
@@ -125,7 +125,7 @@ Scientific input notation such as `4e6` is not supported; write `4m`, `4000000`,
 
 ### Operators and precedence
 
-The binary operators are addition `+`, subtraction `-`, multiplication `*`, division `/`, and exponentiation `^`. Prefix `+` and `-` provide signs and may be repeated, as in `--3`.
+The binary operators are addition `+`, subtraction `-`, multiplication `*`, division `/`, and exponentiation `^`. They require scalar numeric operands. At the start of a function argument, unary `*` instead unpacks an array value; it has no arithmetic precedence and cannot appear elsewhere in an expression. Prefix `+` and `-` provide signs and may be repeated, as in `--3`.
 
 The following table lists precedence from strongest to weakest. Operators on the same row group in the direction shown.
 
@@ -143,11 +143,40 @@ Multiplication must be explicit. `2pi`, `3(4 + 5)`, and `(2 + 1)(4 + 1)` are inv
 
 ### Grouping and calls
 
-Parentheses `()`, square brackets `[]`, and braces `{}` all group expressions. They may be nested and mixed, but every opening bracket must close with its own kind. `[2 + {3 * 4}]` is valid; `[2 + 3)` is not. Brackets do not create arrays, lists, objects, or separate statement scopes.
+Parentheses `()` and braces `{}` group expressions. They may be nested and mixed, but every opening bracket must close with its own kind. `(2 + {3 * 4})` is valid; `(2 + 3]` is not. Bare square brackets `[]` create numeric arrays: `[2 + {3 * 4}]` is a one-element array containing 14. Braces do not create objects or separate statement scopes. Replace square brackets previously used for scalar grouping with parentheses or braces. Previously saved results are ignored once after this language change; input text and presentation preferences are preserved, so calculate again after any needed syntax edits.
 
-A function call consists of its name followed by arguments inside any of these bracket pairs. Whitespace between the name and the opening bracket is allowed. `sqrt(25)`, `sqrt[25]`, and `sqrt {25}` all give 5. Calls may be nested and their arguments may be full expressions.
+A function call consists of its name followed by arguments inside any of these bracket pairs. Whitespace between the name and the opening bracket is allowed. `sqrt(25)`, `sqrt[25]`, and `sqrt {25}` all give 5. Calls may be nested and their arguments may be full scalar expressions or unpacked numeric arrays. Square brackets immediately after a function or sum/product head delimit its arguments, so `sqrt[25]` remains a scalar call while `[25]` is an array.
 
 Matching bracket pairs share a color in the editor and syntax examples, with colors cycling by nesting level. Brackets within comments or declared names keep their comment or name color; unmatched or mismatched brackets stay plain.
+
+## Numeric arrays and unpacking
+
+An array is an ordered, immutable, flat collection of numeric scalar values. Write its elements between `[` and `]`, separated by commas. Integer and fractional values may be mixed, and each element may be a numeric expression using earlier bindings, constants, functions, or sums and products. One trailing comma is allowed after the last element, including before whitespace or a comment. `[]` is an empty array; `[,]`, `[1,,2]`, and `[1,,]` are invalid.
+
+```text
+base = 4;
+measurements = [base, 5.5, 2 * base,];
+measurements
+```
+
+This returns `[4, 5.5, 8]`. Arrays can be declared, referred to by later statements, aliased (`copy = measurements;`), or used as the final result. They cannot be updated, indexed, sliced, concatenated, or used directly in arithmetic. There are no nested arrays, strings, booleans, objects, comprehensions, or general JavaScript iterables. `[1, "2"]`, `[[1, 2]]`, and `measurements + 1` are rejected during parsing, before Calculate is enabled. Numeric type validation does not require finite arithmetic: `[1, sqrt(-1)]` is valid and displays `[1, Undefined]`.
+
+Every comma at an array's own bracket level separates elements, irrespective of spaces: `[1,000]` contains 1 and 0. Write `[1_000]`, `[1k]`, or `[(1,000)]` for one element containing 1,000. Commas within nested calls, parentheses, braces, comments, or matched declared names retain their own meaning.
+
+At the start of a function argument, unary `*` unpacks an earlier array binding or an anonymous numeric array literal into scalar arguments in its element order:
+
+```text
+measurements = [4, 5.5, 8,];
+max(2 * 3, *measurements)
+```
+
+The result is 8. Here `2 * 3` uses binary multiplication, while `*measurements` supplies three arguments. Unpacking is identified by its position, not by whitespace: `max(* measurements)` is also valid. Multiple unpackings and scalar arguments may be mixed, as in `max(*measurements, 10, *measurements,)`. An empty array supplies no arguments; `empty = []; max(3, *empty)` returns 3, but `max(*empty)` has no arguments and is invalid.
+
+The operand must be a numeric array: an earlier array binding, an anonymous array literal, or either wrapped in parentheses or braces. `max(*[1, 2.5, 3,])` returns 3, and `max(*(measurements))` and `max(*([1, 2]))` are also valid. Scalar operands such as `n = 3; max(*n)`, a bare `*measurements`, and `[*measurements]` are invalid. An unpacking occupies the whole argument; `max(*measurements * 2)` is invalid. An array passed without unpacking, as in `max(measurements)`, is also invalid. Descriptive names and aliases follow the ordinary name-matching rules; a local sum/product index shadows an outer binding of the same name and cannot be unpacked as an array.
+
+Unpacking works with fixed-arity functions as well: `pair = [14, 4]; mod(*pair)` returns 2. The parser knows array lengths and checks the argument count after expansion. `pair = [14, 4]; sqrt(*pair)` is invalid because two expanded arguments do not fit `sqrt`. Sums and products keep their three scalar arguments and do not accept unpacking.
+
+A function call containing unpacking divides at **every comma at that call's own bracket level**, even for a fixed-arity function. Write grouped figures with underscores, suffixes, or parentheses in these calls. For example, `divisor = [4]; mod(1_000, *divisor)` is valid, while `mod(1,000, *divisor)` would supply three arguments. Binary multiplication alone does not change a call's usual comma rules.
 
 ## Constants and functions
 
@@ -163,7 +192,7 @@ These are values, not functions. For example, `pi(2)` is invalid; multiplication
 
 ### Function reference
 
-Functions take exactly one expression except `mod`, `nCr`, `nPr`, `n_root`, `log_n`, `arctan2`, and `arctan2_d`, which take two, and `min` and `max`, which take one or more. The parameter letters below are placeholders, not names that must be declared. Function names are case-sensitive: `nCr` and `nPr` require those capital letters, and inverses use the `arc` prefix rather than aliases such as `asin`.
+Functions take exactly one expression except `mod`, `nCr`, `nPr`, `n_root`, `log_n`, `arctan2`, and `arctan2_d`, which take two, and `min`, `max`, `mean`, `median`, `mode`, `sd_p`, and `sd_s`, which take one or more scalar arguments after unpacking. The parameter letters below are placeholders, not names that must be declared. Function names are case-sensitive: `nCr` and `nPr` require those capital letters, and inverses use the `arc` prefix rather than aliases such as `asin`.
 
 | Call | Meaning | Domain and behavior |
 | --- | --- | --- |
@@ -179,6 +208,11 @@ Functions take exactly one expression except `mod`, `nCr`, `nPr`, `n_root`, `log
 | `round(x)` | Nearest integer, with half ties toward positive infinity | `round(2.5)` is 3; `round(-2.5)` is -2. |
 | `min(x, ...)` | Least of one or more expressions | `min(4, -2, 8)` is -2; an empty argument list is invalid. |
 | `max(x, ...)` | Greatest of one or more expressions | `max(4, -2, 8)` is 8; an empty argument list is invalid. |
+| `mean(x, ...)` | Arithmetic mean | Sum of the values divided by their count. |
+| `median(x, ...)` | Middle value in numeric sorted order | An even count returns the mean of the middle pair; the original array order is preserved. |
+| `mode(x, ...)` | Most frequent value | Ties return the first encountered tied value; all-unique input returns its first value. |
+| `sd_p(x, ...)` | Population standard deviation | Square root of the mean squared deviation from the mean; one value returns 0. |
+| `sd_s(x, ...)` | Sample standard deviation | Uses divisor `n - 1` for `n` observations; one value gives *Undefined*. |
 | `fact(x)` | Factorial, the product of integers from 1 through `x` | `fact(0)` is 1; negative or fractional arguments give *Undefined*. |
 | `nCr(n, r)` | Combinations: choose `r` items from `n` without replacement, ignoring order | Both arguments must be nonnegative integers with `r <= n`. |
 | `nPr(n, r)` | Permutations: choose `r` items from `n` without replacement, counting order | Both arguments must be nonnegative integers with `r <= n`. |
@@ -196,6 +230,22 @@ Factorials through `fact(170)` produce finite results. Larger nonnegative intege
 `log_n(x, 10)`, `log_n(x, 2)`, and `log_n(x, e)` match `log(x)`, `lg(x)`, and `ln(x)`. Other bases use `ln(x) / ln(base)`: `log_n(81, 3)` is 4, and `log_n(8, 0.5)` is -3. Invalid bases, negative `x`, and nonfinite results display as *Undefined*.
 
 `round` takes one argument and rounds to a whole number; it has no optional precision parameter. To round to two decimal places, write `round(x * 100) / 100`. `min` and `max` accept one or more complete expressions and evaluate every argument in source order. Their values retain ordinary nonfinite arithmetic: `min(1 / 0, 3)` is 3, while `min(sqrt(-1), 3)` is *Undefined*. These functions are built in; user-defined functions are not supported.
+
+### Statistics
+
+The five statistics functions accept scalar expressions and unpacked numeric arrays, whether bound or written inline. Empty argument lists, including calls supplied only with empty unpackings, are invalid. Any nonfinite observation gives *Undefined* for all five functions. A one-value sample passed to `sd_s` is valid syntax but gives *Undefined* because its divisor is zero. Standard deviations use squared deviations from the arithmetic mean, dividing by the observation count for `sd_p` or one less than that count for `sd_s`; they are not variances.
+
+```text
+observations = [2, 4, 4, 4, 5, 5, 7, 9,];
+average = mean(*observations);
+midpoint = median(*observations);
+most frequent = mode(*observations);
+population deviation = sd_p(*observations);
+sample deviation = sd_s(*observations);
+average
+```
+
+The result and `average` are 5; `midpoint` and `most frequent` are 4.5 and 4; `population deviation` is 2; `sample deviation` is approximately 2.1380899353. Repeated observations count individually. `mode(2, 1, 1, 2)` returns 2 because both values occur twice and 2 appears first. These functions use the same floating-point numeric type as the rest of Scratchpad; they do not add exact decimal arithmetic.
 
 ### Trigonometric functions
 
@@ -236,16 +286,16 @@ The reciprocal hyperbolic functions are `1 / cosh(x)`, `1 / sinh(x)`, and `1 / t
 
 Function calls, sums, and products allow one optional trailing comma after the final argument: `sqrt(25,)`, `mod(14, 4,)`, `min(4, 2,)`, and `sum_i(i, 1, 3,)` are valid. Whitespace and comments may follow that comma before the closing bracket. The comma does not supply a missing argument: `mod(14,)` is still invalid, as are repeated trailing commas and commas in ordinary expression groups such as `(25,)`.
 
-Because commas can group digits as well as separate arguments, fixed-arity calls use a specific rule: **after setting aside an optional trailing comma, the last required commas directly inside a call's brackets separate its arguments**. Variadic `min` and `max` instead divide at every comma directly inside their brackets. Commas inside nested brackets, comments, or matched declared names do not count as separators for the surrounding call.
+Because commas can group digits as well as separate arguments, fixed-arity calls use a specific rule: **after setting aside an optional trailing comma, the last required commas directly inside a call's brackets separate its arguments**. Variadic `min`, `max`, `mean`, `median`, `mode`, `sd_p`, and `sd_s`, and any function call containing unpacking, instead divide at every comma directly inside their brackets. Commas inside nested brackets, comments, or matched declared names do not count as separators for the surrounding call.
 
 | Call | Argument separators | Example |
 | --- | --- | --- |
 | A one-argument function | None; other than the optional trailing comma, commas only group digits | `log(10,000,)` is the logarithm of 10,000. |
-| `min(x, ...)` or `max(x, ...)` | Every comma at that bracket level, with one optional trailing comma | `min(1,000)` has two arguments, 1 and 0; use `min((1,000), 900)` or `min(1_000, 900)` to compare 1,000 with 900. |
+| Any variadic function, or a function call containing unpacking | Every comma at that bracket level, with one optional trailing comma | `min(1,000)` has two arguments, 1 and 0; use `min((1,000), 900)` or `min(1_000, 900)` to compare 1,000 with 900. |
 | A two-argument function: `mod`, `nCr`, `nPr`, `n_root`, `log_n`, `arctan2`, or `arctan2_d` | The last comma at that bracket level before any trailing comma | `mod(10,000, 6,)` has dividend 10,000 and divisor 6; `nCr(1,000, 2)` chooses 2 from 1,000. |
 | `sum_i(body, start, end)` or `prod_i(body, start, end)` | The last two commas at that bracket level before any trailing comma | `sum_i(1,500 * i, 1, 3,)` has body `1,500 * i` and bounds 1 and 3. |
 
-Use ungrouped digits, underscores, magnitude suffixes, or declared names for the second argument of any two-argument function and the bounds of sums and products. For example, write `mod(12000, 1000)` or `mod(12000, 1_000)`, and write `sum_i(i, 1000, 2000)` or `sum_i(i, 1k, 2k)`. An extra pair of brackets can also protect grouped digits: `mod(12000, (1,000))`, `nCr(2000, (1,000))`, and `sum_i(i, (1,000), (2,000))` are valid.
+Use ungrouped digits, underscores, magnitude suffixes, or declared names for the second argument of any two-argument function and the bounds of sums and products. For example, write `mod(12000, 1000)` or `mod(12000, 1_000)`, and write `sum_i(i, 1000, 2000)` or `sum_i(i, 1k, 2k)`. An extra pair of parentheses or braces can also protect grouped digits: `mod(12000, (1,000))`, `nCr(2000, (1,000))`, and `sum_i(i, (1,000), (2,000))` are valid.
 
 Do not rely on spaces after commas to distinguish the two uses. `mod(12000, 1,000)` does not mean a divisor of 1,000, and `sum_i(i, 1,000, 2,000)` does not provide the intended two bounds.
 
@@ -299,7 +349,9 @@ Arithmetic uses binary floating-point numbers rather than exact decimal or symbo
 
 Normal display uses digit grouping and at most ten fractional digits, without unnecessary trailing zeros. Nonzero values with absolute magnitude below 0.000001 use scientific display notation with up to six fractional digits in the significand. Negative zero displays as 0. Consequently, `0.1 + 0.2` displays as 0.3, while `0.1 + 0.2 - 0.3` exposes the residual as `5.551115e-17`.
 
-The **Suffixed** option abbreviates the final result with `K`, `M`, `B`, or `T` and at most three fractional digits; even values below 1,000 use that shorter precision when the option is enabled, apart from the very small values shown in scientific notation. Named values retain the normal display format. These settings affect presentation only. A later expression uses the underlying value of a name, not its rounded display text.
+Arrays display in brackets with comma-separated elements and underscore digit grouping within each element, as `[1_000, 2.5]`, so grouping cannot be confused with element separators. Nonfinite elements display individually as *Undefined*. Empty arrays display as `[]`.
+
+The **Suffixed** option abbreviates the final result with `K`, `M`, `B`, or `T` and at most three fractional digits; even values below 1,000 use that shorter precision when the option is enabled, apart from the very small values shown in scientific notation. For array results it applies separately to each element. Named values retain the normal display format. These settings affect presentation only. A later expression uses the underlying value of a name, not its rounded display text.
 
 Scientific notation can appear in output even though it is not accepted as input. To reuse such a displayed value, translate it to decimal notation or an expression such as `5.551115 * 10 ^ -17`. Copying a rounded display value also loses precision compared with referring to the name in the same program.
 
@@ -323,9 +375,11 @@ Scratchpad checks syntax as the input changes and reports the first problem with
 | `5!` | Write `fact(5)`. |
 | `17 % 4` | Write `mod(17, 4)` for a remainder. |
 | An index used after its sum or product | The index belongs only to the call's first argument. |
+| An array where a scalar is required | Use a numeric scalar; in a function call, use `*name` or `*[...]` to unpack a numeric array. |
+| An invalid unpacking target | Use a numeric array binding or literal after `*` as a complete function argument. |
 | A wrong closing bracket | Match each `(`, `[`, or `{` with its own closer. |
 
-The language has no strings, booleans, comparisons, conditional expressions, arrays, assignments that update an existing name, or general-purpose loops. `=` declares a name; it does not test equality. A declaration with parentheses in its name does not define a callable function. Built-in functions and finite sums and products provide the supported forms of repeated calculation.
+The language has no strings, booleans, comparisons, conditional expressions, nested or nonnumeric arrays, assignments that update an existing name, or general-purpose loops. `=` declares a name; it does not test equality. A declaration with parentheses in its name does not define a callable function. Built-in functions and finite sums and products provide the supported forms of repeated calculation.
 
 ## Notepad++ highlighting
 
@@ -722,14 +776,14 @@ A circular plate has a measured diameter of 48.6 centimeters and a nominal diame
 ```text
 measured diameter (cm) = 48.6;
 nominal diameter (cm) = 50;
-measured area = pi * [measured diameter (cm) / 2] ^ 2;
-nominal area = pi * [nominal diameter (cm) / 2] ^ 2;
+measured area = pi * (measured diameter (cm) / 2) ^ 2;
+nominal area = pi * (nominal diameter (cm) / 2) ^ 2;
 equivalent square side (cm) = sqrt(measured area);
 relative area error = abs(measured area - nominal area) / nominal area;
 100 * relative area error
 ```
 
-The result is **5.5216**, meaning an area difference of 5.5216%. The equivalent square's side is approximately 43.07 centimeters. Parentheses within the declared diameter names are part of the names, while the square brackets in the area expressions group arithmetic. `abs` reports the magnitude of the deviation regardless of its direction.
+The result is **5.5216**, meaning an area difference of 5.5216%. The equivalent square's side is approximately 43.07 centimeters. Parentheses within the declared diameter names are part of the names, while the outer parentheses in the area expressions group arithmetic. `abs` reports the magnitude of the deviation regardless of its direction.
 
 ### Binary identifiers and storage capacity
 
@@ -846,6 +900,49 @@ days to target
 ```
 
 The result is approximately **26.5754** days. The named `remaining fraction` is approximately 0.1767766953, or 17.6777%. The example combines `e`, `ln`, a negative exponent, a literal percentage, and `inv` as an alternative to division.
+
+### Statistics: measured processing times
+
+A workshop records the time to process eight parts under the same machine setup: 12, 15, 14.5, 15, 18, 16, 15, and 14.5 seconds. Keep the observations together in a numeric array, then compare their average, middle value, most frequent value, and spread. Each observation has equal weight; a repeated time represents another completed part and must remain in the data.
+
+For observations $x_1,\ldots,x_n$, with $n=8$, the mean and the two standard deviations are:
+
+$$
+\bar{x}=\frac{1}{n}\sum_{i=1}^{n}x_i,\qquad
+\sigma=\sqrt{\frac{1}{n}\sum_{i=1}^{n}(x_i-\bar{x})^2},\qquad
+s=\sqrt{\frac{1}{n-1}\sum_{i=1}^{n}(x_i-\bar{x})^2}.
+$$
+
+The median is the average of the fourth and fifth observations after numeric sorting because the count is even. The mode is the most frequent observed time. Means, medians, modes, and standard deviations all retain the observations' unit of seconds; only the squared deviations inside the formulas have units of seconds squared.
+
+```text
+# Eight observed processing times, all in seconds
+processing times (s) = [12, 15, 14.5, 15, 18, 16, 15, 14.5];
+
+# Typical processing time, summarized three ways
+average time (s) = mean(*processing times (s));
+middle time (s) = median(*processing times (s));
+most common time (s) = mode(*processing times (s));
+
+# Spread of this complete batch versus a sample of the ongoing process
+population spread (s) = sd_p(*processing times (s));
+sample spread (s) = sd_s(*processing times (s));
+sample spread (s)
+```
+
+The result is approximately **1.6690459208** seconds. The named values are:
+
+| Scratchpad name | Value in seconds | Interpretation |
+| --- | --- | --- |
+| `average time (s)` | 15 | The eight times total 120 seconds. |
+| `middle time (s)` | 15 | Both middle observations in sorted order are 15. |
+| `most common time (s)` | 15 | Three parts took 15 seconds, the highest frequency. |
+| `population spread (s)` | Approximately 1.5612494996 | Uses all eight observations as the population being described. |
+| `sample spread (s)` | Approximately 1.6690459208 | Uses divisor seven when the observations are a sample of a larger process. |
+
+Use `sd_p` when the question concerns exactly these eight completed parts as a complete population. Use `sd_s` when treating them as a sample for estimating the variability of repeated runs under the same conditions. The squared deviations total 19.5 seconds squared, so the difference between the two reported spreads comes from dividing by eight or seven before taking the square root. Neither calculation establishes that the sample represents future runs or that processing times follow a particular distribution.
+
+The trailing comma after the last observation is optional, and each `*processing times (s)` expands the same array into scalar arguments. The parentheses within that descriptive name are part of the name. `median` sorts a copy, leaving the bound observations in their original order. For a short calculation without a binding, `mean(*[14.5, 15.5,])` similarly returns 15 seconds. To compare another batch, replace the observations and calculate again; all five summaries are recomputed together.
 
 ### Probability of passing a sampling check
 

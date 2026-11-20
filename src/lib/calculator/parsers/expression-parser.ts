@@ -1,4 +1,4 @@
-import type { Expression } from '#lib/calculator/program.js';
+import type { CallArgument, Expression } from '#lib/calculator/program.js';
 import {
   countWord,
   describeArguments,
@@ -56,11 +56,16 @@ function describe(token: Token): string {
 export class ExpressionParser {
   #tokens: Token[];
   #index = 0;
+  #arrays: ReadonlyMap<string, number>;
   #iterations: OpenIteration[] = [];
 
-  /** Take an ordered token sequence for one expression; each parser is consumed once. */
-  constructor(tokens: Token[]) {
+  /** Take tokens and the lengths of earlier array bindings; each parser is consumed once. */
+  constructor(
+    tokens: Token[],
+    arrays: ReadonlyMap<string, number> = new Map(),
+  ) {
     this.#tokens = tokens;
+    this.#arrays = arrays;
   }
 
   /** Consume the complete expression, throwing ParseError on the first error. */
@@ -107,22 +112,32 @@ export class ExpressionParser {
   ): Expression {
     let left = operand();
     for (let op = this.#operator(symbols); op; op = this.#operator(symbols)) {
-      left = { kind: 'binary', operator: op, left, right: operand() };
+      const right = operand();
+      this.#numeric(left);
+      this.#numeric(right);
+      left = { kind: 'binary', operator: op, left, right };
     }
     return left;
   }
 
   #unary(): Expression {
     const sign = this.#operator(['+', '-']);
-    if (sign === '+') return this.#unary();
-    if (sign === '-') return { kind: 'negate', operand: this.#unary() };
+    if (sign) {
+      const operand = this.#numeric(this.#unary());
+      return sign === '+' ? operand : { kind: 'negate', operand };
+    }
     return this.#power();
   }
 
   #power(): Expression {
     const base = this.#primary();
     if (!this.#operator(['^'])) return base;
-    return { kind: 'binary', operator: '^', left: base, right: this.#unary() };
+    return {
+      kind: 'binary',
+      operator: '^',
+      left: this.#numeric(base),
+      right: this.#numeric(this.#unary()),
+    };
   }
 
   #primary(): Expression {
@@ -138,7 +153,7 @@ export class ExpressionParser {
         this.#index += 1;
         return { kind: 'number', value: token.value };
       case 'open':
-        return this.#group();
+        return token.bracket === '[' ? this.#array() : this.#group();
       case 'name':
         this.#index += 1;
         if (this.#isBoundIndex(token.name)) {
@@ -204,15 +219,26 @@ export class ExpressionParser {
       );
     }
 
-    const argumentsRead = [this.#sum()];
+    const argumentsRead = [this.#argument()];
     while (this.#peek()?.kind === 'separator') {
       this.#index += 1;
       if (this.#peek()?.kind === 'close') break;
-      argumentsRead.push(this.#sum());
+      argumentsRead.push(this.#argument());
     }
     this.#close(open);
 
-    if (!variadic && argumentsRead.length !== parameters.length) {
+    const count = argumentsRead.reduce(
+      (total, argument) =>
+        total +
+        (argument.kind === 'unpack' ? this.arrayLength(argument.operand)! : 1),
+      0,
+    );
+    if (variadic && count === 0) {
+      throw new ParseError(
+        `'${name}' on line ${line} takes at least one argument, as '${describeArguments(list)}'`,
+      );
+    }
+    if (!variadic && count !== parameters.length) {
       throw new ParseError(
         `'${name}' on line ${line} takes ${countWord(parameters.length)} arguments, as '${describeArguments(list)}'`,
       );
@@ -254,13 +280,13 @@ export class ExpressionParser {
 
     const iteration: OpenIteration = { head, index, inBody: true };
     this.#iterations.push(iteration);
-    const body = this.#sum();
+    const body = this.#numeric(this.#sum());
     iteration.inBody = false;
     const bounds: Expression[] = [];
     while (this.#peek()?.kind === 'separator') {
       this.#index += 1;
       if (this.#peek()?.kind === 'close') break;
-      bounds.push(this.#sum());
+      bounds.push(this.#numeric(this.#sum()));
     }
     this.#iterations.pop();
     this.#close(open);
@@ -272,6 +298,51 @@ export class ExpressionParser {
       );
     }
     return { kind: 'iteration', operator, index, body, start, end, line };
+  }
+
+  /** Array lengths are known at parse time, including aliases of earlier bindings. */
+  arrayLength(expression: Expression): number | undefined {
+    if (expression.kind === 'array') return expression.elements.length;
+    if (expression.kind === 'variable')
+      return this.#arrays.get(expression.name);
+    return undefined;
+  }
+
+  #numeric(expression: Expression): Expression {
+    if (this.arrayLength(expression) !== undefined) {
+      throw new ParseError(
+        `Expected a numeric scalar, not an array, on line ${this.#tokens[this.#index - 1]?.line ?? this.#lastLine()}; use '*' to unpack an array in a function call`,
+      );
+    }
+    return expression;
+  }
+
+  #argument(): CallArgument {
+    if (!this.#operator(['*'])) return this.#numeric(this.#sum());
+    const line = this.#peek()?.line ?? this.#lastLine();
+    const operand = this.#primary();
+    if (this.arrayLength(operand) === undefined) {
+      throw new ParseError(
+        `Unpacking '*' requires a numeric array literal or earlier array binding on line ${line}`,
+      );
+    }
+    return { kind: 'unpack', operand };
+  }
+
+  #array(): Expression {
+    const open = this.#peek() as OpenToken;
+    this.#index += 1;
+    const elements: Expression[] = [];
+    if (this.#peek()?.kind !== 'close') {
+      elements.push(this.#numeric(this.#sum()));
+      while (this.#peek()?.kind === 'separator') {
+        this.#index += 1;
+        if (this.#peek()?.kind === 'close') break;
+        elements.push(this.#numeric(this.#sum()));
+      }
+    }
+    this.#close(open);
+    return { kind: 'array', elements };
   }
 
   #group(): Expression {

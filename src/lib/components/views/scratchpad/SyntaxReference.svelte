@@ -1,6 +1,6 @@
 <!--
 @component
-Presents highlighted Scratchpad syntax and runnable examples, including nested iteration scopes. The route owns expansion persistence and the action that transfers an example to the editor.
+Presents highlighted Scratchpad syntax and runnable examples, including numeric arrays, statistics, and nested iteration scopes. The route owns expansion persistence and the action that transfers an example to the editor.
 -->
 <script lang="ts">
   import Card from '#lib/components/elements/Card.svelte';
@@ -19,6 +19,15 @@ Presents highlighted Scratchpad syntax and runnable examples, including nested i
   let { expanded, onExpandedChange, onRun }: Props = $props();
   const bindingsExample =
     'income = $1k;\ntax rate = 0.25;\nincome * (1 - tax rate)';
+  const statisticsExample = [
+    'observations = [2, 4, 4, 4, 5, 5, 7, 9,];',
+    'average = mean(*observations);',
+    'midpoint = median(*observations);',
+    'most frequent = mode(*observations);',
+    'population deviation = sd_p(*observations);',
+    'sample deviation = sd_s(*observations);',
+    'max(2 * 3, *observations)',
+  ].join('\n');
   const nestedIterationExample = [
     '# Five deposits, each growing from its own year',
     'deposit = $5k;',
@@ -73,7 +82,7 @@ Presents highlighted Scratchpad syntax and runnable examples, including nested i
         </h3>
         <p>
           <HighlightedExpression source="+ - * / ^" /> with <HighlightedExpression
-            source={'() [] {}'}
+            source={'() {}'}
           />
           grouping. A figure may end in <HighlightedExpression source="%" />, so
           <HighlightedExpression source="4.5%" /> is
@@ -141,6 +150,57 @@ Presents highlighted Scratchpad syntax and runnable examples, including nested i
           floating-point arithmetic.
         </p>
       </div>
+    </div>
+    <div
+      class="mt-6 space-y-2 border-t border-slate-200 pt-5 text-sm leading-relaxed text-slate-600 dark:border-slate-800 dark:text-slate-400"
+    >
+      <h3 class="font-semibold text-slate-900 dark:text-slate-100">
+        Arrays & statistics
+      </h3>
+      <p>
+        Square brackets create flat numeric arrays:
+        <HighlightedExpression source="[1, 2.5,]" />. Elements may be scalar
+        expressions, with one optional final comma. <HighlightedExpression
+          source="[]"
+        /> is empty. Strings, nested arrays, indexing, and array arithmetic are unsupported.
+        Every comma separates elements; use
+        <HighlightedExpression source="1_000" /> or
+        <HighlightedExpression source="(1,000)" /> for grouped figures.
+      </p>
+      <p>
+        At the start of a function argument,
+        <HighlightedExpression source="*observations" /> unpacks an earlier array
+        binding; <HighlightedExpression source="max(*[1, 2.5, 3,])" /> unpacks an
+        anonymous array. Parentheses or braces may wrap either array operand. Between
+        expressions, <HighlightedExpression source="*" />
+        multiplies. Both appear in the example below. Unpacking can mix with scalar
+        arguments and other unpackings; an empty array adds no arguments. Calls containing
+        unpacking separate arguments at every comma, and the expanded count must fit
+        the function. Pass arrays with
+        <HighlightedExpression source="mean(*observations)" />, not
+        <HighlightedExpression source="mean(observations)" />.
+      </p>
+      <p>
+        <HighlightedExpression source="mean median mode" /> give the average, middle
+        sorted value, and most frequent value. Median averages the middle pair for
+        even counts; mode picks the first encountered value when counts tie. <HighlightedExpression
+          source="sd_p sd_s"
+        /> give population and sample standard deviation, using divisors n and n −
+        1. All five require at least one expanded argument and show
+        <em>Undefined</em>
+        for nonfinite observations. One observation gives population deviation 0 and
+        sample deviation <em>Undefined</em>.
+      </p>
+      <HighlightedExpression
+        source={statisticsExample}
+        block
+        {onRun}
+        exampleName="Arrays & statistics"
+      />
+      <p>
+        Average 5, median 4.5, mode 4, population deviation 2, sample deviation
+        approximately 2.1380899353; the final maximum is 9.
+      </p>
     </div>
     <div
       class="mt-6 space-y-2 border-t border-slate-200 pt-5 text-sm leading-relaxed text-slate-600 dark:border-slate-800 dark:text-slate-400"

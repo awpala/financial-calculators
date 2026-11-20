@@ -21,7 +21,8 @@ function run(source: string): Evaluation {
 
 function calculate(source: string): number {
   const { value } = run(source);
-  if (value === undefined) throw new Error('Expected a result expression');
+  if (typeof value !== 'number')
+    throw new Error('Expected a scalar result expression');
   return value;
 }
 
@@ -69,7 +70,7 @@ describe('calculator program parsing', () => {
     ['phi', (1 + Math.sqrt(5)) / 2],
     ['phi ^ 2 - phi', 1],
     ['1 / phi - (phi - 1)', 0],
-    ['(1 + 2) * [3 + {4 - 1}]', 18],
+    ['(1 + 2) * (3 + {4 - 1})', 18],
     ['log[100] + ln{e ^ 2}', 4],
     ['sqrt(16)', 4],
     ['sqrt[2] ^ 2', 2],
@@ -253,7 +254,7 @@ describe('calculator program parsing', () => {
     'log(100,, # final argument\n)',
     'mod(8, 3,',
     '(1,)',
-    '[1,]',
+    '[1,,]',
   ])(
     'still rejects missing arguments, extra commas, and invalid groups in %j',
     (source) => {
@@ -374,7 +375,10 @@ describe('calculator program parsing', () => {
     ['x_2', "'x_2' is not declared by an earlier statement on line 1"],
     ['_x', "'_' must sit between digits or within a name on line 1"],
     ['1_ + 2', "'_' must sit between digits on line 1"],
-    ['median(1)', "'median' is not declared by an earlier statement on line 1"],
+    [
+      'average(1)',
+      "'average' is not declared by an earlier statement on line 1",
+    ],
     ['log 10', "'log' must be followed by a parenthesized argument on line 1"],
     ['1 +\nln', "'ln' must be followed by a parenthesized argument on line 2"],
     ['1 = 1', "'1' reads as a number and cannot be declared on line 1"],

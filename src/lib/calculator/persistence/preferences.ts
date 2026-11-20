@@ -1,8 +1,11 @@
 /** Browser-local key for the Scratchpad source text. */
 export const CALCULATOR_INPUT_STORAGE_KEY = 'scratchpad_input_v1';
 
-/** Browser-local key for the result paired with its source. */
-export const CALCULATOR_RESULT_STORAGE_KEY = 'scratchpad_result_v1';
+/**
+ * Browser-local key for results under the numeric-array language. The revision
+ * leaves earlier scalar-bracket results unread while preserving saved source.
+ */
+export const CALCULATOR_RESULT_STORAGE_KEY = 'scratchpad_result_v2';
 
 /** Browser-local key for abbreviated result presentation. */
 export const CALCULATOR_SUFFIXED_STORAGE_KEY = 'scratchpad_suffixed_v1';

@@ -9,8 +9,8 @@ Displays the last successful result or calculation error and the magnitude-suffi
   import CalculatorNotice from '#lib/components/views/scratchpad/CalculatorNotice.svelte';
   import type { CalculatorStore } from '#lib/calculator/calculator.svelte.js';
   import {
-    formatCalculatedValue,
-    formatSuffixedValue,
+    formatCalculatorValue,
+    isDefinedValue,
   } from '#lib/calculator/presentation/format.js';
   /** Route-owned calculation and presentation preference. */
   type Props = {
@@ -47,16 +47,12 @@ Displays the last successful result or calculation error and the magnitude-suffi
       <output
         class={[
           'block font-mono text-3xl leading-relaxed font-semibold break-all select-all sm:text-4xl',
-          Number.isFinite(result.value)
+          isDefinedValue(result.value)
             ? 'text-slate-900 dark:text-slate-50'
             : 'text-amber-700 dark:text-amber-400',
         ]}
       >
-        {Number.isFinite(result.value)
-          ? calculator.suffixed
-            ? formatSuffixedValue(result.value)
-            : formatCalculatedValue(result.value)
-          : 'Undefined'}
+        {formatCalculatorValue(result.value, calculator.suffixed)}
       </output>
     {:else}
       <p

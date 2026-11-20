@@ -1,3 +1,4 @@
+import type { CalculatorValue } from '#lib/calculator/program.js';
 /**
  * Present a calculated value for reading and copying, in full or abbreviated.
  */
@@ -81,4 +82,31 @@ export function formatSuffixedValue(value: number): string {
 function roundToDigits(value: number): number {
   const factor = 10 ** MAX_SUFFIXED_FRACTION_DIGITS;
   return Math.round(value * factor) / factor;
+}
+
+/** Whether a scalar or every numeric array element is finite; an empty array is defined. */
+export function isDefinedValue(value: CalculatorValue): boolean {
+  return typeof value === 'number'
+    ? Number.isFinite(value)
+    : value.every(Number.isFinite);
+}
+
+/**
+ * Present a scalar or bracketed numeric array, retaining individual Undefined
+ * entries. Array digit groups use underscores so commas identify only elements.
+ * Suffixed applies to each element; callers keep bindings in full figures.
+ */
+export function formatCalculatorValue(
+  value: CalculatorValue,
+  suffixed = false,
+): string {
+  const format = (number: number) =>
+    Number.isFinite(number)
+      ? suffixed
+        ? formatSuffixedValue(number)
+        : formatCalculatedValue(number)
+      : 'Undefined';
+  return typeof value === 'number'
+    ? format(value)
+    : `[${value.map((number) => format(number).replaceAll(',', '_')).join(', ')}]`;
 }

@@ -213,6 +213,7 @@ function argumentSpans(source: string, claimed: readonly Span[]): Span[] {
   const skip = (index: number) => claimedUntil[index];
 
   const spans: Span[] = [];
+  const callOpenings = new Set<number>();
   for (const word of source.matchAll(WORD)) {
     const list = readArgumentList(word[0]);
     const head = readIterationHead(word[0]);
@@ -232,6 +233,7 @@ function argumentSpans(source: string, claimed: readonly Span[]): Span[] {
 
     const open = openingBracketAfter(source, end, skip);
     if (open === undefined) continue;
+    callOpenings.add(open);
     const layout = layOutArguments(
       source,
       open + 1,
@@ -252,6 +254,24 @@ function argumentSpans(source: string, claimed: readonly Span[]): Span[] {
     }
   }
 
+  for (let index = 0; index < source.length; index += 1) {
+    const skipped = skip(index);
+    if (skipped !== undefined) {
+      index = skipped - 1;
+      continue;
+    }
+    if (source[index] !== '[' || callOpenings.has(index)) continue;
+    const layout = layOutArguments(
+      source,
+      index + 1,
+      source.length,
+      'all',
+      skip,
+    );
+    for (const separator of layout.separators) {
+      spans.push({ start: separator, end: separator + 1, tone: 'operator' });
+    }
+  }
   return spans;
 }
 

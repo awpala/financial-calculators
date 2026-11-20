@@ -2,7 +2,7 @@
 
 A full-page calculator for ad hoc financial working at `/scratchpad/`. Its route composes a highlighted editor beside a result card and named-bindings table on wider screens; the panels stack on small screens. Input is parsed as you type, evaluated when you press Calculate, and remembered in browser-local storage. It runs entirely in the browser without accounts or a runtime API.
 
-What a user types is a small program in a purpose-built language — named figures declared once and reused, arithmetic with the precedence of ordinary mathematics, a handful of built-in constants and functions, and figures written the way they appear on paper (`$1,250.50`, `$2.5k`, `4.5%`). This document describes that language, how the input becomes a result, how the full-page workspace behaves around it, and which module owns each part. It is the authoritative account of the calculator; the rest of the application's documentation points here.
+What a user types is a small program in a purpose-built language — named figures declared once and reused, arithmetic with the precedence of ordinary mathematics, a handful of built-in constants and functions, flat numeric arrays with explicit argument unpacking and descriptive statistics, and figures written the way they appear on paper (`$1,250.50`, `$2.5k`, `4.5%`). This document describes that language, how the input becomes a result, how the full-page workspace behaves around it, and which module owns each part. It is the authoritative account of the calculator; the rest of the application's documentation points here.
 
 ## At a glance
 
@@ -17,13 +17,17 @@ What a user types is a small program in a purpose-built language — named figur
 | `%` | A percent of the figure it ends | `$2k * 4.5%` | 90 |
 | `+` `-` `*` `/` | Arithmetic, with the usual precedence | `2 + 3 * 4` | 14 |
 | `^` | Exponentiation, right-associative | `2 ^ 3 ^ 2` | 512 |
-| `( )` `[ ]` `{ }` | Grouping, each closed by its own kind | `[1 + 2] * 3` | 9 |
+| `( )` `{ }` | Grouping, each closed by its own kind | `(1 + 2) * 3` | 9 |
+| `[ ... ]` | Flat numeric array; an optional final comma guards the last element | `[1, 2.5,]` | `[1, 2.5]` |
+| `*name` or `*[...]` | Unpack a numeric array at the start of a function argument | `xs = [1, 2.5]; max(*xs)` | 2.5 |
 | `log` `lg` `ln` | Base-10, base-2, and natural logarithms | `lg(1,024)` | 10 |
 | `log_n(x, base)` | A logarithm in a chosen positive base other than 1 | `log_n(81, 3)` | 4 |
 | `n_root(x, n)` | A real root; a negative degree takes its reciprocal | `n_root(-8, 3)` | -2 |
 | `sqrt` `abs` | Square root and absolute value | `sqrt(3 ^ 2 + 4 ^ 2)` | 5 |
 | `floor` `ceil` `round` | Round down, up, or to the nearest whole number | `round(2.5)` | 3 |
 | `min(x, ...)` `max(x, ...)` | Least or greatest of one or more expressions | `max(4, -2, 8)` | 8 |
+| `mean` `median` `mode` | Average, middle value, and most frequent value | `mean(2, 4, 9)` | 5 |
+| `sd_p` `sd_s` | Population or sample standard deviation | `sd_p(2, 4, 4, 4, 5, 5, 7, 9)` | 2 |
 | `fact` `inv` | Factorial and reciprocal (`1 / x`) | `fact(5) * inv(4)` | 30 |
 | `nCr(n, r)` `nPr(n, r)` | Unordered or ordered selections without replacement | `nCr(5, 2)` | 10 |
 | `sin` `cos` `tan` `sec` `csc` `cot` | Circular functions in radians; `_d` accepts degrees | `sin_d(30)` | 0.5 |
@@ -239,7 +243,7 @@ The editor occupies the wider left column; the right column separates the large 
 
 - **Calculate is disabled while the input is invalid**, with an amber notice naming the first problem and its line. Empty input — nothing, or nothing but whitespace and comments — disables it without a notice. The notice sets the pieces of input it quotes — a character, a name, a figure — as code, so they stand apart from the prose around them; the message itself stays a plain sentence, since it is also read where nothing can be marked up.
 - **Input whose last statement is a declaration has no result.** Its names are the whole of what it says, so the workspace shows the variable list and explains that a final expression would produce a result.
-- **Every declared name is listed with its declaration line and final value** beneath the result, with columns ordered Line, Name, Value and values always shown as full figures. When there are more than one named binding, each column header sorts ascending on selection and reverses direction on another selection; a triangle marks the active direction. With zero or one binding, the headers are plain labels with no sort controls or indicator; the saved sort preference is retained. The default is Line ascending, with declaration order retained for ties. Name sorts alphabetically, while Line and Value sort numerically; *Undefined* values follow numeric values in either direction. The selected column and direction are remembered across navigation and reload.
+- **Every declared name is listed with its declaration line and final value** beneath the result, with columns ordered Line, Name, Value and values always shown as full figures. When there are more than one named binding, each column header sorts ascending on selection and reverses direction on another selection; a triangle marks the active direction. With zero or one binding, the headers are plain labels with no sort controls or indicator; the saved sort preference is retained. The default is Line ascending, with declaration order retained for ties. Name sorts alphabetically and Line sorts numerically. Value sorts finite scalar numbers numerically, followed by arrays in declaration order, then *Undefined* scalars; these categories keep that order in either direction. The selected column and direction are remembered across navigation and reload.
 - **Undefined arithmetic does not block a calculation.** A value that is not finite — `1/0`, `ln(-1)` — shows as *Undefined*, in amber, wherever it lands.
 - **A calculation that would pass 10,000,000 terms stops instead.** Sums and products share that budget across the whole input, each term of a nested one counted, and the one that would pass it is refused before any of its terms is evaluated, so a mistyped bound such as `1t` answers at once rather than stalling the page. Calculate then shows an amber *Cannot calculate* notice naming that sum or product and its line, with no result and no variable list. The notice lasts until the text next changes and is never stored.
 
@@ -256,7 +260,7 @@ The editor occupies the wider left column; the right column separates the large 
 
 The [persistence keys](persistence/preferences.ts) belong to Scratchpad. The [storage primitive](../state/README.md) tolerates unavailable storage; its callers normalize successfully parsed JSON. There is one local workspace per browser profile, with no account namespace or cross-tab synchronization. A fresh route owner is created on navigation, then restores its input, matching result, and presentation preference on mount. SSR renders the empty editor and never reads or writes a visitor's work.
 
-The result is stored beside the input it was calculated from and is read back only where it names that input as its own, so a stale or hand-edited entry is discarded rather than shown against text it does not describe; the cost is one press of Calculate. JSON carries no infinity, so a non-finite value is stored as null and read back as *Undefined*. A result describes the input as it stood at Calculate, so any change to the input's text — an edit, or Clear Inputs — removes the result and its variable list, here and in storage; clicking into the input or navigating away changes no text and leaves them in place.
+The result uses a new storage key for the array-aware language, so older saved results are ignored once while input and presentation preferences are preserved. Calculate again after any needed syntax edits. The result is stored beside the input it was calculated from and is read back only where it names that input as its own, so a stale or hand-edited entry is discarded rather than shown against text it does not describe; the cost is one press of Calculate. JSON carries no infinity, so a nonfinite scalar or array element is stored as null and read back as *Undefined*. Flat arrays of numbers or nulls are normalized element by element; strings, nested arrays, objects, booleans, and other malformed stored values cause the saved calculation to be discarded. A result describes the input as it stood at Calculate, so any change to the input's text — an edit, or Clear Inputs — removes the result and its variable list, here and in storage; clicking into the input or navigating away changes no text and leaves them in place.
 
 ```mermaid
 stateDiagram-v2
@@ -347,13 +351,15 @@ sum        = product { ( "+" | "-" ) product } ;
 product    = unary { ( "*" | "/" ) unary } ;
 unary      = ( "+" | "-" ) unary | power ;
 power      = primary [ "^" unary ] ;
-primary    = number | reference | index | constant | call | iteration | group ;
+primary    = number | reference | index | constant | call | iteration | group | array ;
 call       = function brackets ;
-group      = "(" expression ")" | "[" expression "]" | "{" expression "}" ;
+group      = "(" expression ")" | "{" expression "}" ;
+array      = "[" [ expression { "," expression } [ "," ] ] "]" ;  (* every element must be scalar *)
 brackets   = "(" arguments ")" | "[" arguments "]" | "{" arguments "}" ;
 iteration  = iterated "_" index brackets ;
-arguments  = expression { "," expression } [ "," ] ;  (* fixed-arity calls use the last required commas; variadic min/max use every comma at their bracket level *)
-function   = unary_function | binary_function | "min" | "max" ;
+arguments  = argument { "," argument } [ "," ] ;  (* iteration requires scalar expressions; function arity is checked after expansion *)
+argument   = expression | "*" primary ;  (* unpacking requires an array-valued primary and is allowed only in function calls *)
+function   = unary_function | binary_function | "min" | "max" | "mean" | "median" | "mode" | "sd_p" | "sd_s" ;
 unary_function = "log" | "lg" | "ln" | "sqrt" | "abs" | "floor" | "ceil" | "round" | "fact" | "inv" | circular | hyperbolic ;
 binary_function = "mod" | "nCr" | "nPr" | "n_root" | "log_n" | "arctan2" [ "_d" ] ;
 circular   = ( "sin" | "cos" | "tan" | "sec" | "csc" | "cot" | "arcsin" | "arccos" | "arctan" | "arcsec" | "arccsc" | "arccot" ) [ "_d" ] ;
@@ -374,7 +380,7 @@ index      = letter { letter | digit | "_" } ;  (* as a primary, the index of a 
 
 The sign sits below `^` and above `*`, as it does in written mathematics: `-2 ^ 2` is the negative of a square, not the square of a negative. Because the right side of `^` and every operand of `*` and `/` are read at the sign's level, an exponent or a factor may carry its own sign — `2 ^ -1` and `2 * -3` need no parentheses.
 
-Parentheses, brackets, and braces group interchangeably and nest freely, but each closes with its own kind; mixing them is a way of making deep nesting legible, and a mismatch is reported with both lines.
+Parentheses and braces group expressions and nest freely, while bare square brackets create arrays. Each closes with its own kind, and a mismatch is reported with both lines. A function or iteration head still accepts any bracket pair around its arguments: `lg[8]` is a scalar call, while `[8]` is a one-element array. Existing scalar grouping written with square brackets must be changed to parentheses or braces. Arithmetic and unary signs require scalar operands; unary unpacking is a separate argument form, not an arithmetic precedence level.
 
 | Built-in | Kind | Meaning | Example |
 | --- | --- | --- | --- |
@@ -393,6 +399,11 @@ Parentheses, brackets, and braces group interchangeably and nest freely, but eac
 | `round(x)` | Function | Nearest integer, half ties toward positive infinity | `round(-2.5)` = -2 |
 | `min(x, ...)` | Function | Least of one or more expressions | `min(4, -2, 8)` = -2 |
 | `max(x, ...)` | Function | Greatest of one or more expressions | `max(4, -2, 8)` = 8 |
+| `mean(x, ...)` | Function | Arithmetic mean of finite observations | `mean(2, 4, 9)` = 5 |
+| `median(x, ...)` | Function | Middle sorted value, or mean of the middle pair | `median(9, 2, 4, 5)` = 4.5 |
+| `mode(x, ...)` | Function | Most frequent value; first encountered among ties | `mode(2, 1, 1, 2)` = 2 |
+| `sd_p(x, ...)` | Function | Population standard deviation, divisor `n` | `sd_p(2, 4)` = 1 |
+| `sd_s(x, ...)` | Function | Sample standard deviation, divisor `n - 1` | `sd_s(2, 4)` ≈ 1.4142135624 |
 | `fact(x)` | Function | Factorial, *x*! | `fact(5)` = 120 |
 | `nCr(n, r)` | Function | Unordered selections without replacement | `nCr(5, 2)` = 10 |
 | `nPr(n, r)` | Function | Ordered selections without replacement | `nPr(5, 2)` = 20 |
@@ -403,17 +414,47 @@ Parentheses, brackets, and braces group interchangeably and nest freely, but eac
 
 - **Built-ins are reserved in exactly these spellings.** Names are case-sensitive, so `E`, `PI`, `Phi`, `Sqrt`, and `Sum_i` are ordinary names a user may declare; only the registered spellings are taken, including the mixed-case `nCr` and `nPr`. Every [trigonometric function spelling](#trigonometric-functions) is also reserved; `asin`, `atan2`, and `asinh` are ordinary user names rather than inverse aliases. For sums and products that means every single word of `sum_` or `prod_` and then a letter, whatever follows.
 - **A function takes its arguments in a group** of any bracket kind: `log(100)`, `lg[8]`, `ceil{2.1}`, `mod[9, 4]`, with any whitespace between the name and the bracket. A function named without one — `log 100`, `fact 5` — is reported, as is one given the wrong number of arguments: `mod(8)` says it takes two. A call is a value like any other and binds tighter than every operator around it, so `-abs(-3)` is -3 and `abs(-2) ^ 2` is 4.
-- **One trailing comma is optional in function calls, sums, and products.** `sqrt(16,)`, `mod(8, 3,)`, and `sum_i(i, 1, 3,)` mean the same as their forms without it. Whitespace and comments may follow the comma before the closing bracket. It neither supplies a missing argument nor permits another trailing comma; `mod(8,)`, `sqrt(16,,)`, and an ordinary group `(16,)` remain invalid.
-- **`mod` is the remainder, and the only place `%` used to be.** `mod(17, 5)` is 2 and `mod(-7, 3)` is -1, since the sign follows the dividend; its divisor may be any expression, and `mod(5, 0)` is *Undefined*. After setting aside an optional trailing comma, its two arguments are divided by the last comma directly within its brackets, so `mod(3,000, 7,)` keeps its grouped figure whole. `%` cannot be the remainder as well, because it ends a figure as a percent.
+- **One trailing comma is optional in arrays, function calls, sums, and products.** `sqrt(16,)`, `mod(8, 3,)`, and `sum_i(i, 1, 3,)` mean the same as their forms without it. Whitespace and comments may follow the comma before the closing bracket. It neither supplies a missing argument nor permits another trailing comma; `mod(8,)`, `sqrt(16,,)`, and an ordinary group `(16,)` remain invalid.
+- **`mod` is the remainder, and the only place `%` used to be.** `mod(17, 5)` is 2 and `mod(-7, 3)` is -1, since the sign follows the dividend; its divisor may be any expression, and `mod(5, 0)` is *Undefined*. Without unpacking, after setting aside an optional trailing comma, its two arguments are divided by the last comma directly within its brackets, so `mod(3,000, 7,)` keeps its grouped figure whole. `%` cannot be the remainder as well, because it ends a figure as a percent.
 - **`fact` is defined for whole numbers from 0 up.** A fraction or a negative number has no factorial and gives *Undefined*, as does anything past `170!`, which overflows. Past `18!` the product is larger than the whole numbers floating point holds exactly, so it carries the same rounding as the rest of the arithmetic. There is no postfix `!`.
 - **A constant is a value, not a function**, so `e(2)` is missing an operator.
 - **There is no implicit multiplication.** `2(3)`, `(2)(3)`, `2e`, `2pi`, and `2 x` are each missing an operator, not products; a juxtaposition in this language is always a mistake, never a meaning.
-- **A word that is neither declared nor built in is an error**, including functions the calculator does not have: `median(1)` reports `median` as undeclared.
+- **A word that is neither declared nor built in is an error**, including functions the calculator does not have: `average(1)` reports `average` as undeclared.
 - **`round` rounds to a whole number, with half ties toward positive infinity.** `round(2.5)` is 3 and `round(-2.5)` is -2. It takes one argument; write `round(x * 100) / 100` for two decimal places.
 - **`min` and `max` take one or more expressions.** Empty lists are invalid; a single argument returns that value. Every comma at their own bracket level divides arguments, with one optional trailing comma, so `min(1,000)` means the minimum of 1 and 0. Use underscores, suffixes, names, or nested ordinary groups for grouped figures: `min((1,000), 900)` and `min(1_000, 900)` are both 900. Nested calls, comments, and declared names retain their own commas. All arguments are evaluated; nonfinite arithmetic retains its usual behavior, so `min(1 / 0, 3)` is 3 and `min(sqrt(-1), 3)` is *Undefined*.
 - **`nCr` and `nPr` require nonnegative integers with `r <= n`.** They count unordered and ordered selections without replacement: mathematically `n! / (r! * (n - r)!)` and `n! / (n - r)!`. Both return 1 for `r = 0`, including `(0, 0)`. Invalid inputs give *Undefined*. Exact integer intermediates avoid factorial overflow and round to the calculator's number type on return; input precision remains floating point. `nCr(200, 2)` is 19,900 and `nPr(200, 2)` is 39,800 even though `fact(200)` overflows. Symmetry shortens combinations, and overflow ends either calculation promptly even for enormous selections; nonfinite results display as *Undefined*.
 - **`n_root(x, n)` accepts any finite nonzero real degree for nonnegative inputs.** Degree 2 matches `sqrt`, and `n_root(16, 0.5)` is 256. A negative degree takes a reciprocal root: `n_root(16, -2)` is 0.25. Negative inputs require odd integer degrees: `n_root(-8, 3)` is -2 and `n_root(-8, -3)` is -0.5. Zero degrees, negative-degree roots of zero, and negative inputs with even or fractional degrees give *Undefined*.
 - **`log_n(x, base)` requires a finite positive base other than 1.** Bases 10, 2, and `e` use the same calculation as `log`, `lg`, and `ln`. Other bases use `ln(x) / ln(base)`, so `log_n(81, 3)` is 4 and `log_n(8, 0.5)` is -3. Invalid bases, nonpositive inputs, and nonfinite results display as *Undefined*.
+
+### Numeric arrays and unpacking
+
+`[1, 2.5, expression,]` constructs a flat numeric array; `[]` is empty. Elements may mix integers and fractions and may use full scalar expressions, including earlier numeric bindings and sums or products. Every comma at the array's own bracket level separates elements, with one optional trailing comma: `[1,000]` is two elements, while `[1_000]`, `[1k]`, and `[(1,000)]` each contain one value of 1,000. Nested calls, comments, and matched names keep their own commas. Missing elements and repeated trailing commas are errors.
+
+Arrays are immutable language values that can be bound, aliased, and returned as the final result. Numeric type validation occurs while parsing; nested arrays, strings, objects, booleans, and arbitrary JavaScript iterables cannot become elements. Nonfinite numeric arithmetic remains permitted, so `[1, sqrt(-1)]` displays `[1, Undefined]`. Arrays are not coerced into scalars: arithmetic, unary signs, ordinary function arguments, iteration bodies and bounds, and array elements reject array-valued expressions. There is no indexing, slicing, concatenation, mutation, comprehension syntax, or generic iterable protocol.
+
+A unary `*` at the start of a function argument unpacks an earlier array binding or anonymous numeric array literal into scalar arguments in source order. Between expressions, the same token is binary multiplication: `xs = [4, 5.5, 8,]; max(2 * 3, *xs)` returns 8. Whitespace does not select the operation. Array aliases and descriptive names may be unpacked, as may array-valued primaries wrapped in parentheses or braces. `max(*[1, 2.5, 3,])` is 3; `max(*(xs))` and `max(*([1, 2]))` are valid. Scalar bindings and local iteration indices cannot be unpacked. `max(xs)`, a bare `*xs`, `[*xs]`, and `max(*xs * 2)` are invalid: unpacking occupies an entire function argument and is not an array-element or arithmetic operator. Sums and products do not accept unpacking.
+
+Calls may mix scalars and multiple unpackings. The parser knows literal array lengths, records the length of each array binding, follows aliases and grouping, and checks arity after expansion: `pair = [14, 4]; mod(*pair)` is 2, but `sqrt(*pair)` would have too many arguments. Empty unpacking contributes zero values; `empty = []; max(3, *empty)` is 3, while `max(*empty)` is invalid. Every variadic function requires at least one expanded argument.
+
+When a function call contains an argument-leading unpacking marker, every comma directly inside that call separates arguments, including fixed-arity calls. Thus `divisor = [4]; mod(1_000, *divisor)` is valid, but `mod(1,000, *divisor)` supplies three arguments. Calls without unpacking retain the fixed-arity last-comma rule or variadic every-comma rule. The tokenizer and highlighter share this contextual layout, which ignores nested groups, comments, and matched declared names; a binary multiplication operator never enables unpacking layout.
+
+### Statistics
+
+`mean`, `median`, `mode`, `sd_p`, and `sd_s` take one or more scalar arguments, including expanded array bindings and inline literals, and return *Undefined* if any observation is nonfinite. `mean` is the arithmetic average. `median` orders a copy of the observations numerically and returns its middle value or the mean of the middle pair, preserving the original array. `mode` counts repeated observations and resolves equal maximum frequencies by first appearance; all-unique input returns its first value. Numeric equality treats positive and negative zero as the same observation.
+
+`sd_p` computes the square root of squared deviations from the mean divided by `n`, the observation count. `sd_s` uses `n - 1` instead. One population observation has deviation 0; one sample observation gives *Undefined*. An empty expanded argument list is a parse error for both, as it is for the other variadic functions. Mean calculation scales and compensates its sum, and standard deviations scale deviations before squaring to limit avoidable overflow and underflow; all results retain floating-point precision limits.
+
+```text
+observations = [2, 4, 4, 4, 5, 5, 7, 9,];
+average = mean(*observations);
+midpoint = median(*observations);
+most frequent = mode(*observations);
+population deviation = sd_p(*observations);
+sample deviation = sd_s(*observations);
+average
+```
+
+The result and `average` are 5, `midpoint` is 4.5, `most frequent` is 4, `population deviation` is 2, and `sample deviation` is approximately 2.1380899353.
 
 ### Trigonometric functions
 
@@ -481,7 +522,7 @@ flowchart TD
     OP -- yes --> TOP["operator token"]
     OP -- no --> BR{"bracket?"}
     BR -- yes --> TBR["open or close token"]
-    BR -- no --> SEP{", separating or ending<br/>a head's arguments?"}
+    BR -- no --> SEP{", separating or ending<br/>a head's arguments or<br/>array elements?"}
     SEP -- yes --> TSEP["separator token"]
     SEP -- no --> LETTER{"letter?"}
     LETTER -- yes --> TWORD["word token<br/>letters, digits, _<br/>(resolved by the parser)"]
@@ -494,13 +535,13 @@ flowchart TD
 | Number | A digit, or `.` followed by a digit | `1,000`, `.5`, `2.5k`, `4.5%` |
 | Operator | One of `+` `-` `*` `/` `^` | |
 | Bracket | `(` `[` `{` and their closers | |
-| Separator | An argument separator or optional trailing comma directly within a call's brackets | `sum_i(i, 0, 2,)`, `mod(8, 3)`, `sqrt(16,)` |
+| Separator | An element/argument separator or optional trailing comma directly within array/call brackets | `sum_i(i, 0, 2,)`, `mod(8, 3)`, `sqrt(16,)` |
 | Word | A letter, then letters, digits, and underscores | `pi`, `lg`, `taxes`, `sum_i` |
 | Skipped | Whitespace, line breaks, `$`, and comments | |
 
 A word is read whole and left for the parser to resolve as a constant, a function, a sum or product, an index, or an undeclared name — which is why `taxes` is one unknown word rather than `tax` followed by `es`.
 
-A bracket opened right after a function, `sum`, `prod`, or a word beginning `sum_` or `prod_` holds arguments, so the reader looks ahead to its closing bracket, skipping comments and declared names. It sets aside one optional trailing comma, then marks the last remaining commas directly within the brackets as separators — one fewer than the head's arguments, so two for a sum or product, one for each two-argument function, and none for a one-argument function. Variadic `min` and `max` instead mark every comma at their own bracket level, so `min(1,000)` compares 1 and 0; write `min((1,000), 900)` or `min(1_000, 900)` to keep 1,000 whole. The trailing comma is also emitted as a separator token; expression parsing accepts it before the closing bracket without adding an argument. A figure ends at a marked comma and keeps any grouping comma before one, which is why `log(1,000,)` still reads one argument of 1,000.
+A bracket opened right after a function, `sum`, `prod`, or a word beginning `sum_` or `prod_` holds arguments, so the reader looks ahead to its closing bracket, skipping comments and declared names. It sets aside one optional trailing comma, then marks the last remaining commas directly within the brackets as separators — one fewer than the head's arguments, so two for a sum or product, one for each two-argument function, and none for a one-argument function. Bare square brackets open array elements, and arrays, variadic functions, and function calls containing argument-leading unpacking instead mark every comma at their own bracket level, so `min(1,000)` compares 1 and 0; write `min((1,000), 900)` or `min(1_000, 900)` to keep 1,000 whole. The trailing comma is also emitted as a separator token; expression parsing accepts it before the closing bracket without adding an argument. A figure ends at a marked comma and keeps any grouping comma before one, which is why `log(1,000,)` still reads one argument of 1,000.
 
 Figures follow their own small grammar:
 
@@ -511,7 +552,7 @@ magnitude = "k" | "m" | "b" | "t" ;  (* either case, and not followed by a lette
 ```
 
 - **`$` is ignored anywhere** in an expression, so figures can be pasted as written.
-- **`,` and `_` group digits and are accepted only between two digits of one number**, apart from argument separators and a call's optional trailing comma. Anywhere else they would silently join or split values, so `1,,000`, `1, 2`, and `_5` are reported.
+- **`,` and `_` group digits and are accepted only between two digits of one number**, apart from element/argument separators and an array or call's optional trailing comma. Anywhere else they would silently join or split values, so `1,,000`, `1, 2`, and `_5` are reported.
 - **`.` marks the fractional part.** A number has one, and a digit must follow it; a leading point (`.5`) is fine.
 - **A magnitude suffix multiplies by a thousand, a million, a billion, or a trillion** and comes after any `$` and digit grouping, so `$1.5k` is 1,500 and `2,500K` is 2,500,000. It binds to the digits it touches and has to end the number: `1kg`, `1kk`, and `1 k` are all reported rather than read as 1,000 with something after them.
 - **A final `%` divides the figure by a hundred**, so `4.5%` is 0.045, `$1,250%` is 12.5, and `2.5k%` is 25, the percent coming last of all. It binds as tightly as the digits it follows and cannot stand apart from them: `5 %`, `% 5`, and `(1 + 2)%` are reported. Dividing is what keeps `5%` exactly 0.05, and it is why the remainder is `mod` — one `%` reads one way everywhere it appears.
@@ -550,7 +591,7 @@ flowchart LR
         SHAPE{"2 · Program shape<br/>empty · declaration · result"}
         HEAD["3 · Declaration header<br/>check the name"]
         LEX["4 · Tokenizing<br/>against the names declared so far"]
-        PARSE["5 · Expression parsing<br/>by precedence"]
+        PARSE["5 · Expression parsing<br/>precedence · scalar/array checks"]
         REG["6 · Registration<br/>the name becomes visible"]
         SHAPE -- declaration --> HEAD --> LEX
         SHAPE -- result --> LEX
@@ -569,7 +610,7 @@ flowchart LR
 | 2 · Program shape | Statements in order | A declaration, the result, or nothing | An empty statement; a bare expression that is not last | `parsers/` |
 | 3 · Declaration header | Text before `=` | The normalized name | A second `=`; a missing, built-in, numeric, or duplicate name | `parsers/` |
 | 4 · Tokenizing | One expression's text, and the names declared so far | Tokens, each with its line | A malformed figure, a stray separator or `%`, an unexpected character, a comma dividing an argument list that neither separates its arguments nor groups digits; nothing after `=` | `parsers/` |
-| 5 · Expression parsing | Tokens | An expression tree | A missing value or operator, a bracket error, an undeclared name, a function without its arguments or with the wrong number of them, a sum or product without a usable index or three arguments, an index read outside its first argument | `parsers/` |
+| 5 · Expression parsing | Tokens | An expression tree | A missing value or operator, a bracket error, an undeclared name, a function without its arguments or with the wrong number of them, a sum or product without a usable index or three arguments, an index read outside its first argument, an array where a scalar is required, invalid unpacking or expanded arity | `parsers/` |
 | 6 · Registration | An accepted declaration | A name later statements can refer to | Nothing | `parsers/` |
 | 7 · Evaluation | The parsed program | The result and every name's value | Only sums and products past the term limit; undefined arithmetic yields a non-finite value instead | `language/` |
 | 8 · Presentation | Numbers | Full or suffixed text | Nothing | `presentation/` |
@@ -599,7 +640,7 @@ flowchart TD
     NAME -- yes --> TOKD["tokenize the text after ="]
     TOKD --> ANYD{"any tokens?"}
     ANYD -- no --> E5["✗ Expected a value after ="]
-    ANYD -- yes --> PARD["parse the expression"] --> REG(["declare the name<br/>for later statements"])
+    ANYD -- yes --> PARD["parse the expression"] --> REG(["declare the name and array length, if any,<br/>for later statements"])
 ```
 
 ### Names feed the tokenizer
@@ -643,12 +684,14 @@ flowchart TD
     SUM["sum<br/>product, then any + − product"] --> PRODUCT["product<br/>unary, then any * / unary"]
     PRODUCT --> UNARY["unary<br/>a sign, then unary — or power"]
     UNARY --> POWER["power<br/>primary, then optionally ^ unary"]
-    POWER --> PRIMARY["primary<br/>number · reference · index · constant ·<br/>call · iteration · group"]
-    PRIMARY --> GROUP["group<br/>an expression between matching brackets"]
+    POWER --> PRIMARY["primary<br/>number · reference · index · constant ·<br/>call · iteration · group · array"]
+    PRIMARY --> GROUP["group<br/>an expression between parentheses or braces"]
+    PRIMARY --> ARRAY["array<br/>zero or more scalar elements"]
     PRIMARY --> CALL["call<br/>one, two, or variadic arguments<br/>between matching brackets"]
     PRIMARY --> ITERATION["iteration<br/>three arguments between matching brackets,<br/>the index bound in the first"]
     GROUP -- "starts over at the loosest level" --> SUM
-    CALL -- "each argument starts over" --> SUM
+    ARRAY -- "each element starts over" --> SUM
+    CALL -- "each scalar argument starts over;<br/>*primary expands an array" --> SUM
     ITERATION -- "each argument starts over" --> SUM
     POWER -- "the exponent may carry a sign" --> UNARY
     UNARY -- "signs repeat" --> UNARY
@@ -668,6 +711,8 @@ flowchart TD
     MUL --> THREE["3"]
     MUL --> FOUR["4"]
 ```
+
+The expression parser also receives the lengths of earlier array bindings. A bare square-bracket primary reads and validates scalar elements; a variable primary preserves its known scalar or array shape. Numeric operators and scalar-only contexts reject array shapes before evaluation. At the start of a function argument, `*` reads a primary, validates its array shape, and creates an explicit unpacking argument; it does not enter the binary multiplication rule. Grouping preserves a value's shape, and aliases preserve array lengths. Index shadowing is resolved before deciding whether a name is an unpackable array value.
 
 ### Diagnostics
 
@@ -702,11 +747,13 @@ Parsing stops at the first error. Every message names the one-based line it conc
 | Expression parsing | Unmatched '*bracket*' on line *n* | `1 + 2)` |
 | Expression parsing | '*bracket*' on line *n* is never closed | `(1 + 2` |
 | Expression parsing | '*bracket*' on line *n* is closed by '*bracket*' on line *m*; expected '*bracket*' | `(1 + 2]` |
-| Expression parsing | '*name*' is not declared by an earlier statement on line *n* | `x = x + 1;`, `median(1)` |
+| Expression parsing | '*name*' is not declared by an earlier statement on line *n* | `x = x + 1;`, `average(1)` |
 | Expression parsing | '*name*' must be followed by a parenthesized argument on line *n* | `log 100` |
 | Expression parsing | 'mod' must be followed by its arguments in brackets, as 'mod(dividend, divisor)', on line *n* | `mod 8` |
 | Expression parsing | 'mod' on line *n* takes two arguments, as 'mod(dividend, divisor)' | `mod(8)` |
-| Expression parsing | 'min' on line *n* takes at least one argument, as 'min(x, ...)' | `min()` |
+| Expression parsing | 'min' on line *n* takes at least one argument, as 'min(x, ...)' | `min()`, `empty = []; min(*empty)` |
+| Expression parsing | Expected a numeric scalar, not an array, on line *n*; use '*' to unpack an array in a function call | `[1] + 2`, `[[1]]`, `max([1])` |
+| Expression parsing | Unpacking '*' requires a numeric array literal or earlier array binding on line *n* | `n = 2; max(*n)`, `max(*3)` |
 | Expression parsing | '*head*' must be followed by its arguments in brackets, as '*head*(expression, start, end)', on line *n* | `sum_i` |
 | Expression parsing | '*head*' on line *n* takes three arguments, as '*head*(expression, start, end)' | `sum_i(i, 0)` |
 | Expression parsing | '*word*' needs an index that starts with a letter, as '*operator*_i(expression, start, end)', on line *n* | `sum(i, 0, 2)`, `sum_1(i, 0, 2)` |
@@ -717,11 +764,12 @@ Calculate reports one message of its own once parsing has succeeded, in the same
 
 ## Evaluation and results
 
-Calculate evaluates the parsed program with a fresh scope and a fresh term budget: each declaration in order, then the result expression, if there is one. The parser has already guaranteed that every name and index is bound before it is read, so the only way evaluation stops short is a sum or product that would pass the term limit.
+Calculate evaluates the parsed program with a fresh scope and a fresh term budget: each declaration in order, then the result expression, if there is one. The parser has already guaranteed that every name and index is bound before it is read, every array is flat and numeric, scalar contexts receive scalars, and expanded argument counts fit their functions, so the only way evaluation stops short is a sum or product that would pass the term limit.
 
-- **Arithmetic is JavaScript's own**, on double-precision floating point, so results carry its rounding. `mod` is its remainder, whose sign follows the dividend; `^` is exponentiation; native mathematical functions supply the elementary operations, while composed functions supply real roots, arbitrary-base logarithms, reciprocal trigonometry, and degree conversion. Combinatorial counts use exact integer intermediates and convert to floating point on return, avoiding avoidable factorial overflow. Variadic extrema fold in source order without spreading an unbounded list into native function arguments.
+- **Arithmetic is JavaScript's own**, on double-precision floating point, so results carry its rounding. `mod` is its remainder, whose sign follows the dividend; `^` is exponentiation; native mathematical functions supply the elementary operations, while composed functions supply real roots, arbitrary-base logarithms, reciprocal trigonometry, and degree conversion. Combinatorial counts use exact integer intermediates and convert to floating point on return, avoiding avoidable factorial overflow. Variadic extrema fold in source order, while statistics consume the complete collection. Unpacking appends elements explicitly; neither path spreads an unbounded collection into native function arguments.
 - **Undefined arithmetic is a value, not an error.** `1 / 0`, `inv(0)`, `ln(-1)`, `sqrt(-1)`, `fact(2.5)`, and `sum_i(i, 0.5, 2)` produce a value that is not finite, as does any declaration built from one, and each shows as *Undefined* rather than blocking the calculation.
 - **Sums and products fold their terms in order**, from the start upward, with JavaScript's own `+` and `*`, so a long sum carries the rounding a long chain of `+` would. The index is bound to each whole number in turn while the first argument is evaluated, and an outer index of the same spelling is restored afterward.
+- **Arrays are evaluated element by element and frozen.** References and aliases reuse the numeric array without mutation; calls evaluate unpacking operands and expand their elements in source order. Median sorts a copy. Each evaluation owns its fresh scope, arrays, and term budget.
 - **The outcome is the result, if the input ends in an expression, and every declared name with its final value**, in the order declared.
 
 The result reads in full unless the **Suffixed** toggle beside it is on. The toggle carries hover text stating what it does; the choice is a browser-wide preference off until enabled, and it changes only how the result is drawn — the variable list stays in full figures, since those are the user's own named amounts.
@@ -738,6 +786,7 @@ The result reads in full unless the **Suffixed** toggle beside it is on. The tog
 | 0.0000001 | 1e-7 | 1e-7 |
 | 1 / 0 | *Undefined* | *Undefined* |
 
+- **Arrays display as bracketed, comma-separated lists.** Within elements, digit grouping uses underscores to distinguish it from element commas, as `[1_000, 2.5]`. Nonfinite elements show individually as *Undefined*. Suffixed applies per element of an array result; named arrays keep full figures, and an empty array displays as `[]`.
 - **A full figure has digit grouping and at most ten fraction digits.** The cap hides floating-point residue such as `0.1 + 0.2` without rounding away cents. A nonzero value too small to survive it is written in exponent form rather than shown as zero, and negative zero reads as plain zero.
 - **A suffixed figure takes the largest magnitude that fits** — the one dropping the most trailing zeros — so 2,500,000 reads as `2.5M`, and anything under a thousand is written out either way unless rounding carries it to a thousand.
 - **An abbreviated figure keeps at most three decimals, and no trailing zeros**, because it is meant to be read at a glance: `2,416.66…` is `2.417K` and `1.5K` stays `1.5K` rather than `1.500K`. The full figure is the one that carries ten, so the toggle trades precision for legibility in one direction only.
@@ -751,7 +800,7 @@ The text reads like a highlighted file: comments recede, declared names use one 
 
 - **A name is colored where it is declared and at every later reference**, exactly as an identifier is in an editor, which is what makes an alias visible as one thing rather than as words. A reference before its declaration stays plain, and so does a name inside a longer word.
 - **A sum's or product's index is colored as a name** where its head binds it, the `i` of `sum_i`, and wherever its first argument reads it, and nowhere else: in the bounds and past the closing bracket it stays plain, which draws the index's scope on the text.
-- **Operators are `+ - * / ^`, the function names — `log`, `sqrt`, `fact`, `mod`, and the rest — the `sum_` or `prod_` of a head, the commas that separate or end a head's arguments, and the `=` of a declaration.** A comma that groups digits stays plain, like the figure it belongs to, and so does a figure's `%`, which belongs to it as its `$` and magnitude do. The last is not arithmetic, but it is what separates a declaration's two halves, and coloring it is what makes that separation visible. A function name that falls inside a declared name — `log book` — belongs to the name, and one inside a longer word — `absolute`, `factor` — is not a function at all.
+- **Operators are `+ - * / ^`, the function names — `log`, `sqrt`, `fact`, `mod`, and the rest — the `sum_` or `prod_` of a head, the commas that separate or end array elements or a head's arguments, and the `=` of a declaration.** A comma that groups digits stays plain, like the figure it belongs to, and so does a figure's `%`, which belongs to it as its `$` and magnitude do. The last is not arithmetic, but it is what separates a declaration's two halves, and coloring it is what makes that separation visible. A function name that falls inside a declared name — `log book` — belongs to the name, and one inside a longer word — `absolute`, `factor` — is not a function at all.
 - **Matching `()`, `[]`, and `{}` share a tone for their nesting level**, cycling after three levels. Comments and declared names keep their existing tones even when they contain brackets. Unmatched or mismatched brackets stay plain; a semicolon resets nesting so an unfinished expression does not shift later statements' colors. The same pairing applies in syntax-reference examples.
 - **The highlighter judges each statement on its own** rather than waiting for the whole input to parse. A user is mid-edit most of the time, and highlighting that vanished on every keystroke that broke the parse would flicker constantly. A declaration whose name is well formed and untaken colors that name; anything else is left plain, so an unusable declaration — `pi = 3`, say — is simply not highlighted rather than being marked wrong twice.
 
@@ -805,12 +854,12 @@ Most of the language is data. Constants, functions, sums and products, operators
 | To | Change | Follows automatically | Also |
 | --- | --- | --- | --- |
 | Add a constant | An entry in `CONSTANTS` in [`language/syntax.ts`](language/syntax.ts) | Reserved, with the constant-specific message; parsed; evaluated | Tests; the tables in this document |
-| Add a function | An entry in `FUNCTIONS` in the same file, or the trigonometric catalog it includes, naming its parameters and what it applies — a standard-library function or calculator arithmetic. Mark a fold as `variadic` when it takes one or more arguments | Reserved; parsed as a call with that many arguments; its argument list divided using fixed-arity or variadic rules; evaluated; highlighted as an operator | Tests; the tables in this document |
+| Add a function | An entry in `FUNCTIONS` in the same file, or the trigonometric catalog it includes, naming its parameters and scalar `apply` implementation or collection `aggregate` implementation. Mark functions accepting one or more arguments as `variadic`; `apply` folds pairs for such functions, while `aggregate` consumes the complete numeric collection | Reserved; parsed as a call with that many arguments; its argument list divided using fixed-arity or variadic rules; evaluated; highlighted as an operator | Tests; the tables in this document |
 | Add an iterated operator | An entry in `ITERATED_OPERATORS` in [`language/iteration.ts`](language/iteration.ts), with its empty-range value and how a term folds in | Its heads reserved; its argument lists read; parsed; evaluated; highlighted | Tests; the tables in this document |
 | Add a magnitude | An entry in [`language/magnitudes.ts`](language/magnitudes.ts) | Read as an input suffix in either case; offered by Suffixed output | Tests; the figure rules above |
 | Add a binary operator | `OPERATOR_SYMBOLS`, a precedence level in the expression parser, and a case in the evaluator | Tokenized and highlighted | Tests; the grammar and precedence table |
 
-Reserving a name is a change to what existing input means. A user whose remembered input declares a name that has since become built in will find it invalid on the next visit, with the message naming the conflict — which is the intended outcome, since the alternative is a name that silently means two things. Changing what a symbol means carries the same cost and is answered the same way: remembered input that used `%` as a remainder is refused on the next visit, by a message that names `mod`, rather than quietly reading `17 % 5` as 17 followed by a percent of nothing.
+Reserving a name is a change to what existing input means. A user whose remembered input declares a name that has since become built in will find it invalid on the next visit, with the message naming the conflict — which is the intended outcome, since the alternative is a name that silently means two things. Square brackets now create arrays when they do not follow a call head; saved scalar expressions using them for grouping must use parentheses or braces. Changing what a symbol means carries the same cost and is answered the same way: remembered input that used `%` as a remainder is refused on the next visit, by a message that names `mod`, rather than quietly reading `17 % 5` as 17 followed by a percent of nothing.
 
 
 ## Validation

@@ -61,7 +61,7 @@
       <Keywords name="Folders in comment, open"></Keywords>
       <Keywords name="Folders in comment, middle"></Keywords>
       <Keywords name="Folders in comment, close"></Keywords>
-      <Keywords name="Keywords1">log lg ln log_n sqrt n_root abs floor ceil round fact nCr nPr inv mod</Keywords>
+      <Keywords name="Keywords1">log lg ln log_n sqrt n_root abs floor ceil round mean median mode sd_p sd_s fact nCr nPr inv mod</Keywords>
       <Keywords name="Keywords2">e pi phi</Keywords>
       <Keywords name="Keywords3">sum_ prod_</Keywords>
       <Keywords name="Keywords4">sin cos tan sec csc cot arcsin arccos arctan arcsec arccsc arccot arctan2 sin_d cos_d tan_d sec_d csc_d cot_d arcsin_d arccos_d arctan_d arcsec_d arccsc_d arccot_d arctan2_d sinh cosh tanh sech csch coth arcsinh arccosh arctanh arcsech arccsch arccoth</Keywords>

@@ -9,7 +9,7 @@ function calculate(source: string): number {
   const evaluated = evaluateProgram(parsed.program);
   if (!evaluated.ok) throw new Error(evaluated.message);
   const value = evaluated.evaluation.value;
-  if (value === undefined) throw new Error('Expected a result');
+  if (typeof value !== 'number') throw new Error('Expected a scalar result');
   return value;
 }
 

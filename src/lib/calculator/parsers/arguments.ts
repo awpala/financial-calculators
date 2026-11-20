@@ -12,6 +12,9 @@
  * `1,000` would be divided at its comma. Commas inside a nested bracket, a
  * comment, or a declared name are not directly within the brackets and never
  * divide them.
+ * A unary unpacking marker at the start of an argument also selects every
+ * comma at that level, since one array can supply several arguments. Binary
+ * multiplication does not change separator selection.
  * Variadic functions instead separate at every comma directly within their
  * brackets; digit grouping then needs underscores or a nested ordinary group.
  */
@@ -49,19 +52,30 @@ export function layOutArguments(
 ): ArgumentLayout {
   const commas: number[] = [];
   let depth = 0;
+  let unpacking = false;
+  let argumentStart = true;
   let index = start;
   let lastContent = start - 1;
 
   while (index < end) {
     const skipped = skip(index);
     if (skipped !== undefined) {
-      if (source[index] !== COMMENT_MARKER) lastContent = skipped - 1;
+      if (source[index] !== COMMENT_MARKER) {
+        lastContent = skipped - 1;
+        argumentStart = false;
+      }
       index = skipped;
       continue;
     }
     const char = source[index];
     if (char === ';' || (isClosingBracket(char) && depth === 0)) break;
-    if (!/[\s$]/.test(char as string)) lastContent = index;
+    if (char === '*' && depth === 0 && argumentStart) {
+      unpacking = true;
+    }
+    if (!/[\s$]/.test(char as string)) {
+      lastContent = index;
+      argumentStart = depth === 0 && char === ARGUMENT_SEPARATOR;
+    }
     if (isOpeningBracket(char)) {
       depth += 1;
     } else if (isClosingBracket(char)) {
@@ -77,7 +91,11 @@ export function layOutArguments(
       ? commas.pop()
       : undefined;
   const separators =
-    count === 'all' ? commas : count === 0 ? [] : commas.slice(-count);
+    count === 'all' || unpacking
+      ? commas
+      : count === 0
+        ? []
+        : commas.slice(-count);
   if (trailing !== undefined) separators.push(trailing);
   return { separators, end: Math.min(index, end) };
 }
